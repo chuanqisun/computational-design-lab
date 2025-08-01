@@ -35,8 +35,8 @@ applyTo: "**"
 
 ## File organization
 
-/index.html contains the static structure of the UI
-/src/main.ts is the main logic of the app.
+/index.html contains the app root
+/src/main.ts is the main view and logic of the app.
 /src/lib/ contains lower level functions
 /src/components/ contains reactive UI components using the createComponent pattern
 /src/views/ contains legacy UI components that are being migrated to /src/components/

@@ -38,57 +38,31 @@ const Main = createComponent(() => {
       </section>
 
       <section class="section">
-        <header class="section-header">
-          <h2>1. Parti</h2>
-        </header>
+        <header class="section-header"><h2>1. Parti</h2></header>
         <div class="section-content">${PartiComponent({ partiText$ })}</div>
       </section>
 
       <section class="section">
-        <header class="section-header">
-          <h2>2. Concepts</h2>
-        </header>
+        <header class="section-header"><h2>2. Concepts</h2></header>
         <div class="section-content">${ConceptualizeComponent({ apiKeys$, partiText$, concepts$ })}</div>
       </section>
 
       <section class="section">
-        <header class="section-header">
-          <h2>3. Moodboard</h2>
-        </header>
+        <header class="section-header"><h2>3. Moodboard</h2></header>
         <div class="section-content">${MoodboardComponent({ apiKeys$, concepts$, partiText$, artifacts$ })}</div>
       </section>
 
       <section class="section">
-        <header class="section-header">
-          <h2>4. Parameters</h2>
-        </header>
+        <header class="section-header"><h2>4. Parameters</h2></header>
         <div class="section-content">
-          ${ParameterizeComponent({
-            apiKeys$,
-            concepts$,
-            artifacts$,
-            partiText$,
-            parameters$,
-            domain$,
-          })}
+          ${ParameterizeComponent({ apiKeys$, concepts$, artifacts$, partiText$, parameters$, domain$ })}
         </div>
       </section>
 
       <section class="section">
-        <header class="section-header">
-          <h2>5. Designs</h2>
-        </header>
+        <header class="section-header"><h2>5. Designs</h2></header>
         <div class="section-content">
-          ${DesignComponent({
-            apiKeys$,
-            concepts$,
-            artifacts$,
-            parameters$,
-            partiText$,
-            domain$,
-            designs$,
-            mockups$,
-          })}
+          ${DesignComponent({ apiKeys$, concepts$, artifacts$, parameters$, partiText$, domain$, designs$, mockups$ })}
         </div>
       </section>
     </main>
