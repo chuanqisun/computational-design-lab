@@ -1,13 +1,14 @@
 import { render } from "lit-html";
+import { BehaviorSubject } from "rxjs";
+import { ConceptualizeComponent, type ConceptWithId } from "./components/conceptualize.component";
+import { ConnectionsComponent } from "./components/connections.component";
+import { DesignComponent, type DesignWithId, type MockupWithId } from "./components/design.component";
+import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard.component";
+import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize.component";
+import { PartiComponent } from "./components/parti.component";
 import { FluxImageElement } from "./elements/generative-image";
-import { loadApiKeys } from "./lib/storage";
+import { loadApiKeys, type ApiKeys } from "./lib/storage";
 import "./main.css";
-import { conceptualMappingView } from "./views/conceptualize";
-import { connectionsView } from "./views/connections";
-import { fitView } from "./views/design";
-import { moodboardView } from "./views/moodboard";
-import { parameterizeView } from "./views/parameterize";
-import { partiView } from "./views/parti";
 
 // Register custom elements
 FluxImageElement.define(() => ({
@@ -22,36 +23,44 @@ const artifactsContent = document.querySelector("#artifacts-content") as HTMLEle
 const parametersContent = document.querySelector("#parameters-content") as HTMLElement;
 const fitContent = document.querySelector("#renderings-content") as HTMLElement;
 
-// 2. Global streams declarations
-const { connectionsTemplate, apiKeys$ } = connectionsView();
-const { partiTemplate, partiText$ } = partiView();
-const { conceptualTemplate, concepts$, effects$: conceptualize$ } = conceptualMappingView(apiKeys$, partiText$);
-const { visualizeTemplate, artifacts$, effects$: visualize$ } = moodboardView(apiKeys$, concepts$, partiText$);
-const {
-  parameterizeTemplate,
+// 2. States shared by components
+const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
+const partiText$ = new BehaviorSubject<string>("");
+const concepts$ = new BehaviorSubject<ConceptWithId[]>([]);
+const artifacts$ = new BehaviorSubject<ArtifactWithId[]>([]);
+const parameters$ = new BehaviorSubject<ParameterWithId[]>([]);
+const domain$ = new BehaviorSubject<string>("");
+const designs$ = new BehaviorSubject<DesignWithId[]>([]);
+const mockups$ = new BehaviorSubject<MockupWithId[]>([]);
+
+// 3. Components
+const connectionsTemplate = ConnectionsComponent({ apiKeys$ });
+const partiTemplate = PartiComponent({ partiText$ });
+const conceptualTemplate = ConceptualizeComponent({ apiKeys$, partiText$, concepts$ });
+const moodboardTemplate = MoodboardComponent({ apiKeys$, concepts$, partiText$, artifacts$ });
+const parameterizeTemplate = ParameterizeComponent({
+  apiKeys$,
+  concepts$,
+  artifacts$,
+  partiText$,
   parameters$,
   domain$,
-  effects$: parameterize$,
-} = parameterizeView(apiKeys$, concepts$, artifacts$, partiText$);
-const { fitTemplate, effects$: fitEffects$ } = fitView(
+});
+const designTemplate = DesignComponent({
   apiKeys$,
   concepts$,
   artifacts$,
   parameters$,
   partiText$,
   domain$,
-);
+  designs$,
+  mockups$,
+});
 
-// 3. Effects: subscribe and render
+// 4. Effects: subscribe and render
 render(connectionsTemplate, connectionsContent);
 render(partiTemplate, partiContent);
 render(conceptualTemplate, conceptualContent);
-render(visualizeTemplate, artifactsContent);
+render(moodboardTemplate, artifactsContent);
 render(parameterizeTemplate, parametersContent);
-render(fitTemplate, fitContent);
-
-// Subscribe to effects to enable reactive behavior
-conceptualize$.subscribe();
-visualize$.subscribe();
-parameterize$.subscribe();
-fitEffects$.subscribe();
+render(designTemplate, fitContent);

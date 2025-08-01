@@ -1,5 +1,5 @@
 ---
-applyTo: "**/parameterize.*,**/generate-parameters.ts"
+applyTo: "**/parameterize.component.*,**/generate-parameters.ts"
 ---
 
 # Feature: Parameterize
