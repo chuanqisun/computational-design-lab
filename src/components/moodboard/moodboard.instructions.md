@@ -1,5 +1,5 @@
 ---
-applyTo: "**/moodboard.component.*,**/generate-artifacts.ts"
+applyTo: "moondboard/**"
 ---
 
 # Feature: Moodboard

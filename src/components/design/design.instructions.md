@@ -1,5 +1,5 @@
 ---
-applyTo: "**/design.component.*,**/generate-designs.ts"
+applyTo: "design/**"
 ---
 
 # Feature: Design
