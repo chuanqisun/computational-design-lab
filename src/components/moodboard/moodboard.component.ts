@@ -340,7 +340,7 @@ export const MoodboardComponent = createComponent((props: MoodboardComponentProp
                           <textarea
                             class="card-edit-textarea"
                             .value=${artifact.description}
-                            @input=${(e: Event) =>
+                            @change=${(e: Event) =>
                               editArtifact$.next({
                                 id: artifact.id,
                                 field: "description",

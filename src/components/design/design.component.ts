@@ -577,7 +577,7 @@ export const DesignComponent = createComponent((props: DesignComponentProps) => 
                                                   <textarea
                                                     class="card-edit-textarea"
                                                     .value=${mockup.description}
-                                                    @input=${(e: Event) =>
+                                                    @change=${(e: Event) =>
                                                       editMockup$.next({
                                                         id: mockup.id,
                                                         field: "description",
