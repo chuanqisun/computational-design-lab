@@ -1,11 +1,11 @@
 import { html } from "lit-html";
 import { BehaviorSubject, Subject, ignoreElements, map, merge, mergeWith, of } from "rxjs";
 import { catchError, debounceTime, distinctUntilChanged, mergeMap, tap } from "rxjs/operators";
-import { observe } from "../lib/observe-directive";
-import { saveApiKeys, type ApiKeys } from "../lib/storage";
-import { testConnection } from "../lib/test-connections";
-import { createComponent } from "../sdk/create-component";
+import { createComponent } from "../../sdk/create-component";
+import { observe } from "../../sdk/observe-directive";
 import "./connections.component.css";
+import { saveApiKeys, type ApiKeys } from "./storage";
+import { testConnection } from "./test-connections";
 
 export interface ConnectionsComponentProps {
   apiKeys$: BehaviorSubject<ApiKeys>;

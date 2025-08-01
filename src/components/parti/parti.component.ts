@@ -1,7 +1,7 @@
 import { html } from "lit-html";
 import { BehaviorSubject, ignoreElements, map, mergeWith } from "rxjs";
 import { tap } from "rxjs/operators";
-import { createComponent } from "../sdk/create-component";
+import { createComponent } from "../../sdk/create-component";
 import "./parti.component.css";
 
 export interface PartiComponentProps {

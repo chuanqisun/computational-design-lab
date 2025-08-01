@@ -16,11 +16,11 @@ import {
   takeUntil,
   tap,
 } from "rxjs";
-import type { Concept } from "../lib/generate-concepts";
-import { regenerateDescription$, streamConcepts$ } from "../lib/generate-concepts";
-import type { ApiKeys } from "../lib/storage";
-import { createComponent } from "../sdk/create-component";
+import { createComponent } from "../../sdk/create-component";
+import type { ApiKeys } from "../connections/storage";
 import "./conceptualize.component.css";
+import type { Concept } from "./generate-concepts";
+import { regenerateDescription$, streamConcepts$ } from "./generate-concepts";
 
 export interface ConceptWithId extends Concept {
   id: string;

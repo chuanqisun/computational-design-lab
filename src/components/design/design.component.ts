@@ -19,15 +19,15 @@ import {
   takeUntil,
   tap,
 } from "rxjs";
-import "../elements/generative-image";
-import type { Design } from "../lib/generate-designs";
-import { generateManualDesign$, streamDesigns$, streamMockups$, type Mockup } from "../lib/generate-designs";
-import type { ApiKeys } from "../lib/storage";
-import { createComponent } from "../sdk/create-component";
-import type { ConceptWithId } from "./conceptualize.component";
+import { createComponent } from "../../sdk/create-component";
+import type { ConceptWithId } from "../conceptualize/conceptualize.component";
+import type { ApiKeys } from "../connections/storage";
+import "../generative-image/generative-image";
+import type { ArtifactWithId } from "../moodboard/moodboard.component";
+import type { ParameterWithId } from "../parameterize/parameterize.component";
 import "./design.component.css";
-import type { ArtifactWithId } from "./moodboard.component";
-import type { ParameterWithId } from "./parameterize.component";
+import type { Design } from "./generate-designs";
+import { generateManualDesign$, streamDesigns$, streamMockups$, type Mockup } from "./generate-designs";
 
 export interface DesignWithId extends Design {
   id: string;

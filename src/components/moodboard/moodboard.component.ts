@@ -17,16 +17,16 @@ import {
   takeUntil,
   tap,
 } from "rxjs";
+import { createComponent } from "../../sdk/create-component";
+import type { ConceptWithId } from "../conceptualize/conceptualize.component";
+import type { ApiKeys } from "../connections/storage";
 import {
   fileToDataUrl,
   generateArtifactFromImage$,
   regenerateArtifactDescription$,
   streamArtifacts$,
   type Artifact,
-} from "../lib/generate-artifacts";
-import type { ApiKeys } from "../lib/storage";
-import { createComponent } from "../sdk/create-component";
-import type { ConceptWithId } from "./conceptualize.component";
+} from "./generate-artifacts";
 import "./moodboard.component.css";
 
 export interface ArtifactWithId extends Artifact {

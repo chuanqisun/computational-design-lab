@@ -1,13 +1,13 @@
 import { render } from "lit-html";
 import { BehaviorSubject } from "rxjs";
-import { ConceptualizeComponent, type ConceptWithId } from "./components/conceptualize.component";
-import { ConnectionsComponent } from "./components/connections.component";
-import { DesignComponent, type DesignWithId, type MockupWithId } from "./components/design.component";
-import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard.component";
-import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize.component";
-import { PartiComponent } from "./components/parti.component";
-import { FluxImageElement } from "./elements/generative-image";
-import { loadApiKeys, type ApiKeys } from "./lib/storage";
+import { ConceptualizeComponent, type ConceptWithId } from "./components/conceptualize/conceptualize.component";
+import { ConnectionsComponent } from "./components/connections/connections.component";
+import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
+import { DesignComponent, type DesignWithId, type MockupWithId } from "./components/design/design.component";
+import { FluxImageElement } from "./components/generative-image/generative-image";
+import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
+import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
+import { PartiComponent } from "./components/parti/parti.component";
 import "./main.css";
 
 // Register custom elements

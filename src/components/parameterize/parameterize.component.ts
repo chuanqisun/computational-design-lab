@@ -16,12 +16,12 @@ import {
   takeUntil,
   tap,
 } from "rxjs";
-import type { Parameter } from "../lib/generate-parameters";
-import { regenerateParameterDescription$, streamParameters$ } from "../lib/generate-parameters";
-import type { ApiKeys } from "../lib/storage";
-import { createComponent } from "../sdk/create-component";
-import type { ConceptWithId } from "./conceptualize.component";
-import type { ArtifactWithId } from "./moodboard.component";
+import { createComponent } from "../../sdk/create-component";
+import type { ConceptWithId } from "../conceptualize/conceptualize.component";
+import type { ApiKeys } from "../connections/storage";
+import type { ArtifactWithId } from "../moodboard/moodboard.component";
+import type { Parameter } from "./generate-parameters";
+import { regenerateParameterDescription$, streamParameters$ } from "./generate-parameters";
 import "./parameterize.component.css";
 
 export interface ParameterWithId extends Parameter {
