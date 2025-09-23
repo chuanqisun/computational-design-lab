@@ -2,6 +2,7 @@ import { html } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
+import { PropertySlider } from "../property-slider/property-slider.component";
 import { streamProperties$, type Property } from "./scan-properites";
 import "./sepctro-alignment.component.css";
 
@@ -52,11 +53,17 @@ export const SpectroAlignmentComponent = createComponent((props: SpectroAlignmen
   };
 
   const addProperty = () => {
-    properties$.next([...properties$.value, { name: "", lowEnd: "", highEnd: "" }]);
+    properties$.next([...properties$.value, { name: "", lowEnd: "", highEnd: "", value: 3 }]);
   };
 
-  const updateProp = (prop: Property, key: keyof Property, value: string) => {
-    const newProps = properties$.value.map((p) => (p === prop ? { ...p, [key]: value } : p));
+  const updateProperty = (index: number, updatedProperty: Property) => {
+    const newProps = [...properties$.value];
+    newProps[index] = updatedProperty;
+    properties$.next(newProps);
+  };
+
+  const removeProperty = (index: number) => {
+    const newProps = properties$.value.filter((_, i) => i !== index);
     properties$.next(newProps);
   };
 
@@ -70,25 +77,12 @@ export const SpectroAlignmentComponent = createComponent((props: SpectroAlignmen
           <button @click=${addProperty}>Add Property</button>
           ${image ? html`<img src=${image} alt="Loaded image" />` : ""}
           ${properties.map(
-            (prop) => html`
-              <div class="property">
-                <input
-                  type="text"
-                  .value=${prop.name}
-                  @input=${(e: Event) => updateProp(prop, "name", (e.target as HTMLInputElement).value)}
-                />
-                <input
-                  type="text"
-                  .value=${prop.lowEnd}
-                  @input=${(e: Event) => updateProp(prop, "lowEnd", (e.target as HTMLInputElement).value)}
-                />
-                <input type="range" min="1" max="5" value="3" />
-                <input
-                  type="text"
-                  .value=${prop.highEnd}
-                  @input=${(e: Event) => updateProp(prop, "highEnd", (e.target as HTMLInputElement).value)}
-                />
-              </div>
+            (property, index) => html`
+              ${PropertySlider({
+                property,
+                onPropertyChange: (updatedProperty: Property) => updateProperty(index, updatedProperty),
+                onRemove: () => removeProperty(index),
+              })}
             `,
           )}
         </div>

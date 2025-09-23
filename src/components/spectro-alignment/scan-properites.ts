@@ -6,6 +6,7 @@ export interface Property {
   name: string;
   lowEnd: string;
   highEnd: string;
+  value?: number;
 }
 
 export function streamProperties$(params: { image: string; apiKey: string }): Observable<Property> {
