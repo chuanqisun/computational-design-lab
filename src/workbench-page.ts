@@ -5,7 +5,7 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { FluxImageElement } from "./components/generative-image/generative-image";
-import { SpectroAlignmentComponent } from "./components/spectro-alighment/spectro-alignment.component";
+import { SpectroAlignmentComponent } from "./components/spectro-alignment/spectro-alignment.component";
 import { createComponent } from "./sdk/create-component";
 import "./workbench-page.css";
 
