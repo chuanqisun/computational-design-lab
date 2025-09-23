@@ -17,8 +17,8 @@ applyTo: "**"
 ## CSS
 
 - Use CSS variables for any globally used colors
-- Try use existing variables in `main.css`, if nothing suitable, introduce new variables in `main.css`
-- button have form inputs have standard styles in `main.css`, use them as much as possible
+- Try use existing variables in `*.page.css`, if nothing suitable, introduce new variables in `*.page.css`
+- button have form inputs have standard styles in `*.page.css`, use them as much as possible
 
 ## Layout
 
