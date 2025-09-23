@@ -1,5 +1,5 @@
 ---
-applyTo: "**/main-v2.ts"
+applyTo: "**/canvas.ts"
 ---
 
 # Layout

@@ -1,12 +1,12 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
+import "./canvas.css";
 import type { ImageItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { FluxImageElement } from "./components/generative-image/generative-image";
-import "./main-v2.css";
 import { createComponent } from "./sdk/create-component";
 
 // Register custom elements
