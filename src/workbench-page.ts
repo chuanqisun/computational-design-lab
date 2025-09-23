@@ -5,6 +5,7 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { FluxImageElement } from "./components/generative-image/generative-image";
+import { SpectroAlignmentComponent } from "./components/spectro-alighment/spectro-alignment.component";
 import { createComponent } from "./sdk/create-component";
 import "./workbench-page.css";
 
@@ -21,10 +22,26 @@ const Main = createComponent(() => {
     map(() => {
       return html`
         <header class="app-header">
-          <h1>Idea Lab</h1>
+          <h1>Workbench</h1>
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
-        <main class="main"></main>
+        <main class="main">
+          <section class="tool-section">
+            <header class="tool-header">
+              <h2>Spectro Alignment</h2>
+            </header>
+            <div class="tool-content">${SpectroAlignmentComponent({ apiKeys$ })}</div>
+          </section>
+
+          <section class="tool-section">
+            <header class="tool-header">
+              <h2>Conceptual Blender</h2>
+            </header>
+            <div class="tool-content">
+              <!-- Tool implementation placeholder -->
+            </div>
+          </section>
+        </main>
         ${ContextTrayComponent({ images$, apiKeys$ })}
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">
