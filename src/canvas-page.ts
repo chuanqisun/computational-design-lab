@@ -1,6 +1,6 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
-import "./canvas.css";
+import "./canvas-page.css";
 import type { ImageItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";

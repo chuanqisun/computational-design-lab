@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: "**/main-page.ts"
 ---
 
 # System Architecture

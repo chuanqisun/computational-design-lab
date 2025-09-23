@@ -8,7 +8,7 @@ import { FluxImageElement } from "./components/generative-image/generative-image
 import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
 import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
 import { PartiComponent } from "./components/parti/parti.component";
-import "./main.css";
+import "./main-page.css";
 import { createComponent } from "./sdk/create-component";
 
 // Register custom elements

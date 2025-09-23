@@ -34,12 +34,11 @@ applyTo: "**"
 ## File organization
 
 /index.html contains the app root
-/src/main.ts is the main view and logic of the app.
+/src/\*.ts are the main pages of the app.
 /src/lib/ contains lower level functions
 /src/components/ contains reactive UI components using the createComponent pattern
-/src/views/ contains legacy UI components that are being migrated to /src/components/
 
-## main.ts
+## `src/*.ts` main page files
 
 - Top down organization, high level first, low level later
 - Get any static global dom reference first
@@ -47,27 +46,19 @@ applyTo: "**"
 - Instantiate components and pass shared state as props
 - Render components to their respective DOM containers
 
-## RxJS patterns in main.ts
+## RxJS patterns in main page files
 
 - Shared state is hoisted to main.ts and passed down to components
 - Components handle their own internal state and effects
 - No manual subscriptions needed in main.ts as components manage their own reactive behavior
 
-## Components (src/components/)
+## `src/components/*`
 
 - Use the createComponent utility for reactive components
 - Follow the pattern: props -> internal state -> actions -> effects -> template
 - Components receive shared state as Observable props and return reactive templates
 - Effects are handled internally using RxJS merge with ignoreElements()
 
-## views/\*.ts (legacy)
+## `sdk/*.ts`
 
-- These are being migrated to components/
-- They should be pure functions that take data and return lit-html templates
-  - Input: any observables it depends on
-  - Output: lit-html template, and observables if it created new ones for other components to consume
-- Avoid querying DOM (they are not type checkable). Instead pass in observables as parameters
-
-## lib/\*.ts
-
-- They should generally be observables, operators, or pure functions
+- lit-html helper functions for working with observables
