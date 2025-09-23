@@ -5,6 +5,7 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { FluxImageElement } from "./components/generative-image/generative-image";
+import { SemanticScanComponent } from "./components/semantic-scan/semantic-scan.component";
 import { SpectroAlignmentComponent } from "./components/spectro-alignment/spectro-alignment.component";
 import { createComponent } from "./sdk/create-component";
 import "./workbench-page.css";
@@ -26,6 +27,12 @@ const Main = createComponent(() => {
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main">
+          <details>
+            <summary>Semantic Scan</summary>
+            <div class="tool-content">
+              ${SemanticScanComponent({ apiKeys$ })}
+            </div>
+          </details>
           <details>
               <summary>Spectro Alignment</summary>
             </header>

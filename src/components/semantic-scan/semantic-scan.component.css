@@ -1,0 +1,22 @@
+.semantic-scan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.semantic-scan img {
+  max-width: 20rem;
+  max-height: 20rem;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+}
+
+.semantic-scan textarea {
+  min-height: 8rem;
+  field-sizing: content;
+}
+
+.semantic-scan .actions {
+  display: flex;
+  gap: var(--spacing-unit);
+}
