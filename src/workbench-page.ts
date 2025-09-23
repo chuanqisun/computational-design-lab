@@ -26,21 +26,20 @@ const Main = createComponent(() => {
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main">
-          <section class="tool-section">
-            <header class="tool-header">
-              <h2>Spectro Alignment</h2>
+          <details>
+              <summary>Spectro Alignment</summary>
             </header>
             <div class="tool-content">${SpectroAlignmentComponent({ apiKeys$ })}</div>
-          </section>
+          </details>
 
-          <section class="tool-section">
-            <header class="tool-header">
-              <h2>Conceptual Blender</h2>
-            </header>
+          <details>
+            <summary>
+              Conceptual Blender
+            </summary>
             <div class="tool-content">
               <!-- Tool implementation placeholder -->
             </div>
-          </section>
+          </details>
         </main>
         ${ContextTrayComponent({ images$, apiKeys$ })}
         <dialog class="connection-form" id="connection-dialog">
