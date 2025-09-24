@@ -7,11 +7,11 @@ export interface Spectrum {
 
 export const bottleDesignSpectrum: Spectrum[] = [
   {
-    name: "Assertiveness",
+    name: "Intensity",
     description:
       "Captures how forcefully someone expresses themselves, ranging from gentle/soft-spoken to bold/confrontational. Affects conflict style, leadership approach, and social dynamics.",
     leftEndName: "mild",
-    rightEndName: "aggressive",
+    rightEndName: "strong",
   },
   {
     name: "Playfulness",

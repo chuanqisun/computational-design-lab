@@ -2,8 +2,7 @@ import { html } from "lit-html";
 import { BehaviorSubject, combineLatest, from, map, mergeMap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
-import { extrapolateSpectrum$ } from "./extrapolate-spectrum";
-import { generateDescription$ } from "./generate-description";
+import { generateSpectrumImages$ } from "./generate-spectrum-images";
 import "./semantic-scan.component.css";
 import { bottleDesignSpectrum, type Spectrum } from "./spectrums";
 
@@ -14,9 +13,45 @@ interface SemanticScanProps {
 export const SemanticScanComponent = createComponent((props: SemanticScanProps) => {
   // Internal state
   const image$ = new BehaviorSubject<string | null>(null);
-  const description$ = new BehaviorSubject<string>("");
-  const isGenerating$ = new BehaviorSubject<boolean>(false);
-  const extrapolated$ = new BehaviorSubject<Array<{ spectrum: Spectrum; leftEnd: string; rightEnd: string }>>([]);
+  const generatedImages$ = new BehaviorSubject<Array<{ spectrum: Spectrum; leftImage: string; rightImage: string }>>(
+    [],
+  );
+
+  const generateImages = () => {
+    const currentImage = image$.value;
+    if (!currentImage) return;
+
+    const apiKeys = props.apiKeys$.value;
+    const apiKey = apiKeys.gemini;
+    if (!apiKey) {
+      console.error("No Gemini API key");
+      return;
+    }
+
+    generatedImages$.next(bottleDesignSpectrum.map((s) => ({ spectrum: s, leftImage: "", rightImage: "" })));
+
+    from(bottleDesignSpectrum)
+      .pipe(
+        mergeMap((spectrum) =>
+          generateSpectrumImages$({ image: currentImage, spectrum, apiKey }).pipe(
+            map((result) => ({ spectrum, ...result })),
+          ),
+        ),
+      )
+      .subscribe({
+        next: (item) => {
+          const current = generatedImages$.value;
+          const index = current.findIndex((e) => e.spectrum.name === item.spectrum.name);
+          if (index !== -1) {
+            current[index] = item;
+            generatedImages$.next([...current]);
+          }
+        },
+        error: (err) => {
+          console.error(err);
+        },
+      });
+  };
 
   const readClipboard = async () => {
     try {
@@ -28,7 +63,7 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
             const reader = new FileReader();
             reader.onload = () => {
               image$.next(reader.result as string);
-              description$.next(""); // Clear previous description
+              generateImages();
             };
             reader.readAsDataURL(blob);
             return;
@@ -40,119 +75,30 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
     }
   };
 
-  const generateDescription = () => {
-    const currentImage = image$.value;
-    if (!currentImage) return;
-
-    const apiKeys = props.apiKeys$.value;
-    const apiKey = apiKeys.openai;
-    if (!apiKey) {
-      console.error("No OpenAI API key");
-      return;
-    }
-
-    isGenerating$.next(true);
-    generateDescription$({ image: currentImage, apiKey }).subscribe({
-      next: (desc) => {
-        description$.next(desc);
-      },
-      complete: () => {
-        isGenerating$.next(false);
-      },
-      error: (err) => {
-        console.error(err);
-        isGenerating$.next(false);
-      },
-    });
-  };
-
-  const updateDescription = (event: Event) => {
-    const target = event.target as HTMLTextAreaElement;
-    description$.next(target.value);
-  };
-
-  const copyDescription = () => {
-    const desc = description$.value;
-    if (desc) {
-      navigator.clipboard.writeText(desc);
-    }
-  };
-
-  const extrapolate = () => {
-    const currentDescription = description$.value;
-    if (!currentDescription) return;
-
-    const apiKeys = props.apiKeys$.value;
-    const apiKey = apiKeys.openai;
-    if (!apiKey) {
-      console.error("No OpenAI API key");
-      return;
-    }
-
-    extrapolated$.next(bottleDesignSpectrum.map((s) => ({ spectrum: s, leftEnd: "", rightEnd: "" })));
-
-    from(bottleDesignSpectrum)
-      .pipe(
-        mergeMap((spectrum) =>
-          extrapolateSpectrum$({ prompt: currentDescription, spectrum, apiKey }).pipe(
-            map((result) => ({ spectrum, ...result })),
-          ),
-        ),
-      )
-      .subscribe({
-        next: (item) => {
-          const current = extrapolated$.value;
-          const index = current.findIndex((e) => e.spectrum.name === item.spectrum.name);
-          if (index !== -1) {
-            current[index] = item;
-            extrapolated$.next([...current]);
-          }
-        },
-        error: (err) => {
-          console.error(err);
-        },
-      });
-  };
-
   // Template
-  const template$ = combineLatest([image$, description$, isGenerating$, extrapolated$]).pipe(
-    map(([image, description, isGenerating, extrapolated]) => {
+  const template$ = combineLatest([image$, generatedImages$]).pipe(
+    map(([image, generatedImages]) => {
       return html`
         <div class="semantic-scan">
           <div class="actions">
             <button @click=${readClipboard}>Paste Image</button>
-            <button @click=${generateDescription} ?disabled=${!image || isGenerating}>
-              ${isGenerating ? "Generating..." : "Generate Description"}
-            </button>
-            ${description ? html`<button @click=${copyDescription}>Copy Description</button>` : ""}
-            ${description ? html`<button @click=${extrapolate}>Extrapolate</button>` : ""}
           </div>
 
           ${image ? html`<img src=${image} alt="Loaded image" />` : ""}
-          ${description || isGenerating
+          ${generatedImages.length > 0
             ? html`
-                <textarea
-                  placeholder="Generated description will appear here..."
-                  .value=${description}
-                  @input=${updateDescription}
-                  ?disabled=${isGenerating}
-                ></textarea>
-              `
-            : ""}
-          ${extrapolated.length > 0
-            ? html`
-                <div class="extrapolated">
-                  ${extrapolated.map(
+                <div class="generated">
+                  ${generatedImages.map(
                     (item) => html`
                       <div class="spectrum">
                         <h4>${item.spectrum.name}</h4>
                         <div class="end">
                           <span>${item.spectrum.leftEndName}:</span>
-                          <generative-image prompt=${item.leftEnd}></generative-image>
+                          <img src=${item.leftImage} alt=${item.spectrum.leftEndName} />
                         </div>
                         <div class="end">
                           <span>${item.spectrum.rightEndName}:</span>
-                          <generative-image prompt=${item.rightEnd}></generative-image>
+                          <img src=${item.rightImage} alt=${item.spectrum.rightEndName} />
                         </div>
                       </div>
                     `,
