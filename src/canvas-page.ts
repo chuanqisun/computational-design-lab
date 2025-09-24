@@ -26,8 +26,10 @@ const Main = createComponent(() => {
           <h1>IdeaBoard</h1>
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
-        <main class="main">${CanvasComponent({ images$, apiKeys$ })}</main>
-        ${ContextTrayComponent({ images$, apiKeys$ })}
+        <main class="main">
+          <div class="canvas-area">${CanvasComponent({ images$, apiKeys$ })}</div>
+          <div class="context-tray-area">${ContextTrayComponent({ images$, apiKeys$ })}</div>
+        </main>
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">
             ${ConnectionsComponent({ apiKeys$ })}

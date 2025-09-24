@@ -222,20 +222,25 @@ generative-image {
 
 .main {
   flex: 1;
-  position: relative;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+.canvas-area {
+  flex: 1;
   overflow: auto;
 }
 
-.app-context-tray {
-  position: fixed;
-  bottom: 4ch;
-  left: 4ch;
-  right: 4ch;
+.context-tray-area {
+  width: 20rem;
+  flex-shrink: 0;
   background: white;
-  border: 1px solid #eee;
+  border-left: 1px solid #eee;
   padding: 1ch;
-  z-index: 10;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 1ch;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
