@@ -16,6 +16,10 @@ applyTo: "**/canvas-page.ts"
   - When one item is selected: display caption and labels, and suggest more like this
   - When multiple items are selected: display shared pattern, and suggest more like the group## Z-Index
 
+## Resize
+
+- Dragging the divider between main canvas and context tray resizes the width of the tray
+
 Top and Main areas are on the same level.
 
 ## Scroll

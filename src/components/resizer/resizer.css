@@ -1,0 +1,21 @@
+.resizer {
+  width: 2px;
+  cursor: col-resize;
+  user-select: none;
+  position: relative;
+}
+
+.resizer::before {
+  content: "";
+  position: absolute;
+  left: 1.5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #eee;
+}
+
+.resizer:hover::before {
+  transform: scaleX(4);
+  transform-origin: center;
+}

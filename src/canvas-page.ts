@@ -1,5 +1,5 @@
 import { html, render } from "lit-html";
-import { BehaviorSubject, map } from "rxjs";
+import { BehaviorSubject, combineLatest, map } from "rxjs";
 import "./canvas-page.css";
 import type { ImageItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
@@ -7,6 +7,7 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { ResizerComponent } from "./components/resizer/resizer";
 import { createComponent } from "./sdk/create-component";
 
 // Register custom elements
@@ -18,16 +19,18 @@ GenerativeImageElement.define(() => ({
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
   const images$ = new BehaviorSubject<ImageItem[]>([]);
+  const trayWidth$ = new BehaviorSubject(320); // 20rem in px
 
-  const template$ = images$.pipe(
-    map(() => {
+  const template$ = combineLatest([images$, trayWidth$]).pipe(
+    map(([, trayWidth]) => {
       return html`
         <header class="app-header">
           <h1>IdeaBoard</h1>
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
-        <main class="main">
+        <main class="main" style="--tray-width: ${trayWidth}px;">
           <div class="canvas-area">${CanvasComponent({ images$, apiKeys$ })}</div>
+          ${ResizerComponent({ trayWidth$ })}
           <div class="context-tray-area">${ContextTrayComponent({ images$, apiKeys$ })}</div>
         </main>
         <dialog class="connection-form" id="connection-dialog">
