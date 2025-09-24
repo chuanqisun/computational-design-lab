@@ -5,7 +5,7 @@ import type { ApiKeys } from "../connections/storage";
 import { extrapolateSpectrum$ } from "./extrapolate-spectrum";
 import { generateDescription$ } from "./generate-description";
 import "./semantic-scan.component.css";
-import { bottleDesignSpectrum } from "./spectrums";
+import { bottleDesignSpectrum, type Spectrum } from "./spectrums";
 
 interface SemanticScanProps {
   apiKeys$: BehaviorSubject<ApiKeys>;
@@ -16,6 +16,7 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
   const image$ = new BehaviorSubject<string | null>(null);
   const description$ = new BehaviorSubject<string>("");
   const isGenerating$ = new BehaviorSubject<boolean>(false);
+  const extrapolated$ = new BehaviorSubject<Array<{ spectrum: Spectrum; leftEnd: string; rightEnd: string }>>([]);
 
   const readClipboard = async () => {
     try {
@@ -88,11 +89,24 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
       return;
     }
 
+    extrapolated$.next(bottleDesignSpectrum.map((s) => ({ spectrum: s, leftEnd: "", rightEnd: "" })));
+
     from(bottleDesignSpectrum)
-      .pipe(mergeMap((spectrum) => extrapolateSpectrum$({ prompt: currentDescription, spectrum, apiKey })))
+      .pipe(
+        mergeMap((spectrum) =>
+          extrapolateSpectrum$({ prompt: currentDescription, spectrum, apiKey }).pipe(
+            map((result) => ({ spectrum, ...result })),
+          ),
+        ),
+      )
       .subscribe({
-        next: (result) => {
-          console.log(result);
+        next: (item) => {
+          const current = extrapolated$.value;
+          const index = current.findIndex((e) => e.spectrum.name === item.spectrum.name);
+          if (index !== -1) {
+            current[index] = item;
+            extrapolated$.next([...current]);
+          }
         },
         error: (err) => {
           console.error(err);
@@ -101,8 +115,8 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
   };
 
   // Template
-  const template$ = combineLatest([image$, description$, isGenerating$]).pipe(
-    map(([image, description, isGenerating]) => {
+  const template$ = combineLatest([image$, description$, isGenerating$, extrapolated$]).pipe(
+    map(([image, description, isGenerating, extrapolated]) => {
       return html`
         <div class="semantic-scan">
           <div class="actions">
@@ -123,6 +137,27 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
                   @input=${updateDescription}
                   ?disabled=${isGenerating}
                 ></textarea>
+              `
+            : ""}
+          ${extrapolated.length > 0
+            ? html`
+                <div class="extrapolated">
+                  ${extrapolated.map(
+                    (item) => html`
+                      <div class="spectrum">
+                        <h4>${item.spectrum.name}</h4>
+                        <div class="end">
+                          <span>${item.spectrum.leftEndName}:</span>
+                          <generative-image prompt=${item.leftEnd}></generative-image>
+                        </div>
+                        <div class="end">
+                          <span>${item.spectrum.rightEndName}:</span>
+                          <generative-image prompt=${item.rightEnd}></generative-image>
+                        </div>
+                      </div>
+                    `,
+                  )}
+                </div>
               `
             : ""}
         </div>
