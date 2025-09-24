@@ -62,7 +62,8 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
             const blob = await item.getType(type);
             const reader = new FileReader();
             reader.onload = () => {
-              image$.next(reader.result as string);
+              const imageSrc = reader.result as string;
+              image$.next(imageSrc);
               generateImages();
             };
             reader.readAsDataURL(blob);

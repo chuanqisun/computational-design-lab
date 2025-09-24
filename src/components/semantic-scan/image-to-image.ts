@@ -1,25 +1,14 @@
-import { GoogleGenAI, type Part } from "@google/genai";
+import { GoogleGenAI, type GenerateContentConfig } from "@google/genai";
 import { Observable, from } from "rxjs";
-import type { ImageItem } from "../canvas/canvas.component";
 
-/**
- * Use Google Gen AI gemini flash 2.5 image model to edit an image based on user provided instruction.
- * Returns the observable of edited image data url
- */
-export function editImage(input: { instruction: string; image: ImageItem; apiKey: string }): Observable<string> {
+export function imageToimage(input: { instruction: string; image: string; apiKey: string }): Observable<string> {
   return from(
     (async () => {
       const ai = new GoogleGenAI({ apiKey: input.apiKey });
       const model = "gemini-2.5-flash-image-preview";
-      const config = {
+      const config: GenerateContentConfig = {
         responseModalities: ["IMAGE"],
       };
-
-      const parts: Part[] = [
-        {
-          text: input.instruction,
-        },
-      ];
 
       // Helper to parse data URL
       const parseDataUrl = (dataUrl: string) => {
@@ -29,10 +18,7 @@ export function editImage(input: { instruction: string; image: ImageItem; apiKey
       };
 
       // Add the image to parts
-      const { mimeType, data } = parseDataUrl(input.image.src);
-      parts.push({
-        inlineData: { mimeType, data },
-      });
+      const { mimeType, data } = parseDataUrl(input.image);
 
       const response = await ai.models.generateContentStream({
         model,
@@ -42,33 +28,42 @@ export function editImage(input: { instruction: string; image: ImageItem; apiKey
             role: "model",
             parts: [
               {
-                text: `Edit the image according to user provided instruction: ${input.instruction}`,
+                inlineData: { mimeType, data },
               },
             ],
           },
           {
             role: "user",
-            parts,
+            parts: [
+              {
+                text: input.instruction,
+              },
+            ],
           },
         ],
       });
 
-      let imageUrl = "";
+      let imageUrls: string[] = [];
       for await (const chunk of response) {
+        if (chunk.usageMetadata?.totalTokenCount !== undefined) {
+          console.log("Usage metadata:", chunk.usageMetadata);
+        }
+
         if (!chunk.candidates || !chunk.candidates[0].content || !chunk.candidates[0].content.parts) {
           continue;
         }
 
-        const chunkParts = chunk.candidates[0].content.parts;
-        for (const part of chunkParts) {
+        const parts = chunk.candidates[0].content.parts;
+        for (const part of parts) {
           if (part.inlineData) {
             const { mimeType, data } = part.inlineData;
-            imageUrl = `data:${mimeType};base64,${data}`;
+            const imageUrl = `data:${mimeType};base64,${data}`;
+            imageUrls.push(imageUrl);
           }
         }
       }
 
-      return imageUrl;
+      return imageUrls[0] || "";
     })(),
   );
 }
