@@ -1,9 +1,11 @@
 import { html } from "lit-html";
-import { BehaviorSubject, combineLatest, map } from "rxjs";
+import { BehaviorSubject, combineLatest, from, map, mergeMap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
+import { extrapolateSpectrum$ } from "./extrapolate-spectrum";
 import { generateDescription$ } from "./generate-description";
 import "./semantic-scan.component.css";
+import { bottleDesignSpectrum } from "./spectrums";
 
 interface SemanticScanProps {
   apiKeys$: BehaviorSubject<ApiKeys>;
@@ -75,6 +77,29 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
     }
   };
 
+  const extrapolate = () => {
+    const currentDescription = description$.value;
+    if (!currentDescription) return;
+
+    const apiKeys = props.apiKeys$.value;
+    const apiKey = apiKeys.openai;
+    if (!apiKey) {
+      console.error("No OpenAI API key");
+      return;
+    }
+
+    from(bottleDesignSpectrum)
+      .pipe(mergeMap((spectrum) => extrapolateSpectrum$({ prompt: currentDescription, spectrum, apiKey })))
+      .subscribe({
+        next: (result) => {
+          console.log(result);
+        },
+        error: (err) => {
+          console.error(err);
+        },
+      });
+  };
+
   // Template
   const template$ = combineLatest([image$, description$, isGenerating$]).pipe(
     map(([image, description, isGenerating]) => {
@@ -86,6 +111,7 @@ export const SemanticScanComponent = createComponent((props: SemanticScanProps) 
               ${isGenerating ? "Generating..." : "Generate Description"}
             </button>
             ${description ? html`<button @click=${copyDescription}>Copy Description</button>` : ""}
+            ${description ? html`<button @click=${extrapolate}>Extrapolate</button>` : ""}
           </div>
 
           ${image ? html`<img src=${image} alt="Loaded image" />` : ""}

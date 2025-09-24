@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { from, Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import { generateImage, type FluxConnection, type GenerateImageOptions } from "../design/generate-image";
+import { generateImage, type FluxConnection, type GenerateImageOptions } from "../design/generate-image-flux";
 import type { ApiKeys } from "./storage";
 
 export interface TestConnectionRequest {

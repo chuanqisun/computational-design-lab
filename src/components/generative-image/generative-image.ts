@@ -1,7 +1,8 @@
 import { html, render } from "lit-html";
 import { combineLatest, concat, of, Subject } from "rxjs";
 import { catchError, distinctUntilChanged, map, switchMap, tap } from "rxjs/operators";
-import { generateImage, type FluxConnection } from "../design/generate-image";
+import { generateImage as generateImageFlux, type FluxConnection } from "../design/generate-image-flux";
+import { generateImage as generateImageGemini } from "../design/generate-image-gemini";
 import "./generative-image.css";
 
 type Status = "empty" | "loading" | "error" | "success";
@@ -12,16 +13,19 @@ interface ImageState {
   altText: string;
 }
 
-const isDevMode = new URLSearchParams(window.location.search).has("dev");
+interface ImageConnections {
+  flux: FluxConnection;
+  gemini: FluxConnection;
+}
 
-export class FluxImageElement extends HTMLElement {
-  static getConnection: () => FluxConnection;
+export class GenerativeImageElement extends HTMLElement {
+  static getConnections: () => ImageConnections;
   static observedAttributes = ["prompt", "width", "height", "placeholderSrc", "model"];
 
-  static define(getConnection: () => FluxConnection, tagName = "generative-image") {
+  static define(getConnections: () => ImageConnections, tagName = "generative-image") {
     if (!customElements.get(tagName)) {
       customElements.define(tagName, this);
-      FluxImageElement.getConnection = getConnection;
+      GenerativeImageElement.getConnections = getConnections;
     }
   }
 
@@ -51,9 +55,7 @@ export class FluxImageElement extends HTMLElement {
         width: parseInt(this.getAttribute("width") ?? "400"),
         height: parseInt(this.getAttribute("height") ?? "400"),
         placeholderSrc: this.getAttribute("placeholderSrc"),
-        model:
-          this.getAttribute("model") ??
-          (isDevMode ? "black-forest-labs/FLUX.1-schnell-free" : "black-forest-labs/FLUX.1-schnell"),
+        model: this.getAttribute("model") ?? undefined,
         retryCounter: this.retryCounter,
       })),
       distinctUntilChanged(
@@ -83,9 +85,13 @@ export class FluxImageElement extends HTMLElement {
         };
 
         try {
-          const connection = FluxImageElement.getConnection();
+          const connections = GenerativeImageElement.getConnections();
+          const isFlux = attrs.model && attrs.model.startsWith("black-forest-labs/");
+          const useGemini = !attrs.model || !isFlux;
+          const connection = useGemini ? connections.gemini : connections.flux;
+          const generateFn = useGemini ? generateImageGemini : generateImageFlux;
 
-          const generation$ = generateImage(connection, {
+          const generation$ = generateFn(connection, {
             prompt: attrs.prompt,
             width: attrs.width,
             height: attrs.height,

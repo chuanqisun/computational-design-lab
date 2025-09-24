@@ -158,7 +158,6 @@ generative-image {
   position: relative;
   overflow: auto;
   padding: var(--spacing-unit);
-  max-width: 90rem;
 }
 
 .main details {

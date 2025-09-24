@@ -114,7 +114,7 @@ async function main() {
     apiKey: "YOUR_GEMINI_API_KEY", // In browser, get from user input or secure storage
   });
   const config = {
-    responseModalities: ["IMAGE", "TEXT"],
+    responseModalities: ["IMAGE"],
   };
   const model = "gemini-2.5-flash-image-preview";
   const contents = [
@@ -171,6 +171,44 @@ async function main() {
 
   // Return or use the image URLs and text
   return { imageUrls, textContent };
+}
+
+main();
+```
+
+## Text to Image
+
+```ts
+import { GoogleGenAI } from "@google/genai";
+
+function saveBinaryFile(fileName: string, content: Buffer) {
+  writeFile(fileName, content, "utf8", (err) => {
+    if (err) {
+      console.error(`Error writing file ${fileName}:`, err);
+      return;
+    }
+    console.log(`File ${fileName} saved to file system.`);
+  });
+}
+
+async function main() {
+  const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+  const config = {
+    responseModalities: ["IMAGE"],
+  };
+  const model = "gemini-2.5-flash-image-preview";
+  const contents = [
+    {
+      role: "user",
+      parts: [
+        {
+          text: `INSERT_INPUT_HERE`,
+        },
+      ],
+    },
+  ];
 }
 
 main();

@@ -4,7 +4,7 @@ import { ConceptualizeComponent, type ConceptWithId } from "./components/concept
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { DesignComponent, type DesignWithId, type MockupWithId } from "./components/design/design.component";
-import { FluxImageElement } from "./components/generative-image/generative-image";
+import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
 import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
 import { PartiComponent } from "./components/parti/parti.component";
@@ -12,8 +12,9 @@ import "./main-page.css";
 import { createComponent } from "./sdk/create-component";
 
 // Register custom elements
-FluxImageElement.define(() => ({
-  apiKey: loadApiKeys().together || "",
+GenerativeImageElement.define(() => ({
+  flux: { apiKey: loadApiKeys().together || "" },
+  gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 
 const Main = createComponent(() => {
