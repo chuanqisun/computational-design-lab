@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Observable } from "rxjs";
 
-export interface FluxConnection {
+export interface GeminiConnection {
   apiKey: string;
 }
 
@@ -17,7 +17,7 @@ export interface GenerateImageResult {
 }
 
 export function generateImage(
-  connection: FluxConnection,
+  connection: GeminiConnection,
   options: GenerateImageOptions,
 ): Observable<GenerateImageResult> {
   return new Observable<GenerateImageResult>((subscriber) => {

@@ -49,7 +49,12 @@ export const VisualizeTool = createComponent(
       mergeMap(([vizTypeId, selectedTexts, apiKeys]) => {
         const vizType = visualizationTypes.find((type) => type.id === vizTypeId);
 
-        if (selectedTexts.length === 0 || !vizType || !apiKeys.openai) {
+        if (selectedTexts.length === 0 || !vizType) {
+          return EMPTY;
+        }
+
+        if (!apiKeys.gemini || !apiKeys.openai) {
+          console.warn("No Gemini API key provided.");
           return EMPTY;
         }
 
@@ -61,11 +66,12 @@ export const VisualizeTool = createComponent(
         return visualizeConcept$({
           concept,
           instruction: vizType.instruction,
-          apiKey: apiKeys.openai,
+          openaiApiKey: apiKeys.openai,
+          geminiApiKey: apiKeys.gemini,
         }).pipe(
           tap((url) => {
             const newImage: ImageItem = {
-              id: `image-${Date.now()}`,
+              id: `img-${crypto.randomUUID()}`,
               type: "image",
               src: url,
               x: Math.random() * 400 + 50,

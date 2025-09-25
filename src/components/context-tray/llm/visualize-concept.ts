@@ -1,24 +1,22 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
-import { Observable, map, mergeMap, tap } from "rxjs";
-import { generateImage, type FluxConnection } from "../../design/generate-image-gemini";
+import { Observable, map, mergeMap } from "rxjs";
+import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
 import type { Concept } from "./scan-concepts";
 
 export interface VisualizeConceptProps {
   concept: Concept;
   instruction: string;
-  apiKey: string;
+  openaiApiKey: string;
+  geminiApiKey: string;
 }
 
 /**
  * Take a textual concept and instruction, emit a stream of image URLs visualizing the concept.
  */
 export function visualizeConcept$(props: VisualizeConceptProps): Observable<string> {
-  const connection: FluxConnection = { apiKey: props.apiKey };
+  const connection: GeminiConnection = { apiKey: props.geminiApiKey };
   return createRenderPrompt(props).pipe(
-    tap((prompt) => {
-      console.log("Generated prompt:", prompt);
-    }),
     mergeMap((prompt) =>
       generateImage(connection, {
         prompt,
@@ -39,7 +37,7 @@ export function createRenderPrompt(props: VisualizeConceptProps): Observable<str
 
     const openai = new OpenAI({
       dangerouslyAllowBrowser: true,
-      apiKey: props.apiKey,
+      apiKey: props.openaiApiKey,
     });
 
     const parser = new JSONParser();
@@ -49,8 +47,8 @@ export function createRenderPrompt(props: VisualizeConceptProps): Observable<str
       // Check if this is an array item under the "prompts" key
       if (
         typeof (entry as any).key === "number" &&
-        (entry as any).parent?.key === "prompts" &&
-        typeof entry.value === "string"
+        typeof entry.value === "string" &&
+        Array.isArray((entry as any).parent)
       ) {
         subscriber.next(entry.value);
       }
