@@ -3,6 +3,18 @@ import { BehaviorSubject, Subject, combineLatest, ignoreElements, map, mergeWith
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
 import "./canvas.component.css";
+import { processClipboardPaste } from "./clipboard";
+import {
+  calculateFinalPositions,
+  calculateSelectionUpdate,
+  deselectAll,
+  getModifierKeys,
+  isCanvasDirectClick,
+  prepareDragData,
+  updateDragPositions,
+  updateZIndex,
+  type SelectionState,
+} from "./pointer";
 
 export interface CanvasItem {
   id: string;
@@ -134,109 +146,63 @@ export const CanvasComponent = createComponent(
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
       e.stopPropagation(); // Prevent canvas click when clicking on item
 
-      const isCtrlPressed = e.ctrlKey || e.metaKey;
-      const isShiftPressed = e.shiftKey;
-      const currentImages = props.images$.value;
-      const currentTexts = props.texts$.value;
+      const { isCtrl, isShift } = getModifierKeys(e);
+      const currentState: SelectionState = {
+        images: props.images$.value,
+        texts: props.texts$.value,
+      };
 
-      // Handle selection logic based on item type
-      const isAlreadySelected = item.isSelected;
-      let updatedImages: ImageItem[] = currentImages;
-      let updatedTexts: TextItem[] = currentTexts;
-
-      if (item.type === "image") {
-        if (isCtrlPressed || isShiftPressed) {
-          // Toggle selection for multi-select
-          updatedImages = currentImages.map((img) =>
-            img.id === item.id ? { ...img, isSelected: !img.isSelected } : img,
-          );
-        } else if (!isAlreadySelected) {
-          // Single select - deselect all others, select this one
-          updatedImages = currentImages.map((img) => ({
-            ...img,
-            isSelected: img.id === item.id,
-          }));
-        }
-        // Deselect texts when selecting images
-        updatedTexts = currentTexts.map((txt) => ({ ...txt, isSelected: false }));
-      } else if (item.type === "text") {
-        if (isCtrlPressed || isShiftPressed) {
-          // Toggle selection for multi-select
-          updatedTexts = currentTexts.map((txt) =>
-            txt.id === item.id ? { ...txt, isSelected: !txt.isSelected } : txt,
-          );
-        } else if (!isAlreadySelected) {
-          // Single select - deselect all others, select this one
-          updatedTexts = currentTexts.map((txt) => ({
-            ...txt,
-            isSelected: txt.id === item.id,
-          }));
-        }
-        // Deselect images when selecting texts
-        updatedImages = currentImages.map((img) => ({ ...img, isSelected: false }));
-      }
-
-      props.images$.next(updatedImages);
-      props.texts$.next(updatedTexts);
+      // Calculate selection update
+      const selectionUpdate = calculateSelectionUpdate(item, currentState, isCtrl, isShift);
+      props.images$.next(selectionUpdate.images);
+      props.texts$.next(selectionUpdate.texts);
 
       // Check if the clicked item is selected after update
       const updatedItem =
         item.type === "image"
-          ? updatedImages.find((img) => img.id === item.id)
-          : updatedTexts.find((txt) => txt.id === item.id);
+          ? selectionUpdate.images.find((img) => img.id === item.id)
+          : selectionUpdate.texts.find((txt) => txt.id === item.id);
 
       if (!updatedItem?.isSelected) return;
 
       // Bring the clicked item to the top
       if (item.type === "image") {
-        const index = updatedImages.findIndex((img) => img.id === item.id);
+        const index = selectionUpdate.images.findIndex((img) => img.id === item.id);
         if (index !== -1) {
-          updatedImages[index] = { ...updatedImages[index], zIndex: ++zSeq };
-          props.images$.next([...updatedImages]);
+          selectionUpdate.images[index] = { ...selectionUpdate.images[index], zIndex: ++zSeq };
+          props.images$.next([...selectionUpdate.images]);
         }
       } else {
-        const index = updatedTexts.findIndex((txt) => txt.id === item.id);
+        const index = selectionUpdate.texts.findIndex((txt) => txt.id === item.id);
         if (index !== -1) {
-          updatedTexts[index] = { ...updatedTexts[index], zIndex: ++zSeq };
-          props.texts$.next([...updatedTexts]);
+          selectionUpdate.texts[index] = { ...selectionUpdate.texts[index], zIndex: ++zSeq };
+          props.texts$.next([...selectionUpdate.texts]);
         }
       }
 
       // Get all selected items to drag
-      const selectedImages = updatedImages.filter((img) => img.isSelected);
-      const selectedTexts = updatedTexts.filter((txt) => txt.isSelected);
-      const allSelectedItems = [...selectedImages, ...selectedTexts];
+      const selectedImages = selectionUpdate.images.filter((img) => img.isSelected);
+      const selectedTexts = selectionUpdate.texts.filter((txt) => txt.isSelected);
+      const allSelectedItems: CanvasItem[] = [
+        ...selectedImages.map((img): CanvasItem => ({ ...img, type: "image" as const })),
+        ...selectedTexts.map((txt): CanvasItem => ({ ...txt, type: "text" as const })),
+      ];
 
       const canvas = (e.currentTarget as HTMLElement).parentElement as HTMLElement;
-      const draggedData = allSelectedItems.map((dragItem) => {
-        const cssClass = dragItem.id.startsWith("img-") ? "canvas-image" : "canvas-text";
-        const el = canvas.querySelector(`.${cssClass}[data-id="${dragItem.id}"]`) as HTMLElement;
-        const offsetX = e.clientX - dragItem.x;
-        const offsetY = e.clientY - dragItem.y;
-        el.style.zIndex = String(++zSeq);
-        return { el, offsetX, offsetY, item: dragItem };
-      });
+      const draggedData = prepareDragData(canvas, allSelectedItems, e);
 
-      // Bring the clicked item to the top
-      (e.currentTarget as HTMLElement).style.zIndex = String(++zSeq);
+      // Update z-index for dragged elements
+      const elements = draggedData.map(({ el }) => el);
+      zSeq = updateZIndex(elements, zSeq);
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
-        draggedData.forEach(({ el, offsetX, offsetY }) => {
-          const x = moveEvent.clientX - offsetX;
-          const y = moveEvent.clientY - offsetY;
-          el.style.left = `${x}px`;
-          el.style.top = `${y}px`;
-        });
+        updateDragPositions(draggedData, moveEvent);
       };
 
       const handleMouseUp = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-        const newPositions = draggedData.map(({ el, item: dragItem }) => {
-          const x = parseFloat(el.style.left || "0");
-          const y = parseFloat(el.style.top || "0");
-          return { id: dragItem.id, x, y };
-        });
+        const newPositions = calculateFinalPositions(draggedData);
         moveItems$.next({ moves: newPositions });
       };
 
@@ -247,50 +213,23 @@ export const CanvasComponent = createComponent(
     // Handle canvas click to deselect all
     const handleCanvasClick = (e: MouseEvent) => {
       // Only deselect if clicking directly on canvas (not on an image)
-      if (e.target === e.currentTarget) {
-        const currentImages = props.images$.value;
-        const updatedImages = currentImages.map((img) => ({ ...img, isSelected: false }));
-        props.images$.next(updatedImages);
-        const currentTexts = props.texts$.value;
-        const updatedTexts = currentTexts.map((txt) => ({ ...txt, isSelected: false }));
-        props.texts$.next(updatedTexts);
+      if (isCanvasDirectClick(e)) {
+        const currentState: SelectionState = {
+          images: props.images$.value,
+          texts: props.texts$.value,
+        };
+        const selectionUpdate = deselectAll(currentState);
+        props.images$.next(selectionUpdate.images);
+        props.texts$.next(selectionUpdate.texts);
       }
     };
 
     // Handle paste event
     const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.indexOf("image") !== -1) {
-          const file = item.getAsFile();
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const src = e.target?.result as string;
-              pasteImage$.next(src);
-            };
-            reader.readAsDataURL(file);
-          }
-        }
-      }
-
-      const textPlain = event.clipboardData?.getData("text/plain");
-      if (textPlain && textPlain.trim()) {
-        pasteText$.next(textPlain);
-      } else {
-        const textHtml = event.clipboardData?.getData("text/html");
-        if (textHtml) {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(textHtml, "text/html");
-          const text = doc.body.textContent || "";
-          if (text && text.trim()) {
-            pasteText$.next(text);
-          }
-        }
-      }
+      processClipboardPaste(event).subscribe((action) => {
+        if (action.type === "image") pasteImage$.next(action.src);
+        else pasteText$.next(action.content);
+      });
     };
 
     // Handle keydown event for delete/backspace
