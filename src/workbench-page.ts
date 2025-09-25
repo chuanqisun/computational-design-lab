@@ -1,6 +1,6 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
-import type { ImageItem } from "./components/canvas/canvas.component";
+import type { ImageItem, TextItem } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
@@ -19,6 +19,7 @@ GenerativeImageElement.define(() => ({
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
   const images$ = new BehaviorSubject<ImageItem[]>([]);
+  const texts$ = new BehaviorSubject<TextItem[]>([]);
 
   const template$ = images$.pipe(
     map(() => {
@@ -49,7 +50,7 @@ const Main = createComponent(() => {
             </div>
           </details>
         </main>
-        ${ContextTrayComponent({ images$, apiKeys$ })}
+        ${ContextTrayComponent({ images$, texts$, apiKeys$ })}
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">
             ${ConnectionsComponent({ apiKeys$ })}

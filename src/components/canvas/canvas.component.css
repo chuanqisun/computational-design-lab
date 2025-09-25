@@ -12,6 +12,51 @@
   outline: 2px solid var(--color-text-active);
 }
 
+.canvas-item {
+  position: absolute;
+  cursor: move;
+  border: 1px solid #ccc;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  user-select: none;
+}
+
+.canvas-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.canvas-item.text {
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: flex-start;
+}
+
+.canvas-item.text .text-title {
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+
+.canvas-item:hover {
+  outline: 3px solid var(--color-selection-outline);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-item.selected {
+  outline: 3px solid var(--color-selection-outline);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Legacy classes for backward compatibility */
 .canvas-image {
   position: absolute;
   cursor: move;
@@ -35,6 +80,39 @@
 }
 
 .canvas-image.selected {
+  outline: 3px solid var(--color-selection-outline);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.canvas-text {
+  position: absolute;
+  cursor: move;
+  border: 1px solid #ccc;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: flex-start;
+}
+
+.canvas-text .text-title {
+  font-weight: bold;
+  color: var(--color-text-primary);
+}
+
+.canvas-text:hover {
+  outline: 3px solid var(--color-selection-outline);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-text.selected {
   outline: 3px solid var(--color-selection-outline);
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.1),

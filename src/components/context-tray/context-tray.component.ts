@@ -1,29 +1,57 @@
 import { html } from "lit-html";
-import { BehaviorSubject, map } from "rxjs";
+import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
-import type { ImageItem } from "../canvas/canvas.component";
+import type { ImageItem, TextItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
 import { DownloadTool } from "./tools/download.tool";
 
 export const ContextTrayComponent = createComponent(
-  ({ images$, apiKeys$ }: { images$: BehaviorSubject<ImageItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
-    const template$ = images$.pipe(
-      map((images) => {
-        const selected = images.filter((img) => img.isSelected);
-        if (selected.length === 0) return html``;
+  ({
+    images$,
+    texts$,
+    apiKeys$,
+  }: {
+    images$: BehaviorSubject<ImageItem[]>;
+    texts$: BehaviorSubject<TextItem[]>;
+    apiKeys$: BehaviorSubject<ApiKeys>;
+  }) => {
+    const template$ = combineLatest([images$, texts$]).pipe(
+      map(([images, texts]) => {
+        const selectedImages = images.filter((img: ImageItem) => img.isSelected);
+        const selectedTexts = texts.filter((txt: TextItem) => txt.isSelected);
+        const totalSelected = selectedImages.length + selectedTexts.length;
 
-        const toolUI =
-          selected.length === 1
-            ? DownloadTool({ selectedImages: selected })
-            : selected.length >= 2
-              ? BlendTool({ selectedImages: selected, images$, apiKeys$ })
+        if (totalSelected === 0) return html``;
+
+        const imageToolUI =
+          selectedImages.length === 1
+            ? DownloadTool({ selectedImages })
+            : selectedImages.length >= 2
+              ? BlendTool({ selectedImages, images$, apiKeys$ })
               : html``;
 
+        const textContentUI =
+          selectedTexts.length > 0
+            ? html`
+                <div class="text-content-section">
+                  <h3>Text Content</h3>
+                  ${selectedTexts.map(
+                    (txt: TextItem) => html`
+                      <div class="text-item-content">
+                        <h4>${txt.title}</h4>
+                        <div class="text-content">${txt.content}</div>
+                      </div>
+                    `,
+                  )}
+                </div>
+              `
+            : html``;
+
         return html`<aside class="context-tray">
-          <p>${selected.length === 1 ? `1 item` : `${selected.length} items`}</p>
-          ${toolUI}
+          <p>${totalSelected === 1 ? `1 item` : `${totalSelected} items`}</p>
+          ${imageToolUI} ${textContentUI}
         </aside>`;
       }),
     );
