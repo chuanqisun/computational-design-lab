@@ -1,9 +1,8 @@
 import { html } from "lit-html";
-import { BehaviorSubject, EMPTY, Subject, ignoreElements, map, mergeMap, mergeWith, tap } from "rxjs";
+import { BehaviorSubject, Subject, ignoreElements, map, mergeWith, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
 import "./canvas.component.css";
-import { getCaption } from "./get-caption";
 
 export interface ImageItem {
   id: string;
@@ -12,7 +11,6 @@ export interface ImageItem {
   y: number;
   width: number;
   height: number;
-  caption: string;
   isSelected?: boolean;
 }
 
@@ -29,31 +27,16 @@ export const CanvasComponent = createComponent(
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
-      mergeMap((src) => {
+      map((src) => {
         const newImage: ImageItem = {
           id: `img-${Date.now()}`,
           src,
           x: Math.random() * 400, // Random position
           y: Math.random() * 400,
-          caption: "",
           width: 200,
           height: 200,
         };
         props.images$.next([...props.images$.value, newImage]);
-
-        // Generate caption using OpenAI
-        const apiKey = props.apiKeys$.value.openai;
-        if (apiKey) {
-          return getCaption(src, apiKey).pipe(
-            tap((caption) => {
-              const current = props.images$.value;
-              const updated = current.map((img) => (img.id === newImage.id ? { ...img, caption } : img));
-              props.images$.next(updated);
-            }),
-          );
-        } else {
-          return EMPTY;
-        }
       }),
     );
 

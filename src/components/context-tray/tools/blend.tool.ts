@@ -1,8 +1,7 @@
 import { html } from "lit-html";
-import { BehaviorSubject, EMPTY, ignoreElements, map, mergeMap, mergeWith, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, EMPTY, ignoreElements, map, mergeMap, mergeWith, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { ImageItem } from "../../canvas/canvas.component";
-import { getCaption } from "../../canvas/get-caption";
 import type { ApiKeys } from "../../connections/storage";
 import { blendImages } from "../blend-images";
 
@@ -26,7 +25,7 @@ export const BlendTool = createComponent(
           return EMPTY;
         }
         return blendImages({ instruction: instruction.trim(), images: selectedImages, apiKey: apiKeys.gemini }).pipe(
-          mergeMap((blendedSrc) => {
+          map((blendedSrc) => {
             const newImage: ImageItem = {
               id: `blended-${Date.now()}`,
               src: blendedSrc,
@@ -34,22 +33,9 @@ export const BlendTool = createComponent(
               y: Math.random() * 400,
               width: 200,
               height: 200,
-              caption: `(blended)`,
               isSelected: false,
             };
             images$.next([...images$.value, newImage]);
-
-            if (apiKeys.openai) {
-              return getCaption(blendedSrc, apiKeys.openai).pipe(
-                tap((caption) => {
-                  const current = images$.value;
-                  const updated = current.map((img) => (img.id === newImage.id ? { ...img, caption } : img));
-                  images$.next(updated);
-                }),
-              );
-            } else {
-              return EMPTY;
-            }
           }),
         );
       }),

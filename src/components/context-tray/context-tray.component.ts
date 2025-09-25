@@ -22,7 +22,7 @@ export const ContextTrayComponent = createComponent(
               : html``;
 
         return html`<aside class="context-tray">
-          <p>${selected.length === 1 ? `Caption: ${selected[0].caption}` : `${selected.length} items`}</p>
+          <p>${selected.length === 1 ? `1 item` : `${selected.length} items`}</p>
           ${toolUI}
         </aside>`;
       }),
