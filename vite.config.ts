@@ -11,7 +11,6 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         canvas: resolve(__dirname, "canvas.html"),
-        workbench: resolve(__dirname, "workbench.html"),
       },
     },
   },
