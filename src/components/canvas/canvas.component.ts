@@ -1,7 +1,8 @@
 import { html } from "lit-html";
-import { BehaviorSubject, Subject, combineLatest, ignoreElements, map, mergeWith, tap } from "rxjs";
+import { BehaviorSubject, Subject, catchError, combineLatest, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
+import { generateTitle } from "../context-tray/llm/generate-title";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
 import {
@@ -65,6 +66,7 @@ export const CanvasComponent = createComponent(
     const pasteText$ = new Subject<string>();
     const moveItems$ = new Subject<{ moves: { id: string; x: number; y: number }[] }>();
     const deleteSelected$ = new Subject<void>();
+    const updateTextTitle$ = new Subject<{ id: string; title: string }>();
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
@@ -83,9 +85,10 @@ export const CanvasComponent = createComponent(
     );
 
     const pasteTextEffect$ = pasteText$.pipe(
-      map((text) => {
+      tap((text) => {
+        const textId = `text-${Date.now()}`;
         const newText: TextItem = {
-          id: `text-${Date.now()}`,
+          id: textId,
           title: "Text",
           content: text,
           x: Math.random() * 400,
@@ -95,6 +98,18 @@ export const CanvasComponent = createComponent(
           zIndex: ++zSeq,
         };
         props.texts$.next([...props.texts$.value, newText]);
+
+        // Generate title for the new text item
+        const apiKey = props.apiKeys$.value.openai;
+        if (apiKey) {
+          generateTitle({ fullText: text, apiKey })
+            .pipe(
+              catchError(() => of("Text")), // Fallback to "Text" if generation fails
+            )
+            .subscribe((generatedTitle) => {
+              updateTextTitle$.next({ id: textId, title: generatedTitle });
+            });
+        }
       }),
     );
 
@@ -139,6 +154,14 @@ export const CanvasComponent = createComponent(
         props.images$.next(updatedImages);
         const currentTexts = props.texts$.value;
         const updatedTexts = currentTexts.filter((txt) => !txt.isSelected);
+        props.texts$.next(updatedTexts);
+      }),
+    );
+
+    const updateTitleEffect$ = updateTextTitle$.pipe(
+      tap(({ id, title }) => {
+        const currentTexts = props.texts$.value;
+        const updatedTexts = currentTexts.map((txt) => (txt.id === id ? { ...txt, title } : txt));
         props.texts$.next(updatedTexts);
       }),
     );
@@ -267,10 +290,11 @@ export const CanvasComponent = createComponent(
                   <div
                     class="canvas-item canvas-text text ${item.isSelected ? "selected" : ""}"
                     data-id="${item.id}"
-                    style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex || 0};"
+                    style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
+                    0};"
                     @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
                   >
-                    <div class="text-title"></div>${item.title}</div>
+                    <div class="text-title">${item.title}</div>
                   </div>
                 `;
               }
@@ -287,6 +311,7 @@ export const CanvasComponent = createComponent(
         pasteTextEffect$.pipe(ignoreElements()),
         moveEffect$.pipe(ignoreElements()),
         deleteEffect$.pipe(ignoreElements()),
+        updateTitleEffect$.pipe(ignoreElements()),
       ),
     );
   },

@@ -36,12 +36,16 @@
   overflow: hidden;
   white-space: nowrap;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-item.text .text-title {
   font-weight: bold;
   color: var(--color-text-primary);
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: center;
 }
 
 .canvas-item:hover {
