@@ -44,7 +44,7 @@ export function blendImages(input: { instruction: string; images: ImageItem[]; a
             role: "model",
             parts: [
               {
-                text: `Blend the images according to user provided instruction: ${input.instruction}`,
+                text: input.instruction,
               },
             ],
           },
