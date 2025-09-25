@@ -20,6 +20,10 @@ const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
   const items$ = new BehaviorSubject<CanvasItem[]>([]);
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
+  const canvasUI = CanvasComponent({ items$, apiKeys$ });
+  const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
+  const resizerUI = ResizerComponent({ trayWidth$ });
+  const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
   const template$ = combineLatest([items$, trayWidth$]).pipe(
     map(([, trayWidth]) => {
@@ -29,13 +33,13 @@ const Main = createComponent(() => {
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main" style="--tray-width: ${trayWidth}px;">
-          <div class="canvas-area">${CanvasComponent({ items$, apiKeys$ })}</div>
-          ${ResizerComponent({ trayWidth$ })}
-          <div class="context-tray-area">${ContextTrayComponent({ items$, apiKeys$ })}</div>
+          <div class="canvas-area">${canvasUI}</div>
+          ${resizerUI}
+          <div class="context-tray-area">${contextTrayUI}</div>
         </main>
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">
-            ${ConnectionsComponent({ apiKeys$ })}
+            ${connectionsUI}
             <form method="dialog">
               <button>Close</button>
             </form>
