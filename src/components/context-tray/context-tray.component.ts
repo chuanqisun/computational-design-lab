@@ -25,32 +25,11 @@ export const ContextTrayComponent = createComponent(
     const selectedImages$ = images$.pipe(map((images) => images.filter((img: ImageItem) => img.isSelected)));
     const selectedTexts$ = texts$.pipe(map((texts) => texts.filter((txt: TextItem) => txt.isSelected)));
 
-    const conceptualScanUI = ConceptualScanTool({
-      selectedImages$,
-      selectedTexts$,
-      items$,
-      apiKeys$,
-    });
-
-    const textContentUI = TextContentTool({
-      selectedTexts$,
-    });
-
-    const visualizeUI = VisualizeTool({
-      selectedTexts$,
-      items$,
-      apiKeys$,
-    });
-
-    const blendToolUI = BlendTool({
-      selectedImages$,
-      items$,
-      apiKeys$,
-    });
-
-    const downloadToolTUI = DownloadTool({
-      selectedImages$,
-    });
+    const conceptualScanUI = ConceptualScanTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
+    const textContentUI = TextContentTool({ selectedTexts$ });
+    const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
+    const blendToolUI = BlendTool({ selectedImages$, items$, apiKeys$ });
+    const downloadToolTUI = DownloadTool({ selectedImages$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
       map(([selectedImages, selectedTexts]) => {
