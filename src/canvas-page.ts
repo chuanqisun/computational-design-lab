@@ -25,7 +25,7 @@ const Main = createComponent(() => {
     map(([, trayWidth]) => {
       return html`
         <header class="app-header">
-          <h1>IdeaBoard</h1>
+          <h1>Computational Mood Board</h1>
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main" style="--tray-width: ${trayWidth}px;">
