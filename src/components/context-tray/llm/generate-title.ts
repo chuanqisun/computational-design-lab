@@ -7,7 +7,7 @@ export interface GenerateTitleProps {
   apiKey: string;
 }
 
-export function generateTitle(props: GenerateTitleProps): Observable<string> {
+export function generateTitle$(props: GenerateTitleProps): Observable<string> {
   return from(
     (async () => {
       const openai = new OpenAI({

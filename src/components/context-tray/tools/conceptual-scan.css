@@ -1,0 +1,26 @@
+.conceptual-scan-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+.scan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5ch;
+}
+
+.scan-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5ch;
+  cursor: pointer;
+}
+
+.scan-option input[type="radio"] {
+  margin: 0;
+}
+
+.scan-label {
+  font-size: 14px;
+}

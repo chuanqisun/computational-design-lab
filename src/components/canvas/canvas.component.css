@@ -1,7 +1,7 @@
 .canvas {
   position: relative;
-  width: 2000px;
-  height: 2000px;
+  width: 8000px;
+  height: 8000px;
   background: var(--page-background);
   background-image: radial-gradient(circle, var(--color-text-tertiary) 1px, transparent 1px);
   background-size: 20px 20px;

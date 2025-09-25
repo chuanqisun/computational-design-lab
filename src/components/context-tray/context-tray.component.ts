@@ -5,6 +5,7 @@ import type { ImageItem, TextItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
+import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { DownloadTool } from "./tools/download.tool";
 
 export const ContextTrayComponent = createComponent(
@@ -17,10 +18,21 @@ export const ContextTrayComponent = createComponent(
     texts$: BehaviorSubject<TextItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
-    const template$ = combineLatest([images$, texts$]).pipe(
-      map(([images, texts]) => {
-        const selectedImages = images.filter((img: ImageItem) => img.isSelected);
-        const selectedTexts = texts.filter((txt: TextItem) => txt.isSelected);
+    // Create streams for selected items
+    const selectedImages$ = images$.pipe(map((images) => images.filter((img: ImageItem) => img.isSelected)));
+
+    const selectedTexts$ = texts$.pipe(map((texts) => texts.filter((txt: TextItem) => txt.isSelected)));
+
+    // Create the conceptual scan tool with stream props (rendered once)
+    const conceptualScanUI = ConceptualScanTool({
+      selectedImages$,
+      selectedTexts$,
+      texts$,
+      apiKeys$,
+    });
+
+    const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
+      map(([selectedImages, selectedTexts]) => {
         const totalSelected = selectedImages.length + selectedTexts.length;
 
         if (totalSelected === 0) return html``;
@@ -31,6 +43,8 @@ export const ContextTrayComponent = createComponent(
             : selectedImages.length >= 2
               ? BlendTool({ selectedImages, images$, apiKeys$ })
               : html``;
+
+        const conceptualScanUITemplate = conceptualScanUI;
 
         const textContentUI =
           selectedTexts.length > 0
@@ -51,7 +65,7 @@ export const ContextTrayComponent = createComponent(
 
         return html`<aside class="context-tray">
           <p>${totalSelected === 1 ? `1 item` : `${totalSelected} items`}</p>
-          ${imageToolUI} ${textContentUI}
+          ${conceptualScanUITemplate} ${imageToolUI} ${textContentUI}
         </aside>`;
       }),
     );

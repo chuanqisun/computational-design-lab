@@ -2,7 +2,7 @@ import { html } from "lit-html";
 import { BehaviorSubject, Subject, catchError, combineLatest, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
-import { generateTitle } from "../context-tray/llm/generate-title";
+import { generateTitle$ } from "../context-tray/llm/generate-title";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
 import {
@@ -102,7 +102,7 @@ export const CanvasComponent = createComponent(
         // Generate title for the new text item
         const apiKey = props.apiKeys$.value.openai;
         if (apiKey) {
-          generateTitle({ fullText: text, apiKey })
+          generateTitle$({ fullText: text, apiKey })
             .pipe(
               catchError(() => of("Text")), // Fallback to "Text" if generation fails
             )
