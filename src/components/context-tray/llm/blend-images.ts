@@ -41,14 +41,6 @@ export function blendImages(input: { instruction: string; images: ImageItem[]; a
         config,
         contents: [
           {
-            role: "model",
-            parts: [
-              {
-                text: input.instruction,
-              },
-            ],
-          },
-          {
             role: "user",
             parts,
           },
