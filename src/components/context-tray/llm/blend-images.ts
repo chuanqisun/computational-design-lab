@@ -1,6 +1,6 @@
 import { GoogleGenAI, type Part } from "@google/genai";
 import { Observable, from } from "rxjs";
-import type { ImageItem } from "../canvas/canvas.component";
+import type { ImageItem } from "../../canvas/canvas.component";
 
 /**
  * Use Google Gen AI gemini flash 2.5 image model to blend images based on user provided instruction.

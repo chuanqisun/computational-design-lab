@@ -13,7 +13,7 @@ import {
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
-import { blendImages } from "../blend-images";
+import { blendImages } from "../llm/blend-images";
 
 export const BlendTool = createComponent(
   ({

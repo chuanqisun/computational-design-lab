@@ -5,7 +5,7 @@ import type { ImageItem, TextItem } from "../../canvas/canvas.component";
 
 export type ConceptualScanInput = Pick<TextItem, "title" | "content"> | Pick<ImageItem, "src">;
 
-export interface ConceptualScanItem {
+export interface Concept {
   title: string;
   description: string;
 }
@@ -14,8 +14,8 @@ export function scanConcepts$(inputs: {
   items: ConceptualScanInput[];
   instruction: string;
   apiKey: string;
-}): Observable<ConceptualScanItem> {
-  return new Observable<ConceptualScanItem>((subscriber) => {
+}): Observable<Concept> {
+  return new Observable<Concept>((subscriber) => {
     const abortController = new AbortController();
 
     const openai = new OpenAI({
@@ -29,7 +29,7 @@ export function scanConcepts$(inputs: {
     parser.onValue = (entry) => {
       // Check if this is an array item under the "concepts" key
       if (typeof entry.key === "number" && entry.parent && entry.value && typeof entry.value === "object") {
-        const concept = entry.value as unknown as ConceptualScanItem;
+        const concept = entry.value as unknown as Concept;
         if (concept.title && concept.description) {
           subscriber.next(concept);
         }

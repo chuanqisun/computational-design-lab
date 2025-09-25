@@ -7,6 +7,7 @@ import "./context-tray.component.css";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { ImageTools } from "./tools/image-tools";
 import { TextContentTool } from "./tools/text-content.tool";
+import { VisualizeTool } from "./tools/visualize.tool";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
@@ -24,7 +25,6 @@ export const ContextTrayComponent = createComponent(
 
     const selectedTexts$ = texts$.pipe(map((texts) => texts.filter((txt: TextItem) => txt.isSelected)));
 
-    // Create the conceptual scan tool with stream props (rendered once)
     const conceptualScanUI = ConceptualScanTool({
       selectedImages$,
       selectedTexts$,
@@ -32,16 +32,20 @@ export const ContextTrayComponent = createComponent(
       apiKeys$,
     });
 
-    // Create image tools
     const imageToolsUI = ImageTools({
       selectedImages$,
       items$,
       apiKeys$,
     });
 
-    // Create text content tool
     const textContentUI = TextContentTool({
       selectedTexts$,
+    });
+
+    const visualizeUI = VisualizeTool({
+      selectedTexts$,
+      items$,
+      apiKeys$,
     });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
@@ -64,9 +68,13 @@ export const ContextTrayComponent = createComponent(
             : ""}
           ${selectedTexts.length > 0
             ? html`<details class="tool-container" open>
-                <summary>Text Content</summary>
-                <div class="tool-body">${textContentUI}</div>
-              </details>`
+                  <summary>Text Content</summary>
+                  <div class="tool-body">${textContentUI}</div>
+                </details>
+                <details class="tool-container" open>
+                  <summary>Visualize</summary>
+                  <div class="tool-body">${visualizeUI}</div>
+                </details>`
             : ""}
         </aside>`;
       }),
