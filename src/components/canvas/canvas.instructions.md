@@ -7,7 +7,9 @@ applyTo: "**/canvas/**"
 A self contained component that renders a full width/height element that serves as a canvas.
 
 - Allow user to paste images on to the canvas.
+- Allow user to paste text on to the canvas.
 - Pasted image will be rendered at a standard size (non-resizable) of 200 \* 200 pixels
+- Pasted text will be rendered as a text item with a default size and font.
 - User can drag to move
 - Maintain an z order. Last interacted image should be on top
 
@@ -29,6 +31,7 @@ Each element is a real `<div>` element.
 ### Pasting
 
 - Pasted item should appear near the center of the viewport despite current scroll position of the canvas
+- Support pasting both images and text from clipboard
 
 ### Mouse interaction
 
@@ -51,6 +54,7 @@ Dot matrix grid background, efficiently rendered with repeating background image
 The canvas can trigger the following events
 
 - Image pasted/removed
+- Text pasted/removed
 - Label updated
 
 AI can emit the following actions:
@@ -62,6 +66,7 @@ AI can emit the following actions:
 ## Workflow
 
 When user pastes a new image, use AI to caption the image based the subject, scene, and style of the image.
+When user pastes text, create a text item on the canvas.
 AI can label the image based on the context of the entire canvas
 User can manually edit the caption and labels of any image
 AI can suggest new image (text caption only) based on the existing images
