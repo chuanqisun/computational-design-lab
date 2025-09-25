@@ -99,8 +99,8 @@ export const ConceptualScanTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = combineLatest([selectedScanType$, selectedImages$, selectedTexts$]).pipe(
-      map(([selectedTypeId, selectedImages, selectedTexts]) => {
+    const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
+      map(([selectedImages, selectedTexts]) => {
         const selectedItemsCount = selectedImages.length + selectedTexts.length;
         if (selectedItemsCount === 0) return html``;
 
@@ -109,25 +109,18 @@ export const ConceptualScanTool = createComponent(
             <div class="scan-options">
               ${scanTypes.map(
                 (scanType) => html`
-                  <label class="scan-option">
-                    <input
-                      type="radio"
-                      name="scan-type"
-                      value=${scanType.id}
-                      ?checked=${selectedTypeId === scanType.id}
-                      @change=${(e: Event) => {
-                        const target = e.target as HTMLInputElement;
-                        if (target.checked) {
-                          selectedScanType$.next(scanType.id);
-                        }
-                      }}
-                    />
-                    <span class="scan-label">${scanType.label}</span>
-                  </label>
+                  <button
+                    class="scan-option"
+                    @click=${() => {
+                      selectedScanType$.next(scanType.id);
+                      scan$.next();
+                    }}
+                  >
+                    ${scanType.label}
+                  </button>
                 `,
               )}
             </div>
-            <button @click=${() => scan$.next()}>Scan</button>
           </div>
         `;
       }),

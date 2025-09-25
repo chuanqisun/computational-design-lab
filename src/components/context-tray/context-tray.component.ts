@@ -4,9 +4,9 @@ import { createComponent } from "../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
-import { BlendTool } from "./tools/blend.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
-import { DownloadTool } from "./tools/download.tool";
+import { ImageTools } from "./tools/image-tools";
+import { TextContentTool } from "./tools/text-content.tool";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
@@ -32,41 +32,42 @@ export const ContextTrayComponent = createComponent(
       apiKeys$,
     });
 
+    // Create image tools
+    const imageToolsUI = ImageTools({
+      selectedImages$,
+      items$,
+      apiKeys$,
+    });
+
+    // Create text content tool
+    const textContentUI = TextContentTool({
+      selectedTexts$,
+    });
+
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
       map(([selectedImages, selectedTexts]) => {
         const totalSelected = selectedImages.length + selectedTexts.length;
 
         if (totalSelected === 0) return html``;
 
-        const imageToolUI =
-          selectedImages.length === 1
-            ? DownloadTool({ selectedImages })
-            : selectedImages.length >= 2
-              ? BlendTool({ selectedImages, items$, apiKeys$ })
-              : html``;
-
-        const conceptualScanUITemplate = conceptualScanUI;
-
-        const textContentUI =
-          selectedTexts.length > 0
-            ? html`
-                <div class="text-content-section">
-                  <h3>Text Content</h3>
-                  ${selectedTexts.map(
-                    (txt: TextItem) => html`
-                      <div class="text-item-content">
-                        <h4>${txt.title}</h4>
-                        <div class="text-content">${txt.content}</div>
-                      </div>
-                    `,
-                  )}
-                </div>
-              `
-            : html``;
-
         return html`<aside class="context-tray">
           <p>${totalSelected === 1 ? `1 item` : `${totalSelected} items`}</p>
-          ${conceptualScanUITemplate} ${imageToolUI} ${textContentUI}
+          <details class="tool-container" open>
+            <summary>Conceptual Scan</summary>
+            <div class="tool-body">${conceptualScanUI}</div>
+          </details>
+          ${selectedImages.length > 0
+            ? html`<details class="tool-container" open>
+                <summary>Image Tools</summary>
+                <div class="tool-body">${imageToolsUI}</div>
+              </details>`
+            : ""}
+          ${selectedTexts.length > 0
+            ? html`<details class="tool-container" open>
+                <summary>Text Content</summary>
+                <div class="tool-body">${textContentUI}</div>
+              </details>`
+            : ""}
         </aside>`;
       }),
     );

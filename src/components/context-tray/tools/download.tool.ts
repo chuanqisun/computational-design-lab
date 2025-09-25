@@ -1,8 +1,9 @@
 import { html } from "lit-html";
+import { map, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { ImageItem } from "../../canvas/canvas.component";
 
-export const DownloadTool = createComponent(({ selectedImages }: { selectedImages: ImageItem[] }) => {
+export const DownloadTool = createComponent(({ selectedImages$ }: { selectedImages$: Observable<ImageItem[]> }) => {
   const downloadImage = (src: string, filename: string) => {
     const link = document.createElement("a");
     link.href = src;
@@ -12,7 +13,10 @@ export const DownloadTool = createComponent(({ selectedImages }: { selectedImage
     document.body.removeChild(link);
   };
 
-  if (selectedImages.length !== 1) return html``;
-
-  return html`<button @click=${() => downloadImage(selectedImages[0].src, `${Date.now()}.png`)}>Download</button>`;
+  return selectedImages$.pipe(
+    map((selectedImages) => {
+      if (selectedImages.length !== 1) return html``;
+      return html`<button @click=${() => downloadImage(selectedImages[0].src, `${Date.now()}.png`)}>Download</button>`;
+    }),
+  );
 });

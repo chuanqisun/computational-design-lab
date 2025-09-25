@@ -1,5 +1,15 @@
 import { html } from "lit-html";
-import { BehaviorSubject, EMPTY, ignoreElements, map, mergeMap, mergeWith, withLatestFrom } from "rxjs";
+import {
+  BehaviorSubject,
+  combineLatest,
+  EMPTY,
+  ignoreElements,
+  map,
+  mergeMap,
+  mergeWith,
+  withLatestFrom,
+  type Observable,
+} from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
@@ -7,11 +17,11 @@ import { blendImages } from "../blend-images";
 
 export const BlendTool = createComponent(
   ({
-    selectedImages,
+    selectedImages$,
     items$,
     apiKeys$,
   }: {
-    selectedImages: ImageItem[];
+    selectedImages$: Observable<ImageItem[]>;
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
@@ -19,8 +29,8 @@ export const BlendTool = createComponent(
     const blend$ = new BehaviorSubject<void>(undefined);
 
     const blendEffect$ = blend$.pipe(
-      withLatestFrom(blendInstruction$, apiKeys$),
-      mergeMap(([_, instruction, apiKeys]) => {
+      withLatestFrom(blendInstruction$, selectedImages$, apiKeys$),
+      mergeMap(([_, instruction, selectedImages, apiKeys]) => {
         if (selectedImages.length < 2 || !instruction.trim() || !apiKeys.gemini) {
           return EMPTY;
         }
@@ -43,8 +53,8 @@ export const BlendTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = blendInstruction$.pipe(
-      map((instruction) => {
+    const template$ = combineLatest([blendInstruction$, selectedImages$]).pipe(
+      map(([instruction, selectedImages]) => {
         if (selectedImages.length < 2) return html``;
         return html`
           <div class="blend-section">
