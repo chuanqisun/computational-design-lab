@@ -1,5 +1,5 @@
 import { html } from "lit-html";
-import { BehaviorSubject, Subject, catchError, combineLatest, ignoreElements, map, mergeWith, of, tap } from "rxjs";
+import { BehaviorSubject, Subject, catchError, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
 import { generateTitle$ } from "../context-tray/llm/generate-title";
@@ -19,45 +19,34 @@ import {
 
 export interface CanvasItem {
   id: string;
-  type: "image" | "text";
+  type: string;
   x: number;
   y: number;
   width: number;
   height: number;
   isSelected?: boolean;
   zIndex?: number;
-  // Image-specific properties
   src?: string;
-  // Text-specific properties
   title?: string;
   content?: string;
 }
 
 // Legacy interfaces for backward compatibility
-export interface ImageItem extends Omit<CanvasItem, "type"> {
+export interface ImageItem extends CanvasItem {
+  type: "image";
   src: string;
 }
 
-export interface TextItem extends Omit<CanvasItem, "type"> {
+export interface TextItem extends CanvasItem {
+  type: "text";
   title: string;
   content: string;
 }
 
 export const CanvasComponent = createComponent(
-  (props: {
-    images$: BehaviorSubject<ImageItem[]>;
-    texts$: BehaviorSubject<TextItem[]>;
-    apiKeys$: BehaviorSubject<ApiKeys>;
-  }) => {
-    // Convert legacy props to unified items
-    const items$ = combineLatest([props.images$, props.texts$]).pipe(
-      map(([images, texts]) => [
-        ...images.map((img): CanvasItem => ({ ...img, type: "image" as const })),
-        ...texts.map((txt): CanvasItem => ({ ...txt, type: "text" as const })),
-      ]),
-    );
-
+  (props: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
     // Internal state
+    const items$ = props.items$;
     // Local z-index sequence for ephemeral drag stacking without re-render
     let zSeq = 0;
 
@@ -70,9 +59,10 @@ export const CanvasComponent = createComponent(
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
-      map((src) => {
-        const newImage: ImageItem = {
+      tap((src) => {
+        const newImage: CanvasItem = {
           id: `img-${Date.now()}`,
+          type: "image",
           src,
           x: Math.random() * 400, // Random position
           y: Math.random() * 400,
@@ -80,15 +70,16 @@ export const CanvasComponent = createComponent(
           height: 200,
           zIndex: ++zSeq,
         };
-        props.images$.next([...props.images$.value, newImage]);
+        props.items$.next([...props.items$.value, newImage]);
       }),
     );
 
     const pasteTextEffect$ = pasteText$.pipe(
       tap((text) => {
         const textId = `text-${Date.now()}`;
-        const newText: TextItem = {
+        const newText: CanvasItem = {
           id: textId,
+          type: "text",
           title: "Text",
           content: text,
           x: Math.random() * 400,
@@ -97,7 +88,7 @@ export const CanvasComponent = createComponent(
           height: 200,
           zIndex: ++zSeq,
         };
-        props.texts$.next([...props.texts$.value, newText]);
+        props.items$.next([...props.items$.value, newText]);
 
         // Generate title for the new text item
         const apiKey = props.apiKeys$.value.openai;
@@ -115,54 +106,30 @@ export const CanvasComponent = createComponent(
 
     const moveEffect$ = moveItems$.pipe(
       tap(({ moves }) => {
-        // Update images
-        const currentImages = props.images$.value;
-        const imageUpdates = moves.filter((move) => move.id.startsWith("img-"));
-        if (imageUpdates.length > 0) {
-          const movedImages = imageUpdates
-            .map((move) => {
-              const item = currentImages.find((img) => img.id === move.id);
-              return item ? { ...item, x: move.x, y: move.y } : null;
-            })
-            .filter(Boolean) as ImageItem[];
-          const movedIds = imageUpdates.map((m) => m.id);
-          const otherImages = currentImages.filter((img) => !movedIds.includes(img.id));
-          props.images$.next([...otherImages, ...movedImages]);
-        }
-
-        // Update texts
-        const currentTexts = props.texts$.value;
-        const textUpdates = moves.filter((move) => move.id.startsWith("text-"));
-        if (textUpdates.length > 0) {
-          const movedTexts = textUpdates
-            .map((move) => {
-              const item = currentTexts.find((txt) => txt.id === move.id);
-              return item ? { ...item, x: move.x, y: move.y } : null;
-            })
-            .filter(Boolean) as TextItem[];
-          const movedIds = textUpdates.map((m) => m.id);
-          const otherTexts = currentTexts.filter((txt) => !movedIds.includes(txt.id));
-          props.texts$.next([...otherTexts, ...movedTexts]);
-        }
+        const currentItems = props.items$.value;
+        const updatedItems = currentItems.map((item) => {
+          const move = moves.find((m) => m.id === item.id);
+          return move ? { ...item, x: move.x, y: move.y } : item;
+        });
+        props.items$.next(updatedItems);
       }),
     );
 
     const deleteEffect$ = deleteSelected$.pipe(
       tap(() => {
-        const currentImages = props.images$.value;
-        const updatedImages = currentImages.filter((img) => !img.isSelected);
-        props.images$.next(updatedImages);
-        const currentTexts = props.texts$.value;
-        const updatedTexts = currentTexts.filter((txt) => !txt.isSelected);
-        props.texts$.next(updatedTexts);
+        const currentItems = props.items$.value;
+        const filteredItems = currentItems.filter((item) => !item.isSelected);
+        props.items$.next(filteredItems);
       }),
     );
 
     const updateTitleEffect$ = updateTextTitle$.pipe(
       tap(({ id, title }) => {
-        const currentTexts = props.texts$.value;
-        const updatedTexts = currentTexts.map((txt) => (txt.id === id ? { ...txt, title } : txt));
-        props.texts$.next(updatedTexts);
+        const currentItems = props.items$.value;
+        const updatedItems = currentItems.map((item) =>
+          item.id === id && item.type === "text" ? { ...item, title } : item,
+        );
+        props.items$.next(updatedItems);
       }),
     );
 
@@ -171,45 +138,25 @@ export const CanvasComponent = createComponent(
 
       const { isCtrl, isShift } = getModifierKeys(e);
       const currentState: SelectionState = {
-        images: props.images$.value,
-        texts: props.texts$.value,
+        items: props.items$.value,
       };
 
       // Calculate selection update
       const selectionUpdate = calculateSelectionUpdate(item, currentState, isCtrl, isShift);
-      props.images$.next(selectionUpdate.images);
-      props.texts$.next(selectionUpdate.texts);
+      props.items$.next(selectionUpdate.items);
 
       // Check if the clicked item is selected after update
-      const updatedItem =
-        item.type === "image"
-          ? selectionUpdate.images.find((img) => img.id === item.id)
-          : selectionUpdate.texts.find((txt) => txt.id === item.id);
+      const updatedItem = selectionUpdate.items.find((i) => i.id === item.id);
 
       if (!updatedItem?.isSelected) return;
 
       // Bring the clicked item to the top
-      if (item.type === "image") {
-        const index = selectionUpdate.images.findIndex((img) => img.id === item.id);
-        if (index !== -1) {
-          selectionUpdate.images[index] = { ...selectionUpdate.images[index], zIndex: ++zSeq };
-          props.images$.next([...selectionUpdate.images]);
-        }
-      } else {
-        const index = selectionUpdate.texts.findIndex((txt) => txt.id === item.id);
-        if (index !== -1) {
-          selectionUpdate.texts[index] = { ...selectionUpdate.texts[index], zIndex: ++zSeq };
-          props.texts$.next([...selectionUpdate.texts]);
-        }
-      }
+      const currentItems = props.items$.value;
+      const updatedItems = currentItems.map((i) => (i.id === item.id ? { ...i, zIndex: ++zSeq } : i));
+      props.items$.next(updatedItems);
 
       // Get all selected items to drag
-      const selectedImages = selectionUpdate.images.filter((img) => img.isSelected);
-      const selectedTexts = selectionUpdate.texts.filter((txt) => txt.isSelected);
-      const allSelectedItems: CanvasItem[] = [
-        ...selectedImages.map((img): CanvasItem => ({ ...img, type: "image" as const })),
-        ...selectedTexts.map((txt): CanvasItem => ({ ...txt, type: "text" as const })),
-      ];
+      const allSelectedItems = selectionUpdate.items.filter((i) => i.isSelected);
 
       const canvas = (e.currentTarget as HTMLElement).parentElement as HTMLElement;
       const draggedData = prepareDragData(canvas, allSelectedItems, e);
@@ -238,12 +185,10 @@ export const CanvasComponent = createComponent(
       // Only deselect if clicking directly on canvas (not on an image)
       if (isCanvasDirectClick(e)) {
         const currentState: SelectionState = {
-          images: props.images$.value,
-          texts: props.texts$.value,
+          items: props.items$.value,
         };
         const selectionUpdate = deselectAll(currentState);
-        props.images$.next(selectionUpdate.images);
-        props.texts$.next(selectionUpdate.texts);
+        props.items$.next(selectionUpdate.items);
       }
     };
 
@@ -258,8 +203,7 @@ export const CanvasComponent = createComponent(
     // Handle keydown event for delete/backspace
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Delete" || event.key === "Backspace") {
-        const hasSelected =
-          props.images$.value.some((img) => img.isSelected) || props.texts$.value.some((txt) => txt.isSelected);
+        const hasSelected = props.items$.value.some((item) => item.isSelected);
         if (hasSelected) {
           event.preventDefault();
           deleteSelected$.next();

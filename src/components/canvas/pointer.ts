@@ -1,13 +1,11 @@
-import type { CanvasItem, ImageItem, TextItem } from "./canvas.component";
+import type { CanvasItem } from "./canvas.component";
 
 export interface SelectionState {
-  images: ImageItem[];
-  texts: TextItem[];
+  items: CanvasItem[];
 }
 
 export interface SelectionUpdate {
-  images: ImageItem[];
-  texts: TextItem[];
+  items: CanvasItem[];
 }
 
 export interface DragData {
@@ -35,65 +33,33 @@ export function calculateSelectionUpdate(
   const isMultiSelect = isCtrlPressed || isShiftPressed;
   const isAlreadySelected = item.isSelected;
 
-  if (item.type === "image") {
-    let updatedImages: ImageItem[];
+  let updatedItems: CanvasItem[];
 
-    if (isMultiSelect) {
-      // Toggle selection for multi-select
-      updatedImages = currentState.images.map((img) =>
-        img.id === item.id ? { ...img, isSelected: !img.isSelected } : img,
-      );
-    } else if (!isAlreadySelected) {
-      // Single select - deselect all others, select this one
-      updatedImages = currentState.images.map((img) => ({
-        ...img,
-        isSelected: img.id === item.id,
-      }));
-    } else {
-      // Item is already selected and no multi-select - keep current state
-      updatedImages = currentState.images;
-    }
-
-    // Deselect texts when selecting images
-    const updatedTexts = currentState.texts.map((txt) => ({ ...txt, isSelected: false }));
-
-    return { images: updatedImages, texts: updatedTexts };
-  } else if (item.type === "text") {
-    let updatedTexts: TextItem[];
-
-    if (isMultiSelect) {
-      // Toggle selection for multi-select
-      updatedTexts = currentState.texts.map((txt) =>
-        txt.id === item.id ? { ...txt, isSelected: !txt.isSelected } : txt,
-      );
-    } else if (!isAlreadySelected) {
-      // Single select - deselect all others, select this one
-      updatedTexts = currentState.texts.map((txt) => ({
-        ...txt,
-        isSelected: txt.id === item.id,
-      }));
-    } else {
-      // Item is already selected and no multi-select - keep current state
-      updatedTexts = currentState.texts;
-    }
-
-    // Deselect images when selecting texts
-    const updatedImages = currentState.images.map((img) => ({ ...img, isSelected: false }));
-
-    return { images: updatedImages, texts: updatedTexts };
+  if (isMultiSelect) {
+    // Toggle selection for multi-select
+    updatedItems = currentState.items.map((currentItem) =>
+      currentItem.id === item.id ? { ...currentItem, isSelected: !currentItem.isSelected } : currentItem,
+    );
+  } else if (!isAlreadySelected) {
+    // Single select - deselect all others, select this one
+    updatedItems = currentState.items.map((currentItem) => ({
+      ...currentItem,
+      isSelected: currentItem.id === item.id,
+    }));
+  } else {
+    // Item is already selected and no multi-select - keep current state
+    updatedItems = currentState.items;
   }
 
-  // Fallback - no change
-  return currentState;
+  return { items: updatedItems };
 }
 
 /**
  * Deselect all items in the selection state
  */
 export function deselectAll(currentState: SelectionState): SelectionUpdate {
-  const updatedImages = currentState.images.map((img) => ({ ...img, isSelected: false }));
-  const updatedTexts = currentState.texts.map((txt) => ({ ...txt, isSelected: false }));
-  return { images: updatedImages, texts: updatedTexts };
+  const updatedItems = currentState.items.map((item) => ({ ...item, isSelected: false }));
+  return { items: updatedItems };
 }
 
 /**
@@ -101,7 +67,7 @@ export function deselectAll(currentState: SelectionState): SelectionUpdate {
  */
 export function prepareDragData(canvas: HTMLElement, selectedItems: CanvasItem[], mouseEvent: MouseEvent): DragData[] {
   return selectedItems.map((dragItem) => {
-    const cssClass = dragItem.id.startsWith("img-") ? "canvas-image" : "canvas-text";
+    const cssClass = dragItem.type === "image" ? "canvas-image" : "canvas-text";
     const el = canvas.querySelector(`.${cssClass}[data-id="${dragItem.id}"]`) as HTMLElement;
     const offsetX = mouseEvent.clientX - dragItem.x;
     const offsetY = mouseEvent.clientY - dragItem.y;

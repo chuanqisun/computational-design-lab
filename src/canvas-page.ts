@@ -1,7 +1,7 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import "./canvas-page.css";
-import type { ImageItem, TextItem } from "./components/canvas/canvas.component";
+import type { CanvasItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
@@ -18,11 +18,10 @@ GenerativeImageElement.define(() => ({
 
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
-  const images$ = new BehaviorSubject<ImageItem[]>([]);
-  const texts$ = new BehaviorSubject<TextItem[]>([]);
+  const items$ = new BehaviorSubject<CanvasItem[]>([]);
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
 
-  const template$ = combineLatest([images$, trayWidth$]).pipe(
+  const template$ = combineLatest([items$, trayWidth$]).pipe(
     map(([, trayWidth]) => {
       return html`
         <header class="app-header">
@@ -30,9 +29,9 @@ const Main = createComponent(() => {
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main" style="--tray-width: ${trayWidth}px;">
-          <div class="canvas-area">${CanvasComponent({ images$, texts$, apiKeys$ })}</div>
+          <div class="canvas-area">${CanvasComponent({ items$, apiKeys$ })}</div>
           ${ResizerComponent({ trayWidth$ })}
-          <div class="context-tray-area">${ContextTrayComponent({ images$, texts$, apiKeys$ })}</div>
+          <div class="context-tray-area">${ContextTrayComponent({ items$, apiKeys$ })}</div>
         </main>
         <dialog class="connection-form" id="connection-dialog">
           <div class="connections-dialog-body">

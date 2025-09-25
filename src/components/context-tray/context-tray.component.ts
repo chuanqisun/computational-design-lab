@@ -1,7 +1,7 @@
 import { html } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
-import type { ImageItem, TextItem } from "../canvas/canvas.component";
+import type { CanvasItem, ImageItem, TextItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
@@ -9,15 +9,16 @@ import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { DownloadTool } from "./tools/download.tool";
 
 export const ContextTrayComponent = createComponent(
-  ({
-    images$,
-    texts$,
-    apiKeys$,
-  }: {
-    images$: BehaviorSubject<ImageItem[]>;
-    texts$: BehaviorSubject<TextItem[]>;
-    apiKeys$: BehaviorSubject<ApiKeys>;
-  }) => {
+  ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
+    // Derive images and texts from unified items
+    const images$ = items$.pipe(
+      map((items) => items.filter((item): item is ImageItem => item.type === "image") as ImageItem[]),
+    );
+
+    const texts$ = items$.pipe(
+      map((items) => items.filter((item): item is TextItem => item.type === "text") as TextItem[]),
+    );
+
     // Create streams for selected items
     const selectedImages$ = images$.pipe(map((images) => images.filter((img: ImageItem) => img.isSelected)));
 
@@ -27,7 +28,7 @@ export const ContextTrayComponent = createComponent(
     const conceptualScanUI = ConceptualScanTool({
       selectedImages$,
       selectedTexts$,
-      texts$,
+      items$,
       apiKeys$,
     });
 
@@ -41,7 +42,7 @@ export const ContextTrayComponent = createComponent(
           selectedImages.length === 1
             ? DownloadTool({ selectedImages })
             : selectedImages.length >= 2
-              ? BlendTool({ selectedImages, images$, apiKeys$ })
+              ? BlendTool({ selectedImages, items$, apiKeys$ })
               : html``;
 
         const conceptualScanUITemplate = conceptualScanUI;

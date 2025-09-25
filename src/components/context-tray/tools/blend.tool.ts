@@ -1,18 +1,18 @@
 import { html } from "lit-html";
 import { BehaviorSubject, EMPTY, ignoreElements, map, mergeMap, mergeWith, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { ImageItem } from "../../canvas/canvas.component";
+import type { CanvasItem, ImageItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { blendImages } from "../blend-images";
 
 export const BlendTool = createComponent(
   ({
     selectedImages,
-    images$,
+    items$,
     apiKeys$,
   }: {
     selectedImages: ImageItem[];
-    images$: BehaviorSubject<ImageItem[]>;
+    items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const blendInstruction$ = new BehaviorSubject<string>("");
@@ -26,8 +26,9 @@ export const BlendTool = createComponent(
         }
         return blendImages({ instruction: instruction.trim(), images: selectedImages, apiKey: apiKeys.gemini }).pipe(
           map((blendedSrc) => {
-            const newImage: ImageItem = {
+            const newImage: CanvasItem = {
               id: `blended-${Date.now()}`,
+              type: "image",
               src: blendedSrc,
               x: Math.random() * 400,
               y: Math.random() * 400,
@@ -35,7 +36,7 @@ export const BlendTool = createComponent(
               height: 200,
               isSelected: false,
             };
-            images$.next([...images$.value, newImage]);
+            items$.next([...items$.value, newImage]);
           }),
         );
       }),

@@ -13,7 +13,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { scanConcepts$, type ConceptualScanInput } from "../llm/scan-concepts";
 import "./conceptual-scan.css";
@@ -22,12 +22,12 @@ export const ConceptualScanTool = createComponent(
   ({
     selectedImages$,
     selectedTexts$,
-    texts$,
+    items$,
     apiKeys$,
   }: {
     selectedImages$: Observable<ImageItem[]>;
     selectedTexts$: Observable<TextItem[]>;
-    texts$: BehaviorSubject<TextItem[]>;
+    items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const scanTypes = [
@@ -81,8 +81,9 @@ export const ConceptualScanTool = createComponent(
           apiKey: apiKeys.openai,
         }).pipe(
           tap((concept) => {
-            const newText: TextItem = {
+            const newText: CanvasItem = {
               id: `text-${Date.now()}`,
+              type: "text",
               title: concept.title,
               content: concept.description,
               x: Math.random() * 400,
@@ -91,7 +92,7 @@ export const ConceptualScanTool = createComponent(
               height: 200,
               isSelected: false,
             };
-            texts$.next([...texts$.value, newText]);
+            items$.next([...items$.value, newText]);
           }),
         );
       }),
