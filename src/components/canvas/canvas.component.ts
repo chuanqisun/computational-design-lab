@@ -1,4 +1,5 @@
 import { html } from "lit-html";
+import { repeat } from "lit-html/directives/repeat.js";
 import { BehaviorSubject, Subject, catchError, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
@@ -216,33 +217,37 @@ export const CanvasComponent = createComponent(
       map(
         (items) => html`
           <div class="canvas" tabindex="0" @paste=${handlePaste} @click=${handleCanvasClick} @keydown=${handleKeyDown}>
-            ${items.map((item) => {
-              if (item.type === "image") {
-                return html`
-                  <div
-                    class="canvas-item canvas-image ${item.isSelected ? "selected" : ""}"
-                    data-id="${item.id}"
-                    style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
-                    0};"
-                    @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
-                  >
-                    <img src="${item.src || ""}" alt="Pasted image" />
-                  </div>
-                `;
-              } else {
-                return html`
-                  <div
-                    class="canvas-item canvas-text text ${item.isSelected ? "selected" : ""}"
-                    data-id="${item.id}"
-                    style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
-                    0};"
-                    @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
-                  >
-                    <div class="text-title">${item.title}</div>
-                  </div>
-                `;
-              }
-            })}
+            ${repeat(
+              items,
+              (item) => item.id,
+              (item) => {
+                if (item.type === "image") {
+                  return html`
+                    <div
+                      class="canvas-item canvas-image ${item.isSelected ? "selected" : ""}"
+                      data-id="${item.id}"
+                      style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
+                      0};"
+                      @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
+                    >
+                      <img src="${item.src || ""}" alt="Pasted image" />
+                    </div>
+                  `;
+                } else {
+                  return html`
+                    <div
+                      class="canvas-item canvas-text text ${item.isSelected ? "selected" : ""}"
+                      data-id="${item.id}"
+                      style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
+                      0};"
+                      @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
+                    >
+                      <div class="text-title">${item.title}</div>
+                    </div>
+                  `;
+                }
+              },
+            )}
           </div>
         `,
       ),
