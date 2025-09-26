@@ -10,6 +10,7 @@ export interface GenerateImageOptions {
   width: number;
   height: number;
   model?: string;
+  images?: string[];
 }
 
 export interface GenerateImageResult {
@@ -38,6 +39,7 @@ export function generateImage(
         {
           role: "user",
           parts: [
+            ...(options.images?.map((image) => ({ image_url: { url: image } })) || []),
             {
               text: options.prompt,
             },
@@ -48,7 +50,7 @@ export function generateImage(
       const response = await ai.models.generateContentStream({
         model,
         config,
-        contents,
+        contents: contents as any,
       });
 
       let imageUrls: string[] = [];

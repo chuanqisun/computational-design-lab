@@ -7,6 +7,7 @@ import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { DownloadTool } from "./tools/download.tool";
+import { RenderTool } from "./tools/render.tool";
 import { TextContentTool } from "./tools/text-content.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
 
@@ -30,6 +31,7 @@ export const ContextTrayComponent = createComponent(
     const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selectedImages$, items$, apiKeys$ });
     const downloadToolTUI = DownloadTool({ selectedImages$ });
+    const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
       map(([selectedImages, selectedTexts]) => {
@@ -65,6 +67,10 @@ export const ContextTrayComponent = createComponent(
                   <div class="tool-body">${visualizeUI}</div>
                 </details>`
             : nothing}
+          <details class="tool-container" open>
+            <summary>Render</summary>
+            <div class="tool-body">${renderToolUI}</div>
+          </details>
         </aside>`;
       }),
     );
