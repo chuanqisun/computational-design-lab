@@ -1,5 +1,6 @@
 import { GoogleGenAI, type ContentListUnion } from "@google/genai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface GeminiConnection {
   apiKey: string;
@@ -22,6 +23,11 @@ export function generateImage(
   options: GenerateImageOptions,
 ): Observable<GenerateImageResult> {
   return new Observable<GenerateImageResult>((subscriber) => {
+    progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+    });
+
     if (!options.prompt.trim()) {
       subscriber.error(new Error("Prompt cannot be empty"));
       return;

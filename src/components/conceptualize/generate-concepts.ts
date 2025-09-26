@@ -1,6 +1,7 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface StreamConceptsParams {
   parti: string;
@@ -16,6 +17,11 @@ export interface Concept {
 
 export function streamConcepts$(params: StreamConceptsParams): Observable<Concept> {
   return new Observable<Concept>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({
@@ -105,6 +111,11 @@ export function regenerateDescription$(params: {
   existingConcepts?: Concept[];
 }): Observable<string> {
   return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({

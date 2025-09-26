@@ -1,5 +1,6 @@
 import { Observable } from "rxjs";
 import Together from "together-ai";
+import { progress$ } from "../progress/progress";
 
 export interface FluxConnection {
   apiKey: string;
@@ -21,6 +22,11 @@ export function generateImage(
   options: GenerateImageOptions,
 ): Observable<GenerateImageResult> {
   return new Observable<GenerateImageResult>((subscriber) => {
+    progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+    });
+
     if (!options.prompt.trim()) {
       subscriber.error(new Error("Prompt cannot be empty"));
       return;

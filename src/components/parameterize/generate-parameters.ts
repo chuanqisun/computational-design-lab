@@ -1,6 +1,7 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface StreamParametersParams {
   parti: string;
@@ -19,6 +20,11 @@ export interface Parameter {
 
 export function streamParameters$(params: StreamParametersParams): Observable<Parameter> {
   return new Observable<Parameter>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const openai = new OpenAI({
       dangerouslyAllowBrowser: true,
       apiKey: params.apiKey,
@@ -116,6 +122,11 @@ export function regenerateParameterDescription$(params: {
   existingParameters?: Parameter[];
 }): Observable<string> {
   return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({

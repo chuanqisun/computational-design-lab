@@ -1,6 +1,7 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface StreamArtifactsParams {
   parti: string;
@@ -17,6 +18,11 @@ export interface Artifact {
 
 export function streamArtifacts$(params: StreamArtifactsParams): Observable<Artifact> {
   return new Observable<Artifact>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const openai = new OpenAI({
       dangerouslyAllowBrowser: true,
       apiKey: params.apiKey,
@@ -108,6 +114,11 @@ export function regenerateArtifactDescription$(params: {
   existingArtifacts?: Artifact[];
 }): Observable<string> {
   return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({
@@ -167,6 +178,11 @@ export function generateArtifactFromImage$(params: {
   existingArtifacts?: Artifact[];
 }): Observable<Artifact> {
   return new Observable<Artifact>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({

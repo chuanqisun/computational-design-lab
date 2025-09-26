@@ -7,8 +7,10 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { progress$ } from "./components/progress/progress";
 import { ResizerComponent } from "./components/resizer/resizer";
 import { createComponent } from "./sdk/create-component";
+import { observe } from "./sdk/observe-directive";
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
@@ -25,11 +27,21 @@ const Main = createComponent(() => {
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
+  const progressText = progress$.pipe(
+    map((status) => {
+      const tasks = [];
+      if (status.textGen > 0) tasks.push(`Writing ${status.textGen} items`);
+      if (status.imageGen > 0) tasks.push(`Rendering ${status.imageGen} items`);
+      return tasks.join(" | ") || "Idle";
+    }),
+  );
+
   const template$ = combineLatest([items$, trayWidth$]).pipe(
     map(([, trayWidth]) => {
       return html`
         <header class="app-header">
           <h1>Computational Mood Board</h1>
+          ${observe(progressText)}
           <button commandfor="connection-dialog" command="show-modal">Setup</button>
         </header>
         <main class="main" style="--tray-width: ${trayWidth}px;">

@@ -1,6 +1,6 @@
 import { OpenAI } from "openai";
-import type { Observable } from "rxjs";
-import { from } from "rxjs";
+import { Observable, from } from "rxjs";
+import { progress$ } from "../../progress/progress";
 
 export interface GenerateTitleProps {
   fullText: string;
@@ -8,39 +8,48 @@ export interface GenerateTitleProps {
 }
 
 export function generateTitle$(props: GenerateTitleProps): Observable<string> {
-  return from(
-    (async () => {
-      const openai = new OpenAI({
-        dangerouslyAllowBrowser: true,
-        apiKey: props.apiKey,
-      });
+  return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    console.log("+1");
+    subscriber.add(() => {
+      console.log("-1");
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
 
-      const response = await openai.responses.create({
-        model: "gpt-5-mini",
-        input: [
-          {
-            role: "developer",
-            content: [{ type: "input_text", text: "Summarize user provided content into one word or short phrase" }],
-          },
-          {
-            role: "user",
-            content: [{ type: "input_text", text: props.fullText }],
-          },
-        ],
-        reasoning: { effort: "minimal" },
-        text: { verbosity: "low" },
-      });
+    from(
+      (async () => {
+        const openai = new OpenAI({
+          dangerouslyAllowBrowser: true,
+          apiKey: props.apiKey,
+        });
 
-      // Extract the text from the response
-      const outputItem = response.output.find((item) => item.type === "message");
-      if (outputItem && "content" in outputItem) {
-        const content = outputItem.content?.[0];
-        if (content?.type === "output_text") {
-          return content.text.trim();
+        const response = await openai.responses.create({
+          model: "gpt-5-mini",
+          input: [
+            {
+              role: "developer",
+              content: [{ type: "input_text", text: "Summarize user provided content into one word or short phrase" }],
+            },
+            {
+              role: "user",
+              content: [{ type: "input_text", text: props.fullText }],
+            },
+          ],
+          reasoning: { effort: "minimal" },
+          text: { verbosity: "low" },
+        });
+
+        // Extract the text from the response
+        const outputItem = response.output.find((item) => item.type === "message");
+        if (outputItem && "content" in outputItem) {
+          const content = outputItem.content?.[0];
+          if (content?.type === "output_text") {
+            return content.text.trim();
+          }
         }
-      }
 
-      throw new Error("Failed to generate title");
-    })(),
-  );
+        throw new Error("Failed to generate title");
+      })(),
+    ).subscribe(subscriber);
+  });
 }

@@ -1,8 +1,14 @@
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export function generateDescription$(params: { image: string; apiKey: string }): Observable<string> {
   return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({

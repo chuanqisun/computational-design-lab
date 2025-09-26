@@ -1,6 +1,7 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface StreamDesignsParams {
   parti: string;
@@ -33,6 +34,11 @@ export interface StreamMockupsParams {
 
 export function streamDesigns$(params: StreamDesignsParams): Observable<Design> {
   return new Observable<Design>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({
@@ -142,6 +148,11 @@ Respond in this JSON format:
 
 export function streamMockups$(params: StreamMockupsParams): Observable<Mockup> {
   return new Observable<Mockup>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({
@@ -252,6 +263,11 @@ export function generateManualDesign$(params: {
   existingDesigns?: Design[];
 }): Observable<Design> {
   return new Observable<Design>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+    });
+
     const abortController = new AbortController();
 
     const openai = new OpenAI({
