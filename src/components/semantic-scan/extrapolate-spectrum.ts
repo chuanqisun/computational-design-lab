@@ -1,5 +1,6 @@
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 import type { Spectrum } from "./spectrums";
 
 export interface ExtrapolatedSpectrum {
@@ -22,6 +23,7 @@ export function extrapolateSpectrum$(params: {
 
     // Call OpenAI responses API
     (async () => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const prompt = `
 Given the base prompt: "${params.prompt}"
@@ -62,6 +64,8 @@ Respond in this JSON format:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
 

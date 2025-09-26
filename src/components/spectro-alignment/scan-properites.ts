@@ -1,6 +1,7 @@
 import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 export interface Property {
   name: string;
@@ -33,6 +34,7 @@ export function streamProperties$(params: { image: string; apiKey: string }): Ob
 
     // Call OpenAI responses API in structured mode, streaming output
     (async () => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const prompt = `
 Analyze this product image and generate conceptual and material properties that can be adjusted to simulate different designs.
@@ -82,6 +84,8 @@ Respond in this JSON format:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
 

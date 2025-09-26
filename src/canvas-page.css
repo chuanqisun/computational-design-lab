@@ -220,6 +220,12 @@ generative-image {
   gap: 1ch;
 }
 
+.app-header__right {
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+}
+
 .main {
   flex: 1;
   display: grid;

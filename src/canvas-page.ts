@@ -41,8 +41,10 @@ const Main = createComponent(() => {
       return html`
         <header class="app-header">
           <h1>Computational Mood Board</h1>
-          ${observe(progressText)}
-          <button commandfor="connection-dialog" command="show-modal">Setup</button>
+          <div class="app-header__right">
+            ${observe(progressText)}
+            <button commandfor="connection-dialog" command="show-modal">Setup</button>
+          </div>
         </header>
         <main class="main" style="--tray-width: ${trayWidth}px;">
           <div class="canvas-area">${canvasUI}</div>

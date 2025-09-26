@@ -2,6 +2,7 @@ import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable } from "rxjs";
 import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import { progress$ } from "../../progress/progress";
 
 export type ConceptualScanInput = Pick<TextItem, "title" | "content"> | Pick<ImageItem, "src">;
 
@@ -38,6 +39,7 @@ export function scanConcepts$(inputs: {
 
     // Call OpenAI responses API in structured mode, streaming output
     (async () => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         // Build content array with text and images
         const contentItems = inputs.items.map((item) => {
@@ -89,6 +91,8 @@ Respond in this JSON format:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
 
