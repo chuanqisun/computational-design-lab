@@ -30,13 +30,13 @@ export const VisualizeTool = createComponent(
     const visualizationTypes = [
       {
         id: "abstract",
-        label: "Abstract Visualization",
+        label: "Abstract",
         instruction:
           "Create abstract, artistic visualizations that capture the essence of the concept in non-literal, symbolic ways. Use diverse artistic styles, colors, and compositions to represent ideas metaphorically.",
       },
       {
         id: "concrete",
-        label: "Concrete Visualization",
+        label: "Concrete",
         instruction:
           "Create concrete, realistic visualizations that depict the concept in literal, tangible forms. Focus on detailed, lifelike representations that show the concept as it might appear in reality.",
       },

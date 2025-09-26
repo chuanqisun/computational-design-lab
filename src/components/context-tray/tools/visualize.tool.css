@@ -9,15 +9,3 @@
   flex-wrap: wrap;
   gap: 0.5ch;
 }
-
-.visualize-option {
-  padding: 0.5ch 1ch;
-  border: 1px solid #ccc;
-  background: white;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.visualize-option:hover {
-  background: #f0f0f0;
-}
