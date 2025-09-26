@@ -2,6 +2,7 @@ import { JSONParser } from "@streamparser/json";
 import { OpenAI } from "openai";
 import { Observable, map, mergeMap } from "rxjs";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
+import { progress$ } from "../../progress/progress";
 import type { Concept } from "./scan-concepts";
 
 export interface VisualizeConceptProps {
@@ -56,6 +57,8 @@ export function createRenderPrompt(props: VisualizeConceptProps): Observable<str
 
     (async () => {
       try {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+
         const prompt = `
 Create detailed prompts for image generation based on the following concept and instruction.
 
@@ -92,6 +95,8 @@ Respond in JSON format:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
 
