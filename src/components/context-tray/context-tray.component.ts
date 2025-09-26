@@ -6,7 +6,7 @@ import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
-import { DownloadTool } from "./tools/download.tool";
+import { FileTool } from "./tools/file.tool";
 import { RenderTool } from "./tools/render.tool";
 import { TextContentTool } from "./tools/text-content.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
@@ -30,7 +30,7 @@ export const ContextTrayComponent = createComponent(
     const textContentUI = TextContentTool({ selectedTexts$ });
     const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selectedImages$, items$, apiKeys$ });
-    const downloadToolTUI = DownloadTool({ selectedImages$ });
+    const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
@@ -53,7 +53,7 @@ export const ContextTrayComponent = createComponent(
             : nothing}
           ${selectedImages.length === 1
             ? html`<details class="tool-container" open>
-                <summary>Download</summary>
+                <summary>File</summary>
                 <div class="tool-body">${downloadToolTUI}</div>
               </details>`
             : nothing}

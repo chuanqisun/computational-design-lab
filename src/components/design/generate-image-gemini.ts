@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type ContentListUnion } from "@google/genai";
 import { Observable } from "rxjs";
 
 export interface GeminiConnection {
@@ -35,11 +35,20 @@ export function generateImage(
         responseModalities: ["IMAGE"],
       };
       const model = "gemini-2.5-flash-image-preview";
-      const contents = [
+      const contents: ContentListUnion = [
         {
           role: "user",
           parts: [
-            ...(options.images?.map((image) => ({ image_url: { url: image } })) || []),
+            ...(options.images?.map((image) => {
+              const [mimeTypePart, data] = image.split(",");
+              const mimeType = mimeTypePart.split(":")[1].split(";")[0];
+              return {
+                inlineData: {
+                  data,
+                  mimeType,
+                },
+              };
+            }) || []),
             {
               text: options.prompt,
             },
@@ -50,7 +59,7 @@ export function generateImage(
       const response = await ai.models.generateContentStream({
         model,
         config,
-        contents: contents as any,
+        contents,
       });
 
       let imageUrls: string[] = [];
