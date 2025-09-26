@@ -10,9 +10,7 @@ export interface GenerateTitleProps {
 export function generateTitle$(props: GenerateTitleProps): Observable<string> {
   return new Observable<string>((subscriber) => {
     progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
-    console.log("+1");
     subscriber.add(() => {
-      console.log("-1");
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
     });
 
