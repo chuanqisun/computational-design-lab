@@ -38,7 +38,11 @@ export const ContextTrayComponent = createComponent(
         const totalSelected = selectedImages.length + selectedTexts.length;
 
         return html`<aside class="context-tray">
-          <p>${totalSelected === 1 ? `1 item` : `${totalSelected} items`}</p>
+          <p>${totalSelected} selected</p>
+          <details class="tool-container" open>
+            <summary>Render</summary>
+            <div class="tool-body">${renderToolUI}</div>
+          </details>
           ${selectedImages.length > 0
             ? html` <details class="tool-container" open>
                 <summary>Conceptual Scan</summary>
@@ -51,12 +55,6 @@ export const ContextTrayComponent = createComponent(
                 <div class="tool-body">${blendToolUI}</div>
               </details>`
             : nothing}
-          ${selectedImages.length === 1
-            ? html`<details class="tool-container" open>
-                <summary>File</summary>
-                <div class="tool-body">${downloadToolTUI}</div>
-              </details>`
-            : nothing}
           ${selectedTexts.length > 0
             ? html`<details class="tool-container" open>
                   <summary>Text Content</summary>
@@ -67,10 +65,12 @@ export const ContextTrayComponent = createComponent(
                   <div class="tool-body">${visualizeUI}</div>
                 </details>`
             : nothing}
-          <details class="tool-container" open>
-            <summary>Render</summary>
-            <div class="tool-body">${renderToolUI}</div>
-          </details>
+          ${selectedImages.length === 1
+            ? html`<details class="tool-container" open>
+                <summary>File</summary>
+                <div class="tool-body">${downloadToolTUI}</div>
+              </details>`
+            : nothing}
         </aside>`;
       }),
     );

@@ -20,8 +20,8 @@ export const progress$ = new BehaviorSubject<AppProgress>({
 export const progressText = progress$.pipe(
   map((status) => {
     const tasks = [];
-    if (status.textGen > 0) tasks.push(`Writing ${status.textGen} items`);
-    if (status.imageGen > 0) tasks.push(`Rendering ${status.imageGen} items`);
+    if (status.textGen > 0) tasks.push(`Writing ${status.textGen}`);
+    if (status.imageGen > 0) tasks.push(`Rendering ${status.imageGen}`);
     return tasks.join(" | ") || "Idle";
   }),
 );
