@@ -1,4 +1,4 @@
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, map } from "rxjs";
 
 export interface AppProgress {
   imageGen: number;
@@ -16,3 +16,12 @@ export const progress$ = new BehaviorSubject<AppProgress>({
   imageGen: 0,
   textGen: 0,
 });
+
+export const progressText = progress$.pipe(
+  map((status) => {
+    const tasks = [];
+    if (status.textGen > 0) tasks.push(`Writing ${status.textGen} items`);
+    if (status.imageGen > 0) tasks.push(`Rendering ${status.imageGen} items`);
+    return tasks.join(" | ") || "Idle";
+  }),
+);
