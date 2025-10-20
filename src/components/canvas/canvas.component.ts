@@ -30,6 +30,7 @@ export interface CanvasItem {
   src?: string;
   title?: string;
   content?: string;
+  metadata?: Record<string, any>;
 }
 
 // Legacy interfaces for backward compatibility
