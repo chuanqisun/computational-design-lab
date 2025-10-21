@@ -13,6 +13,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { ImageItem } from "../../canvas/canvas.component";
+import { sortItemsAlongAxis } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
 import { submitTask } from "../tasks";
@@ -132,30 +133,20 @@ export const MoodScanTool = createComponent(
       tap(([mood, selectedImages, moodResults]) => {
         if (selectedImages.length < 2 || !mood) return;
 
-        // Find min and max X positions
-        const xPositions = selectedImages.map((img) => img.x);
-        const minX = Math.min(...xPositions);
-        const maxX = Math.max(...xPositions);
-
-        // Sort images by arousal level for the selected mood
-        const sortedImages = [...selectedImages].sort((a, b) => {
-          const aMoods = moodResults.get(a.id) || [];
-          const bMoods = moodResults.get(b.id) || [];
-          const aArousal = aMoods.find((m) => m.mood === mood)?.arousal || 0;
-          const bArousal = bMoods.find((m) => m.mood === mood)?.arousal || 0;
-          return aArousal - bArousal;
+        const sorted = sortItemsAlongAxis({
+          axis: "x",
+          items: selectedImages,
+          getPosition: (img) => img.x,
+          getValue: (img) => {
+            const moods = moodResults.get(img.id) || [];
+            return moods.find((m) => m.mood === mood)?.arousal || 0;
+          },
         });
-
-        // Distribute evenly across X axis
-        const spacing = selectedImages.length > 1 ? (maxX - minX) / (selectedImages.length - 1) : 0;
 
         const currentItems = items$.value;
         const updatedItems = currentItems.map((item) => {
-          const sortedIndex = sortedImages.findIndex((img) => img.id === item.id);
-          if (sortedIndex === -1) return item;
-
-          const newX = minX + sortedIndex * spacing;
-          return { ...item, x: newX };
+          const sortedItem = sorted.find((s) => s.item.id === item.id);
+          return sortedItem ? { ...item, x: sortedItem.position } : item;
         });
 
         items$.next(updatedItems);
@@ -169,30 +160,20 @@ export const MoodScanTool = createComponent(
       tap(([mood, selectedImages, moodResults]) => {
         if (selectedImages.length < 2 || !mood) return;
 
-        // Find min and max Y positions
-        const yPositions = selectedImages.map((img) => img.y);
-        const minY = Math.min(...yPositions);
-        const maxY = Math.max(...yPositions);
-
-        // Sort images by arousal level for the selected mood
-        const sortedImages = [...selectedImages].sort((a, b) => {
-          const aMoods = moodResults.get(a.id) || [];
-          const bMoods = moodResults.get(b.id) || [];
-          const aArousal = aMoods.find((m) => m.mood === mood)?.arousal || 0;
-          const bArousal = bMoods.find((m) => m.mood === mood)?.arousal || 0;
-          return bArousal - aArousal;
+        const sorted = sortItemsAlongAxis({
+          axis: "y",
+          items: selectedImages,
+          getPosition: (img) => img.y,
+          getValue: (img) => {
+            const moods = moodResults.get(img.id) || [];
+            return moods.find((m) => m.mood === mood)?.arousal || 0;
+          },
         });
-
-        // Distribute evenly across Y axis
-        const spacing = selectedImages.length > 1 ? (maxY - minY) / (selectedImages.length - 1) : 0;
 
         const currentItems = items$.value;
         const updatedItems = currentItems.map((item) => {
-          const sortedIndex = sortedImages.findIndex((img) => img.id === item.id);
-          if (sortedIndex === -1) return item;
-
-          const newY = minY + sortedIndex * spacing;
-          return { ...item, y: newY };
+          const sortedItem = sorted.find((s) => s.item.id === item.id);
+          return sortedItem ? { ...item, y: sortedItem.position } : item;
         });
 
         items$.next(updatedItems);

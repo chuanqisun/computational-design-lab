@@ -11,6 +11,13 @@ export interface NextPositionsConfig {
   offsetY?: number;
 }
 
+export interface SortAxisConfig<T, V> {
+  axis: "x" | "y";
+  items: T[];
+  getPosition: (item: T) => number;
+  getValue: (item: T) => V;
+}
+
 /**
  * Creates an infinite generator that yields positions offset diagonally
  * from the center of the anchor items. Each position moves right and down.
@@ -33,6 +40,37 @@ export function* getNextPositions(anchorItems: CanvasItem[], config: NextPositio
       z: center.z + index,
     };
   }
+}
+
+/**
+ * Sorts items along an axis and distributes them evenly across the min/max range.
+ * Sorts in ascending order for X axis, descending for Y axis.
+ */
+export function sortItemsAlongAxis<T, V extends number>(
+  config: SortAxisConfig<T, V>,
+): Array<{ item: T; position: number }> {
+  const { axis, items, getPosition, getValue } = config;
+
+  if (items.length < 2) {
+    return items.map((item) => ({ item, position: getPosition(item) }));
+  }
+
+  const positions = items.map((item) => getPosition(item));
+  const minPos = Math.min(...positions);
+  const maxPos = Math.max(...positions);
+  const spacing = (maxPos - minPos) / (items.length - 1);
+
+  // Sort items by value: ascending for X, descending for Y
+  const sorted = [...items].sort((a, b) => {
+    const aVal = getValue(a);
+    const bVal = getValue(b);
+    return axis === "x" ? aVal - bVal : bVal - aVal;
+  });
+
+  return sorted.map((item, index) => ({
+    item,
+    position: minPos + index * spacing,
+  }));
 }
 
 function calculateAnchorPoint(items: CanvasItem[]): Position {
