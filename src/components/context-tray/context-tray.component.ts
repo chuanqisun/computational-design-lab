@@ -5,6 +5,7 @@ import type { CanvasItem, ImageItem, TextItem } from "../canvas/canvas.component
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
+import { CanvasTool } from "./tools/canvas.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { FileTool } from "./tools/file.tool";
 import { MoodScanTool } from "./tools/mood-scan.tool";
@@ -34,6 +35,7 @@ export const ContextTrayComponent = createComponent(
     const moodScanUI = MoodScanTool({ selectedImages$, items$, apiKeys$ });
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
+    const canvasToolUI = CanvasTool({ items$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
       map(([selectedImages, selectedTexts]) => {
@@ -77,6 +79,10 @@ export const ContextTrayComponent = createComponent(
                 <div class="tool-body">${downloadToolTUI}</div>
               </details>`
             : nothing}
+          <details class="tool-container" open>
+            <summary>Canvas</summary>
+            <div class="tool-body">${canvasToolUI}</div>
+          </details>
         </aside>`;
       }),
     );
