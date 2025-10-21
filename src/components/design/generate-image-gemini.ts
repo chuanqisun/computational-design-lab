@@ -1,4 +1,4 @@
-import { GoogleGenAI, type ContentListUnion } from "@google/genai";
+import { GoogleGenAI, type ContentListUnion, type GenerateContentConfig } from "@google/genai";
 import { Observable } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -24,8 +24,12 @@ export function generateImage(
 ): Observable<GenerateImageResult> {
   return new Observable<GenerateImageResult>((subscriber) => {
     progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
+
+    const abortController = new AbortController();
+
     subscriber.add(() => {
       progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+      abortController.abort();
     });
 
     if (!options.prompt.trim()) {
@@ -37,8 +41,9 @@ export function generateImage(
       const ai = new GoogleGenAI({
         apiKey: connection.apiKey,
       });
-      const config = {
+      const config: GenerateContentConfig = {
         responseModalities: ["IMAGE"],
+        abortSignal: abortController.signal,
       };
       const model = "gemini-2.5-flash-image-preview";
       const contents: ContentListUnion = [

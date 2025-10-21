@@ -2,11 +2,11 @@ import { html } from "lit-html";
 import {
   BehaviorSubject,
   combineLatest,
-  EMPTY,
+  filter,
   ignoreElements,
   map,
-  mergeMap,
   mergeWith,
+  tap,
   withLatestFrom,
   type Observable,
 } from "rxjs";
@@ -14,6 +14,7 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
+import { submitTask } from "../tasks";
 
 export const RenderTool = createComponent(
   ({
@@ -28,22 +29,23 @@ export const RenderTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const prompt$ = new BehaviorSubject<string>("");
-    const render$ = new BehaviorSubject<void>(undefined);
+    const render$ = new BehaviorSubject<boolean>(false);
 
     const renderEffect$ = render$.pipe(
+      filter((trigger) => trigger === true),
       withLatestFrom(prompt$, selectedTexts$, selectedImages$, apiKeys$),
-      mergeMap(([_, prompt, selectedTexts, selectedImages, apiKeys]) => {
+      tap(([_, prompt, selectedTexts, selectedImages, apiKeys]) => {
+        render$.next(false);
+
         if (!prompt.trim() || !apiKeys.gemini) {
-          return EMPTY;
+          return;
         }
 
         const fullPrompt = [prompt, ...selectedTexts.map((txt) => txt.content)].join(" ");
-
         const images = selectedImages.map((img) => img.src);
-
         const connection: GeminiConnection = { apiKey: apiKeys.gemini };
 
-        return generateImage(connection, {
+        const task$ = generateImage(connection, {
           prompt: fullPrompt,
           width: 512,
           height: 512,
@@ -63,6 +65,8 @@ export const RenderTool = createComponent(
             items$.next([...items$.value, newImage]);
           }),
         );
+
+        submitTask(task$);
       }),
       ignoreElements(),
     );
@@ -76,7 +80,7 @@ export const RenderTool = createComponent(
               .value=${prompt}
               @input=${(e: Event) => prompt$.next((e.target as HTMLTextAreaElement).value)}
             ></textarea>
-            <button @click=${() => render$.next()}>Render</button>
+            <button @click=${() => render$.next(true)}>Render</button>
           </div>
         `;
       }),

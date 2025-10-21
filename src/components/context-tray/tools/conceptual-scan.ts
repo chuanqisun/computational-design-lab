@@ -2,13 +2,11 @@ import { html } from "lit-html";
 import {
   BehaviorSubject,
   combineLatest,
-  EMPTY,
+  filter,
   ignoreElements,
   map,
-  mergeMap,
   mergeWith,
   Observable,
-  Subject,
   tap,
   withLatestFrom,
 } from "rxjs";
@@ -16,6 +14,7 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { scanConcepts$, type ConceptualScanInput } from "../llm/scan-concepts";
+import { submitTask } from "../tasks";
 import "./conceptual-scan.css";
 
 export const ConceptualScanTool = createComponent(
@@ -51,31 +50,28 @@ export const ConceptualScanTool = createComponent(
       },
     ];
 
-    const selectedScanType$ = new BehaviorSubject<string>("emotional-resonance");
-    const scan$ = new Subject<void>();
+    const scan$ = new BehaviorSubject<(typeof scanTypes)[number] | null>(null);
 
     const scanEffect$ = scan$.pipe(
-      withLatestFrom(selectedScanType$, selectedImages$, selectedTexts$, apiKeys$),
-      mergeMap(([_, scanTypeId, selectedImages, selectedTexts, apiKeys]) => {
+      filter((scanType): scanType is (typeof scanTypes)[number] => scanType !== null),
+      withLatestFrom(selectedImages$, selectedTexts$, apiKeys$),
+      tap(([scanType, selectedImages, selectedTexts, apiKeys]) => {
         const selectedItems = [...selectedImages, ...selectedTexts];
-        const scanType = scanTypes.find((type) => type.id === scanTypeId);
 
-        if (selectedItems.length === 0 || !scanType || !apiKeys.openai) {
-          return EMPTY;
+        if (selectedItems.length === 0 || !apiKeys.openai) {
+          return;
         }
 
-        // Convert selected items to scan inputs
         const scanInputs: ConceptualScanInput[] = selectedItems.map((item) => {
           if ("src" in item && item.src) {
             return { src: item.src } as ConceptualScanInput;
           } else if ("title" in item && "content" in item) {
             return { title: item.title, content: item.content } as ConceptualScanInput;
           }
-          // This should never happen given our type filtering above
           throw new Error("Invalid item type");
         });
 
-        return scanConcepts$({
+        const task$ = scanConcepts$({
           items: scanInputs,
           instruction: scanType.instruction,
           apiKey: apiKeys.openai,
@@ -95,6 +91,8 @@ export const ConceptualScanTool = createComponent(
             items$.next([...items$.value, newText]);
           }),
         );
+
+        submitTask(task$);
       }),
       ignoreElements(),
     );
@@ -109,15 +107,7 @@ export const ConceptualScanTool = createComponent(
             <div class="scan-options">
               ${scanTypes.map(
                 (scanType) => html`
-                  <button
-                    class="scan-option"
-                    @click=${() => {
-                      selectedScanType$.next(scanType.id);
-                      scan$.next();
-                    }}
-                  >
-                    ${scanType.label}
-                  </button>
+                  <button class="scan-option" @click=${() => scan$.next(scanType)}>${scanType.label}</button>
                 `,
               )}
             </div>

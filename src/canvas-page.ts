@@ -6,8 +6,9 @@ import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
+import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
-import { progressText } from "./components/progress/progress";
+import { hasActiveTasks, progressText, stopTasks } from "./components/progress/progress";
 import { ResizerComponent } from "./components/resizer/resizer";
 import { createComponent } from "./sdk/create-component";
 import { observe } from "./sdk/observe-directive";
@@ -27,6 +28,8 @@ const Main = createComponent(() => {
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
+  taskRunner$.subscribe();
+
   const template$ = combineLatest([trayWidth$]).pipe(
     map(([trayWidth]) => {
       return html`
@@ -34,6 +37,11 @@ const Main = createComponent(() => {
           <h1>Computational Mood Board</h1>
           <div class="app-header__right">
             ${observe(progressText)}
+            ${observe(
+              hasActiveTasks.pipe(
+                map((hasActive) => (hasActive ? html`<button @click=${stopTasks}>Stop</button>` : html``)),
+              ),
+            )}
             <button commandfor="connection-dialog" command="show-modal">Setup</button>
           </div>
         </header>

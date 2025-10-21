@@ -1,20 +1,10 @@
 import { html } from "lit-html";
-import {
-  BehaviorSubject,
-  EMPTY,
-  ignoreElements,
-  map,
-  mergeMap,
-  mergeWith,
-  Observable,
-  Subject,
-  tap,
-  withLatestFrom,
-} from "rxjs";
+import { BehaviorSubject, filter, ignoreElements, map, mergeWith, Observable, tap, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { visualizeConcept$ } from "../llm/visualize-concept";
+import { submitTask } from "../tasks";
 import "./visualize.tool.css";
 
 export const VisualizeTool = createComponent(
@@ -42,28 +32,26 @@ export const VisualizeTool = createComponent(
       },
     ];
 
-    const visualize$ = new Subject<string>();
+    const visualize$ = new BehaviorSubject<(typeof visualizationTypes)[number] | null>(null);
 
     const visualizeEffect$ = visualize$.pipe(
+      filter((vizType): vizType is (typeof visualizationTypes)[number] => vizType !== null),
       withLatestFrom(selectedTexts$, apiKeys$),
-      mergeMap(([vizTypeId, selectedTexts, apiKeys]) => {
-        const vizType = visualizationTypes.find((type) => type.id === vizTypeId);
-
-        if (selectedTexts.length === 0 || !vizType) {
-          return EMPTY;
+      tap(([vizType, selectedTexts, apiKeys]) => {
+        if (selectedTexts.length === 0) {
+          return;
         }
 
         if (!apiKeys.gemini || !apiKeys.openai) {
-          console.warn("No Gemini API key provided.");
-          return EMPTY;
+          console.warn("No Gemini or OpenAI API key provided.");
+          return;
         }
 
-        // Create concept from selected texts
         const title = "Selected Concept";
         const description = selectedTexts.map((txt) => txt.content).join(" ");
         const concept = { title, description };
 
-        return visualizeConcept$({
+        const task$ = visualizeConcept$({
           concept,
           instruction: vizType.instruction,
           openaiApiKey: apiKeys.openai,
@@ -83,6 +71,8 @@ export const VisualizeTool = createComponent(
             items$.next([...items$.value, newImage]);
           }),
         );
+
+        submitTask(task$);
       }),
       ignoreElements(),
     );
@@ -96,7 +86,7 @@ export const VisualizeTool = createComponent(
             <div class="visualize-options">
               ${visualizationTypes.map(
                 (vizType) => html`
-                  <button class="visualize-option" @click=${() => visualize$.next(vizType.id)}>${vizType.label}</button>
+                  <button class="visualize-option" @click=${() => visualize$.next(vizType)}>${vizType.label}</button>
                 `,
               )}
             </div>

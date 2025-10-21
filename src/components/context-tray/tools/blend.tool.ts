@@ -2,11 +2,11 @@ import { html } from "lit-html";
 import {
   BehaviorSubject,
   combineLatest,
-  EMPTY,
+  filter,
   ignoreElements,
   map,
-  mergeMap,
   mergeWith,
+  tap,
   withLatestFrom,
   type Observable,
 } from "rxjs";
@@ -14,6 +14,7 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { blendImages } from "../llm/blend-images";
+import { submitTask } from "../tasks";
 
 export const BlendTool = createComponent(
   ({
@@ -26,15 +27,23 @@ export const BlendTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const blendInstruction$ = new BehaviorSubject<string>("");
-    const blend$ = new BehaviorSubject<void>(undefined);
+    const blend$ = new BehaviorSubject<boolean>(false);
 
     const blendEffect$ = blend$.pipe(
+      filter((trigger) => trigger === true),
       withLatestFrom(blendInstruction$, selectedImages$, apiKeys$),
-      mergeMap(([_, instruction, selectedImages, apiKeys]) => {
+      tap(([_, instruction, selectedImages, apiKeys]) => {
+        blend$.next(false);
+
         if (selectedImages.length < 2 || !instruction.trim() || !apiKeys.gemini) {
-          return EMPTY;
+          return;
         }
-        return blendImages({ instruction: instruction.trim(), images: selectedImages, apiKey: apiKeys.gemini }).pipe(
+
+        const task$ = blendImages({
+          instruction: instruction.trim(),
+          images: selectedImages,
+          apiKey: apiKeys.gemini,
+        }).pipe(
           map((blendedSrc) => {
             const newImage: CanvasItem = {
               id: `blended-${Date.now()}`,
@@ -49,6 +58,8 @@ export const BlendTool = createComponent(
             items$.next([...items$.value, newImage]);
           }),
         );
+
+        submitTask(task$);
       }),
       ignoreElements(),
     );
@@ -63,7 +74,7 @@ export const BlendTool = createComponent(
               .value=${instruction}
               @input=${(e: Event) => blendInstruction$.next((e.target as HTMLTextAreaElement).value)}
             ></textarea>
-            <button @click=${() => blend$.next()}>Blend</button>
+            <button @click=${() => blend$.next(true)}>Blend</button>
           </div>
         `;
       }),

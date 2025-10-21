@@ -1,4 +1,5 @@
 import { BehaviorSubject, map } from "rxjs";
+import { stopAllTasks } from "../context-tray/tasks";
 
 export interface AppProgress {
   imageGen: number;
@@ -25,3 +26,9 @@ export const progressText = progress$.pipe(
     return tasks.join(" | ") || "Idle";
   }),
 );
+
+export const hasActiveTasks = progress$.pipe(map((status) => status.imageGen > 0 || status.textGen > 0));
+
+export const stopTasks = () => {
+  stopAllTasks();
+};
