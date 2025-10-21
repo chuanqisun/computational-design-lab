@@ -14,7 +14,6 @@ import {
   isCanvasDirectClick,
   prepareDragData,
   updateDragPositions,
-  updateZIndex,
   type SelectionState,
 } from "./pointer";
 
@@ -49,8 +48,13 @@ export const CanvasComponent = createComponent(
   (props: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
     // Internal state
     const items$ = props.items$;
-    // Local z-index sequence for ephemeral drag stacking without re-render
-    let zSeq = 0;
+
+    // Helper: Get next z-index atomically
+    const getNextZIndex = () => {
+      const currentItems = props.items$.value;
+      const maxZ = currentItems.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+      return maxZ + 1;
+    };
 
     // Actions
     const pasteImage$ = new Subject<string>();
@@ -70,7 +74,7 @@ export const CanvasComponent = createComponent(
           y: Math.random() * 400,
           width: 200,
           height: 200,
-          zIndex: ++zSeq,
+          zIndex: getNextZIndex(),
         };
         props.items$.next([...props.items$.value, newImage]);
       }),
@@ -88,7 +92,7 @@ export const CanvasComponent = createComponent(
           y: Math.random() * 400,
           width: 200,
           height: 200,
-          zIndex: ++zSeq,
+          zIndex: getNextZIndex(),
         };
         props.items$.next([...props.items$.value, newText]);
 
@@ -152,20 +156,19 @@ export const CanvasComponent = createComponent(
 
       if (!updatedItem?.isSelected) return;
 
-      // Bring the clicked item to the top
+      // Bring the clicked item to the top (highest z-index)
       const currentItems = props.items$.value;
-      const updatedItems = currentItems.map((i) => (i.id === item.id ? { ...i, zIndex: ++zSeq } : i));
+      const nextZ = getNextZIndex();
+      const updatedItems = currentItems.map((i) => (i.id === item.id ? { ...i, zIndex: nextZ } : i));
       props.items$.next(updatedItems);
 
-      // Get all selected items to drag
-      const allSelectedItems = selectionUpdate.items.filter((i) => i.isSelected);
+      // Get all selected items to drag (sorted by z-index for proper visual stacking)
+      const allSelectedItems = updatedItems
+        .filter((i) => i.isSelected)
+        .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
       const canvas = (e.currentTarget as HTMLElement).parentElement as HTMLElement;
       const draggedData = prepareDragData(canvas, allSelectedItems, e);
-
-      // Update z-index for dragged elements
-      const elements = draggedData.map(({ el }) => el);
-      zSeq = updateZIndex(elements, zSeq);
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
         updateDragPositions(draggedData, moveEvent);

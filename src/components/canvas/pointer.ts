@@ -99,17 +99,6 @@ export function calculateFinalPositions(dragData: DragData[]): MoveUpdate[] {
 }
 
 /**
- * Update z-index for elements to bring them to top
- */
-export function updateZIndex(elements: HTMLElement[], startingZIndex: number): number {
-  let zSeq = startingZIndex;
-  elements.forEach((el) => {
-    el.style.zIndex = String(++zSeq);
-  });
-  return zSeq;
-}
-
-/**
  * Check if a target element is the canvas itself (not a child item)
  */
 export function isCanvasDirectClick(event: MouseEvent): boolean {
