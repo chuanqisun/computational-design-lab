@@ -14,7 +14,7 @@ import {
 import { createComponent } from "../../../sdk/create-component";
 import type { ImageItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
-import { scanMoods$ } from "../llm/scan-moods";
+import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
 import { submitTask } from "../tasks";
 import "./mood-scan.css";
 
@@ -42,6 +42,7 @@ export const MoodScanTool = createComponent(
     const scanning$ = new BehaviorSubject<boolean>(false);
 
     const scanAction$ = new BehaviorSubject<boolean>(false);
+    const lockedMoods$ = new BehaviorSubject<Set<string>>(new Set());
 
     // Load existing mood scan results from metadata
     const loadExistingResults$ = selectedImages$.pipe(
@@ -59,19 +60,29 @@ export const MoodScanTool = createComponent(
 
     const scanEffect$ = scanAction$.pipe(
       filter((action) => action),
-      withLatestFrom(selectedImages$, apiKeys$),
-      tap(([_, selectedImages, apiKeys]) => {
+      withLatestFrom(selectedImages$, apiKeys$, lockedMoods$),
+      tap(([_, selectedImages, apiKeys, lockedMoods]) => {
         if (selectedImages.length === 0 || !apiKeys.openai) {
           return;
         }
 
         scanning$.next(true);
 
-        const tasks = selectedImages.map((image) =>
-          scanMoods$({
-            image,
-            apiKey: apiKeys.openai!,
-          }).pipe(
+        const requiredList = lockedMoods.size > 0 ? Array.from(lockedMoods) : undefined;
+
+        const tasks = selectedImages.map((image) => {
+          const scanObservable$ = requiredList
+            ? scanMoodsSupervised$({
+                image,
+                apiKey: apiKeys.openai!,
+                requiredList,
+              })
+            : scanMoods$({
+                image,
+                apiKey: apiKeys.openai!,
+              });
+
+          return scanObservable$.pipe(
             tap((result: MoodResult) => {
               // Update in-memory results
               const currentResults = moodResults$.value;
@@ -93,8 +104,8 @@ export const MoodScanTool = createComponent(
               );
               items$.next(updatedItems);
             }),
-          ),
-        );
+          );
+        });
 
         const task$ = merge(...tasks).pipe(
           tap({
@@ -113,11 +124,21 @@ export const MoodScanTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = combineLatest([selectedImages$, moodResults$, scanning$]).pipe(
-      map(([selectedImages, moodResults, scanning]) => {
+    const template$ = combineLatest([selectedImages$, moodResults$, scanning$, lockedMoods$]).pipe(
+      map(([selectedImages, moodResults, scanning, lockedMoods]) => {
         if (selectedImages.length === 0) return html``;
 
         const hasResults = moodResults.size > 0;
+
+        const toggleLock = (mood: string) => {
+          const newLocked = new Set(lockedMoods);
+          if (newLocked.has(mood)) {
+            newLocked.delete(mood);
+          } else {
+            newLocked.add(mood);
+          }
+          lockedMoods$.next(newLocked);
+        };
 
         return html`
           <div class="mood-scan-section">
@@ -135,14 +156,16 @@ export const MoodScanTool = createComponent(
                               .filter(([id]) => id === selectedImages[0].id)
                               .map(
                                 ([_, moods]) => html`
-                                  ${moods.map(
-                                    ({ mood, arousal }) => html`
-                                      <div class="mood-item">
-                                        <span class="mood-label">${mood}</span>
-                                        <span class="arousal-level">${arousal}/5</span>
-                                      </div>
-                                    `,
-                                  )}
+                                  ${[...moods]
+                                    .sort((a, b) => a.mood.localeCompare(b.mood))
+                                    .map(
+                                      ({ mood, arousal }) => html`
+                                        <div class="mood-item" @click=${() => toggleLock(mood)}>
+                                          <span class="mood-label"> ${lockedMoods.has(mood) ? "🔒 " : ""}${mood} </span>
+                                          <span class="arousal-level">${arousal}/5</span>
+                                        </div>
+                                      `,
+                                    )}
                                 `,
                               )}
                           </div>
@@ -167,14 +190,18 @@ export const MoodScanTool = createComponent(
 
                                 return moodAverages;
                               })().entries(),
-                            ).map(
-                              ([mood, { total, count }]) => html`
-                                <div class="mood-item">
-                                  <span class="mood-label">${mood} (${count})</span>
-                                  <span class="arousal-level">${(total / count).toFixed(1)}/5</span>
-                                </div>
-                              `,
-                            )}
+                            )
+                              .sort((a, b) => a[0].localeCompare(b[0]))
+                              .map(
+                                ([mood, { total, count }]) => html`
+                                  <div class="mood-item" @click=${() => toggleLock(mood)}>
+                                    <span class="mood-label">
+                                      ${lockedMoods.has(mood) ? "🔒 " : ""}${mood} (${count})
+                                    </span>
+                                    <span class="arousal-level">${(total / count).toFixed(1)}/5</span>
+                                  </div>
+                                `,
+                              )}
                           </div>
                         `}
                   </div>

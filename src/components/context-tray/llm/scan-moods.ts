@@ -93,3 +93,113 @@ Respond in this JSON format:
     };
   });
 }
+
+export function scanMoodsSupervised$(inputs: {
+  image: ImageItem;
+  apiKey: string;
+  suggestedList?: string[];
+  requiredList?: string[];
+}): Observable<MoodResult> {
+  return new Observable<MoodResult>((subscriber) => {
+    const abortController = new AbortController();
+
+    const openai = new OpenAI({
+      dangerouslyAllowBrowser: true,
+      apiKey: inputs.apiKey,
+    });
+
+    (async () => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+      try {
+        const parser = new JSONParser();
+        let currentResult: MoodResult | null = null;
+
+        parser.onValue = (entry) => {
+          if (typeof entry.key === "number" && entry.parent && entry.value && typeof entry.value === "object") {
+            const moodEntry = entry.value as unknown as { mood: string; arousal: number };
+            if (moodEntry.mood && typeof moodEntry.arousal === "number") {
+              if (!currentResult) {
+                currentResult = { imageId: inputs.image.id, moods: [] };
+              }
+              currentResult.moods.push(moodEntry);
+            }
+          }
+        };
+
+        let promptParts: string[] = ["Analyze the provided image and identify 3-5 moods it evokes."];
+
+        if (inputs.requiredList && inputs.requiredList.length > 0) {
+          const requiredListFormatted = inputs.requiredList.map((m) => `"${m}"`).join(", ");
+          promptParts.push(
+            `You MUST only use moods from this required list: ${requiredListFormatted}. Do not create new mood labels or use moods outside this list.`,
+          );
+        }
+
+        if (inputs.suggestedList && inputs.suggestedList.length > 0) {
+          const suggestedListFormatted = inputs.suggestedList.map((m) => `"${m}"`).join(", ");
+          promptParts.push(
+            `Use this list as inspiration for mood labels: ${suggestedListFormatted}. You may use these moods or create similar ones that better match the image.`,
+          );
+        }
+
+        promptParts.push(
+          `For each mood, provide ${inputs.requiredList ? "the exact mood string from the required list" : "a single English word with first letter Capitalized"} and an arousal level from 1 to 5, where 1 is calm/low energy and 5 is intense/high energy.`,
+        );
+
+        const developerPrompt = `${promptParts.join("\n\n")}
+
+Respond in this JSON format:
+{
+  "moods": [
+    {
+      "mood": "string",
+      "arousal": number
+    }
+  ]
+}`;
+
+        const response = await openai.responses.create(
+          {
+            model: "gpt-5-mini",
+            input: [
+              { role: "developer", content: developerPrompt },
+              {
+                role: "user",
+                content: [
+                  { type: "input_text", text: "Analyze this image for moods and arousal levels." },
+                  { type: "input_image", image_url: inputs.image.src, detail: "auto" },
+                ],
+              },
+            ],
+            reasoning: { effort: "minimal" },
+            text: { verbosity: "low", format: { type: "json_object" } },
+            stream: true,
+          },
+          {
+            signal: abortController.signal,
+          },
+        );
+
+        for await (const chunk of response) {
+          if (chunk.type === "response.output_text.delta") {
+            parser.write(chunk.delta);
+          }
+        }
+
+        if (currentResult) {
+          subscriber.next(currentResult);
+        }
+
+        subscriber.complete();
+      } catch (error) {
+        subscriber.error(error);
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+      }
+    })();
+
+    return () => {
+      abortController.abort();
+    };
+  });
+}
