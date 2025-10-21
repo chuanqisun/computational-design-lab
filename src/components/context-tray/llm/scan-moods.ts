@@ -97,7 +97,6 @@ Respond in this JSON format:
 export function scanMoodsSupervised$(inputs: {
   image: ImageItem;
   apiKey: string;
-  suggestedList?: string[];
   requiredList?: string[];
 }): Observable<MoodResult> {
   return new Observable<MoodResult>((subscriber) => {
@@ -126,25 +125,22 @@ export function scanMoodsSupervised$(inputs: {
           }
         };
 
-        let promptParts: string[] = ["Analyze the provided image and identify 3-5 moods it evokes."];
+        let promptParts: string[] = [];
 
         if (inputs.requiredList && inputs.requiredList.length > 0) {
           const requiredListFormatted = inputs.requiredList.map((m) => `"${m}"`).join(", ");
           promptParts.push(
-            `You MUST only use moods from this required list: ${requiredListFormatted}. Do not create new mood labels or use moods outside this list.`,
+            `Analyze the provided image and assign an arousal level to each of the following moods: ${requiredListFormatted}.`,
           );
-        }
-
-        if (inputs.suggestedList && inputs.suggestedList.length > 0) {
-          const suggestedListFormatted = inputs.suggestedList.map((m) => `"${m}"`).join(", ");
           promptParts.push(
-            `Use this list as inspiration for mood labels: ${suggestedListFormatted}. You may use these moods or create similar ones that better match the image.`,
+            `For each mood in the list, provide the exact mood string and an arousal level from 1 to 5, where 1 means the image has very low intensity of that mood and 5 means the image has very high intensity of that mood.`,
+          );
+        } else {
+          promptParts.push("Analyze the provided image and identify 3-5 moods it evokes.");
+          promptParts.push(
+            "For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 5, where 1 is calm/low energy and 5 is intense/high energy.",
           );
         }
-
-        promptParts.push(
-          `For each mood, provide ${inputs.requiredList ? "the exact mood string from the required list" : "a single English word with first letter Capitalized"} and an arousal level from 1 to 5, where 1 is calm/low energy and 5 is intense/high energy.`,
-        );
 
         const developerPrompt = `${promptParts.join("\n\n")}
 
