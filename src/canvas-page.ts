@@ -1,10 +1,10 @@
 import { html, render } from "lit-html";
-import { BehaviorSubject, ignoreElements, map, merge, mergeWith, of } from "rxjs";
+import { BehaviorSubject, debounceTime, ignoreElements, map, merge, mergeWith, of, skip, switchMap } from "rxjs";
 import "./canvas-page.css";
 import type { CanvasItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
-import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
+import { loadApiKeys, loadCanvasItems, saveCanvasItems, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
@@ -19,16 +19,34 @@ GenerativeImageElement.define(() => ({
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 
+// Initialize items from IndexedDB
+const items$ = new BehaviorSubject<CanvasItem[]>([]);
+loadCanvasItems().then((loadedItems) => {
+  if (loadedItems.length > 0) {
+    items$.next(loadedItems);
+  }
+});
+
+// Auto-save items when they change (debounced)
+const autoSave$ = items$.pipe(
+  skip(1), // Skip initial empty value
+  debounceTime(250), // Wait 500ms after last change
+  switchMap((items) =>
+    saveCanvasItems(items).catch((error) => {
+      console.error("Failed to save canvas items:", error);
+    }),
+  ),
+);
+
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
-  const items$ = new BehaviorSubject<CanvasItem[]>([]);
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
   const canvasUI = CanvasComponent({ items$, apiKeys$ });
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
-  const effects$ = merge(taskRunner$).pipe(ignoreElements());
+  const effects$ = merge(taskRunner$, autoSave$).pipe(ignoreElements());
 
   const template$ = of(html`
     <header class="app-header">
