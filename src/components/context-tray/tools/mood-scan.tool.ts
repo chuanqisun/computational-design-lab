@@ -159,18 +159,13 @@ export const MoodScanTool = createComponent(
                                   }
                                 }
 
-                                return new Map(
-                                  Array.from(moodAverages.entries()).map(([mood, { total, count }]) => [
-                                    mood,
-                                    (total / count).toFixed(1),
-                                  ]),
-                                );
+                                return moodAverages;
                               })().entries(),
                             ).map(
-                              ([mood, avgArousal]) => html`
+                              ([mood, { total, count }]) => html`
                                 <div class="mood-item">
-                                  <span class="mood-label">${mood}</span>
-                                  <span class="arousal-level">${avgArousal}/5</span>
+                                  <span class="mood-label">${mood} (${count})</span>
+                                  <span class="arousal-level">${(total / count).toFixed(1)}/5</span>
                                 </div>
                               `,
                             )}
