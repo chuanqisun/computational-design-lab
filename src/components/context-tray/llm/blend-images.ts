@@ -1,5 +1,5 @@
 import { GoogleGenAI, type Part } from "@google/genai";
-import { Observable, from } from "rxjs";
+import { Observable } from "rxjs";
 import type { ImageItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
@@ -8,14 +8,23 @@ import { progress$ } from "../../progress/progress";
  * Returns the observable of image data url
  */
 export function blendImages(input: { instruction: string; images: ImageItem[]; apiKey: string }): Observable<string> {
-  return from(
+  return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
+
+    const abortController = new AbortController();
+
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+      abortController.abort();
+    });
+
     (async () => {
-      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
         const model = "gemini-2.5-flash-image-preview";
         const config = {
           responseModalities: ["IMAGE"],
+          abortSignal: abortController.signal,
         };
 
         const parts: Part[] = [
@@ -65,10 +74,11 @@ export function blendImages(input: { instruction: string; images: ImageItem[]; a
           }
         }
 
-        return imageUrl;
-      } finally {
-        progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+        subscriber.next(imageUrl);
+        subscriber.complete();
+      } catch (error) {
+        subscriber.error(error);
       }
-    })(),
-  );
+    })();
+  });
 }
