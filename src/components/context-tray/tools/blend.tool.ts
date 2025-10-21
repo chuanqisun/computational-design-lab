@@ -12,6 +12,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem } from "../../canvas/canvas.component";
+import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { blendImages } from "../llm/blend-images";
 import { submitTask } from "../tasks";
@@ -39,21 +40,24 @@ export const BlendTool = createComponent(
           return;
         }
 
+        const positionGenerator = getNextPositions(items$.value);
         const task$ = blendImages({
           instruction: instruction.trim(),
           images: selectedImages,
           apiKey: apiKeys.gemini,
         }).pipe(
           map((blendedSrc) => {
+            const { x, y, z } = positionGenerator.next().value;
             const newImage: CanvasItem = {
               id: `blended-${Date.now()}`,
               type: "image",
               src: blendedSrc,
-              x: Math.random() * 400,
-              y: Math.random() * 400,
+              x,
+              y,
               width: 200,
               height: 200,
               isSelected: false,
+              zIndex: z,
             };
             items$.next([...items$.value, newImage]);
           }),
