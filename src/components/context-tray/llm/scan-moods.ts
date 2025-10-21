@@ -36,7 +36,7 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
           }
         };
 
-        const developerPrompt = `Analyze the provided image and identify 3-5 moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 5, where 1 is calm/low energy and 5 is intense/high energy.
+        const developerPrompt = `Analyze the provided image and identify 3-5 moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.
 
 Respond in this JSON format:
 {
@@ -133,12 +133,12 @@ export function scanMoodsSupervised$(inputs: {
             `Analyze the provided image and assign an arousal level to each of the following moods: ${requiredListFormatted}.`,
           );
           promptParts.push(
-            `For each mood in the list, provide the exact mood string and an arousal level from 1 to 5, where 1 means the image has very low intensity of that mood and 5 means the image has very high intensity of that mood.`,
+            `For each mood in the list, provide the exact mood string and an arousal level from 1 to 10, where 1 means the image has very low intensity of that mood and 10 means the image has very high intensity of that mood.`,
           );
         } else {
           promptParts.push("Analyze the provided image and identify 3-5 moods it evokes.");
           promptParts.push(
-            "For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 5, where 1 is calm/low energy and 5 is intense/high energy.",
+            "For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.",
           );
         }
 

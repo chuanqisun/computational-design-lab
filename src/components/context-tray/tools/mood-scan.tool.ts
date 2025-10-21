@@ -254,7 +254,7 @@ export const MoodScanTool = createComponent(
                                       ({ mood, arousal }) => html`
                                         <div class="mood-item" @click=${() => toggleLock(mood)}>
                                           <span class="mood-label"> ${lockedMoods.has(mood) ? "🔒 " : ""}${mood} </span>
-                                          <span class="arousal-level">${arousal}/5</span>
+                                          <span class="arousal-level">${arousal}/10</span>
                                         </div>
                                       `,
                                     )}
