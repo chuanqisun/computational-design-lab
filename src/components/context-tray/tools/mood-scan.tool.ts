@@ -5,6 +5,7 @@ import {
   filter,
   ignoreElements,
   map,
+  merge,
   mergeWith,
   Observable,
   tap,
@@ -66,31 +67,36 @@ export const MoodScanTool = createComponent(
 
         scanning$.next(true);
 
-        const task$ = scanMoods$({
-          images: selectedImages,
-          apiKey: apiKeys.openai,
-        }).pipe(
-          tap((result: MoodResult) => {
-            // Update in-memory results
-            const currentResults = moodResults$.value;
-            currentResults.set(result.imageId, result.moods);
-            moodResults$.next(new Map(currentResults));
+        const tasks = selectedImages.map((image) =>
+          scanMoods$({
+            image,
+            apiKey: apiKeys.openai!,
+          }).pipe(
+            tap((result: MoodResult) => {
+              // Update in-memory results
+              const currentResults = moodResults$.value;
+              currentResults.set(result.imageId, result.moods);
+              moodResults$.next(new Map(currentResults));
 
-            // Persist to metadata
-            const currentItems = items$.value;
-            const updatedItems = currentItems.map((item) =>
-              item.id === result.imageId
-                ? {
-                    ...item,
-                    metadata: {
-                      ...item.metadata,
-                      moodScan: result.moods,
-                    },
-                  }
-                : item,
-            );
-            items$.next(updatedItems);
-          }),
+              // Persist to metadata
+              const currentItems = items$.value;
+              const updatedItems = currentItems.map((item) =>
+                item.id === result.imageId
+                  ? {
+                      ...item,
+                      metadata: {
+                        ...item.metadata,
+                        moodScan: result.moods,
+                      },
+                    }
+                  : item,
+              );
+              items$.next(updatedItems);
+            }),
+          ),
+        );
+
+        const task$ = merge(...tasks).pipe(
           tap({
             complete: () => {
               scanning$.next(false);
