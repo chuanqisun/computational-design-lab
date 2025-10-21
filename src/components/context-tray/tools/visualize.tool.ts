@@ -2,6 +2,7 @@ import { html } from "lit-html";
 import { BehaviorSubject, filter, ignoreElements, map, mergeWith, Observable, tap, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { visualizeConcept$ } from "../llm/visualize-concept";
 import { submitTask } from "../tasks";
@@ -51,6 +52,7 @@ export const VisualizeTool = createComponent(
         const description = selectedTexts.map((txt) => txt.content).join(" ");
         const concept = { title, description };
 
+        const positionGenerator = getNextPositions(items$.value);
         const task$ = visualizeConcept$({
           concept,
           instruction: vizType.instruction,
@@ -58,15 +60,17 @@ export const VisualizeTool = createComponent(
           geminiApiKey: apiKeys.gemini,
         }).pipe(
           tap((url) => {
+            const { x, y, z } = positionGenerator.next().value;
             const newImage: ImageItem = {
               id: `img-${crypto.randomUUID()}`,
               type: "image",
               src: url,
-              x: Math.random() * 400 + 50,
-              y: Math.random() * 400 + 50,
+              x,
+              y,
               width: 200,
               height: 200,
               isSelected: false,
+              zIndex: z,
             };
             items$.next([...items$.value, newImage]);
           }),

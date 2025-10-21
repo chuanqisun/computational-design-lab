@@ -24,7 +24,7 @@ export interface NextPositionsConfig {
  */
 export function* getNextPositions(anchorItems: CanvasItem[], config: NextPositionsConfig = {}): Generator<Position> {
   const { offsetX = 50, offsetY = 50 } = config;
-  const center = calculateCenter(anchorItems);
+  const center = calculateAnchorPoint(anchorItems);
 
   for (let index = 0; ; index++) {
     yield {
@@ -35,7 +35,7 @@ export function* getNextPositions(anchorItems: CanvasItem[], config: NextPositio
   }
 }
 
-function calculateCenter(items: CanvasItem[]): Position {
+function calculateAnchorPoint(items: CanvasItem[]): Position {
   if (items.length === 0) {
     return { x: 400, y: 300, z: 1 }; // Default center if no items
   }
