@@ -43,6 +43,8 @@ export const MoodScanTool = createComponent(
 
     const scanAction$ = new BehaviorSubject<boolean>(false);
     const lockedMoods$ = new BehaviorSubject<Set<string>>(new Set());
+    const sortXMood$ = new BehaviorSubject<string | null>(null);
+    const sortYMood$ = new BehaviorSubject<string | null>(null);
 
     // Load existing mood scan results from metadata
     const loadExistingResults$ = selectedImages$.pipe(
@@ -124,11 +126,101 @@ export const MoodScanTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = combineLatest([selectedImages$, moodResults$, scanning$, lockedMoods$]).pipe(
-      map(([selectedImages, moodResults, scanning, lockedMoods]) => {
+    const sortXEffect$ = sortXMood$.pipe(
+      filter((mood) => mood !== null),
+      withLatestFrom(selectedImages$, moodResults$),
+      tap(([mood, selectedImages, moodResults]) => {
+        if (selectedImages.length < 2 || !mood) return;
+
+        // Find min and max X positions
+        const xPositions = selectedImages.map((img) => img.x);
+        const minX = Math.min(...xPositions);
+        const maxX = Math.max(...xPositions);
+
+        // Sort images by arousal level for the selected mood
+        const sortedImages = [...selectedImages].sort((a, b) => {
+          const aMoods = moodResults.get(a.id) || [];
+          const bMoods = moodResults.get(b.id) || [];
+          const aArousal = aMoods.find((m) => m.mood === mood)?.arousal || 0;
+          const bArousal = bMoods.find((m) => m.mood === mood)?.arousal || 0;
+          return aArousal - bArousal;
+        });
+
+        // Distribute evenly across X axis
+        const spacing = selectedImages.length > 1 ? (maxX - minX) / (selectedImages.length - 1) : 0;
+
+        const currentItems = items$.value;
+        const updatedItems = currentItems.map((item) => {
+          const sortedIndex = sortedImages.findIndex((img) => img.id === item.id);
+          if (sortedIndex === -1) return item;
+
+          const newX = minX + sortedIndex * spacing;
+          return { ...item, x: newX };
+        });
+
+        items$.next(updatedItems);
+      }),
+      ignoreElements(),
+    );
+
+    const sortYEffect$ = sortYMood$.pipe(
+      filter((mood) => mood !== null),
+      withLatestFrom(selectedImages$, moodResults$),
+      tap(([mood, selectedImages, moodResults]) => {
+        if (selectedImages.length < 2 || !mood) return;
+
+        // Find min and max Y positions
+        const yPositions = selectedImages.map((img) => img.y);
+        const minY = Math.min(...yPositions);
+        const maxY = Math.max(...yPositions);
+
+        // Sort images by arousal level for the selected mood
+        const sortedImages = [...selectedImages].sort((a, b) => {
+          const aMoods = moodResults.get(a.id) || [];
+          const bMoods = moodResults.get(b.id) || [];
+          const aArousal = aMoods.find((m) => m.mood === mood)?.arousal || 0;
+          const bArousal = bMoods.find((m) => m.mood === mood)?.arousal || 0;
+          return bArousal - aArousal;
+        });
+
+        // Distribute evenly across Y axis
+        const spacing = selectedImages.length > 1 ? (maxY - minY) / (selectedImages.length - 1) : 0;
+
+        const currentItems = items$.value;
+        const updatedItems = currentItems.map((item) => {
+          const sortedIndex = sortedImages.findIndex((img) => img.id === item.id);
+          if (sortedIndex === -1) return item;
+
+          const newY = minY + sortedIndex * spacing;
+          return { ...item, y: newY };
+        });
+
+        items$.next(updatedItems);
+      }),
+      ignoreElements(),
+    );
+
+    const template$ = combineLatest([
+      selectedImages$,
+      moodResults$,
+      scanning$,
+      lockedMoods$,
+      sortXMood$,
+      sortYMood$,
+    ]).pipe(
+      map(([selectedImages, moodResults, scanning, lockedMoods, _sortXMood, _sortYMood]) => {
         if (selectedImages.length === 0) return html``;
 
         const hasResults = moodResults.size > 0;
+
+        // Extract all unique moods from results
+        const allMoods = new Set<string>();
+        for (const moods of moodResults.values()) {
+          for (const { mood } of moods) {
+            allMoods.add(mood);
+          }
+        }
+        const sortedMoods = Array.from(allMoods).sort();
 
         const toggleLock = (mood: string) => {
           const newLocked = new Set(lockedMoods);
@@ -142,10 +234,10 @@ export const MoodScanTool = createComponent(
 
         return html`
           <div class="mood-scan-section">
-            <h3>Mood Scan</h3>
             <button @click=${() => scanAction$.next(true)} ?disabled=${scanning}>
               ${scanning ? "Scanning..." : "Scan Moods"}
             </button>
+
             ${hasResults
               ? html`
                   <div class="mood-results">
@@ -207,11 +299,31 @@ export const MoodScanTool = createComponent(
                   </div>
                 `
               : html``}
+            ${hasResults && sortedMoods.length > 0
+              ? html`
+                  <div class="sort-controls">
+                    <label>
+                      Sort X:
+                      <select @change=${(e: Event) => sortXMood$.next((e.target as HTMLSelectElement).value || null)}>
+                        <option value="">-- Select mood --</option>
+                        ${sortedMoods.map((mood) => html`<option value=${mood}>${mood}</option>`)}
+                      </select>
+                    </label>
+                    <label>
+                      Sort Y:
+                      <select @change=${(e: Event) => sortYMood$.next((e.target as HTMLSelectElement).value || null)}>
+                        <option value="">-- Select mood --</option>
+                        ${sortedMoods.map((mood) => html`<option value=${mood}>${mood}</option>`)}
+                      </select>
+                    </label>
+                  </div>
+                `
+              : html``}
           </div>
         `;
       }),
     );
 
-    return template$.pipe(mergeWith(scanEffect$, loadExistingResults$));
+    return template$.pipe(mergeWith(scanEffect$, loadExistingResults$, sortXEffect$, sortYEffect$));
   },
 );

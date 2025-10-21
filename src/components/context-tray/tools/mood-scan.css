@@ -26,3 +26,19 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary, #666);
 }
+
+.sort-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+.sort-controls label {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.sort-controls select {
+  flex: 1;
+}
