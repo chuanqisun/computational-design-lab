@@ -1,5 +1,5 @@
 import { html, render } from "lit-html";
-import { BehaviorSubject, combineLatest, map } from "rxjs";
+import { BehaviorSubject, ignoreElements, map, merge, mergeWith, of } from "rxjs";
 import "./canvas-page.css";
 import type { CanvasItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
@@ -28,39 +28,35 @@ const Main = createComponent(() => {
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
-  taskRunner$.subscribe();
+  const effects$ = merge(taskRunner$).pipe(ignoreElements());
 
-  const template$ = combineLatest([trayWidth$]).pipe(
-    map(([trayWidth]) => {
-      return html`
-        <header class="app-header">
-          <h1>Computational Mood Board</h1>
-          <div class="app-header__right">
-            ${observe(progressText)}
-            ${observe(
-              hasActiveTasks.pipe(
-                map((hasActive) => (hasActive ? html`<button @click=${stopTasks}>Stop</button>` : html``)),
-              ),
-            )}
-            <button commandfor="connection-dialog" command="show-modal">Setup</button>
-          </div>
-        </header>
-        <main class="main" style="--tray-width: ${trayWidth}px;">
-          <div class="canvas-area">${canvasUI}</div>
-          ${resizerUI}
-          <div class="context-tray-area">${contextTrayUI}</div>
-        </main>
-        <dialog class="connection-form" id="connection-dialog">
-          <div class="connections-dialog-body">
-            ${connectionsUI}
-            <form method="dialog">
-              <button>Close</button>
-            </form>
-          </div>
-        </dialog>
-      `;
-    }),
-  );
+  const template$ = of(html`
+    <header class="app-header">
+      <h1>Computational Mood Board</h1>
+      <div class="app-header__right">
+        ${observe(progressText)}
+        ${observe(
+          hasActiveTasks.pipe(
+            map((hasActive) => (hasActive ? html`<button @click=${stopTasks}>Stop</button>` : html``)),
+          ),
+        )}
+        <button commandfor="connection-dialog" command="show-modal">Setup</button>
+      </div>
+    </header>
+    <main class="main" style="--tray-width: ${observe(trayWidth$)}px;">
+      <div class="canvas-area">${canvasUI}</div>
+      ${resizerUI}
+      <div class="context-tray-area">${contextTrayUI}</div>
+    </main>
+    <dialog class="connection-form" id="connection-dialog">
+      <div class="connections-dialog-body">
+        ${connectionsUI}
+        <form method="dialog">
+          <button>Close</button>
+        </form>
+      </div>
+    </dialog>
+  `).pipe(mergeWith(effects$));
 
   return template$;
 });
