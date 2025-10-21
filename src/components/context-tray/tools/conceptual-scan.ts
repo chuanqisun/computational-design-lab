@@ -12,6 +12,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanConcepts$, type ConceptualScanInput } from "../llm/scan-concepts";
 import { submitTask } from "../tasks";
@@ -71,22 +72,25 @@ export const ConceptualScanTool = createComponent(
           throw new Error("Invalid item type");
         });
 
+        const positionGenerator = getNextPositions(items$.value);
         const task$ = scanConcepts$({
           items: scanInputs,
           instruction: scanType.instruction,
           apiKey: apiKeys.openai,
         }).pipe(
           tap((concept) => {
+            const { x, y, z } = positionGenerator.next().value;
             const newText: CanvasItem = {
               id: `text-${Date.now()}`,
               type: "text",
               title: concept.title,
               content: concept.description,
-              x: Math.random() * 400,
-              y: Math.random() * 400,
+              x,
+              y,
               width: 200,
               height: 200,
               isSelected: false,
+              zIndex: z,
             };
             items$.next([...items$.value, newText]);
           }),

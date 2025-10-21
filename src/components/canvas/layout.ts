@@ -1,10 +1,9 @@
-import type { Observable } from "rxjs";
-import { defer, generate } from "rxjs";
 import type { CanvasItem } from "./canvas.component";
 
 export interface Position {
   x: number;
   y: number;
+  z: number;
 }
 
 export interface NextPositionsConfig {
@@ -13,7 +12,7 @@ export interface NextPositionsConfig {
 }
 
 /**
- * Creates an infinite observable that generates positions offset diagonally
+ * Creates an infinite generator that yields positions offset diagonally
  * from the center of the anchor items. Each position moves right and down.
  *
  * Pattern (with default 50px offset):
@@ -23,39 +22,36 @@ export interface NextPositionsConfig {
  * Position 3: center + (150, 150)
  * ... continues infinitely
  */
-export function getNextPositions(anchorItems: CanvasItem[], config: NextPositionsConfig = {}): Observable<Position> {
+export function* getNextPositions(anchorItems: CanvasItem[], config: NextPositionsConfig = {}): Generator<Position> {
   const { offsetX = 50, offsetY = 50 } = config;
+  const center = calculateCenter(anchorItems);
 
-  return defer(() => {
-    const center = calculateCenter(anchorItems);
-
-    return generate({
-      initialState: 0,
-      condition: () => true,
-      iterate: (x) => x + 1,
-      resultSelector: (index: number) => ({
-        x: center.x + index * offsetX,
-        y: center.y + index * offsetY,
-      }),
-    });
-  });
+  for (let index = 0; ; index++) {
+    yield {
+      x: center.x + index * offsetX,
+      y: center.y + index * offsetY,
+      z: center.z + index,
+    };
+  }
 }
 
 function calculateCenter(items: CanvasItem[]): Position {
   if (items.length === 0) {
-    return { x: 400, y: 300 }; // Default center if no items
+    return { x: 400, y: 300, z: 1 }; // Default center if no items
   }
 
   const sum = items.reduce(
     (acc, item) => ({
       x: acc.x + item.x + item.width / 2,
       y: acc.y + item.y + item.height / 2,
+      z: Math.max(acc.z, item.zIndex ?? 1),
     }),
-    { x: 0, y: 0 },
+    { x: 0, y: 0, z: 1 },
   );
 
   return {
     x: sum.x / items.length,
     y: sum.y / items.length,
+    z: sum.z + 1,
   };
 }
