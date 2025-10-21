@@ -21,6 +21,48 @@ export interface MoveUpdate {
   y: number;
 }
 
+export interface ClickContext {
+  item: CanvasItem;
+  currentState: SelectionState;
+  isCtrl: boolean;
+  isShift: boolean;
+}
+
+export interface ClickAnalysis {
+  isMultiSelectMode: boolean;
+  isAlreadySelected: boolean;
+  selectedCount: number;
+  shouldDeferSingleSelect: boolean;
+}
+
+/**
+ * Analyze click context to determine selection behavior
+ */
+export function analyzeClick(context: ClickContext): ClickAnalysis {
+  const { item, currentState, isCtrl, isShift } = context;
+  const isMultiSelectMode = isCtrl || isShift;
+  const isAlreadySelected = item.isSelected || false;
+  const selectedCount = currentState.items.filter((i) => i.isSelected).length;
+  const shouldDeferSingleSelect = !isMultiSelectMode && isAlreadySelected && selectedCount > 1;
+
+  return {
+    isMultiSelectMode,
+    isAlreadySelected,
+    selectedCount,
+    shouldDeferSingleSelect,
+  };
+}
+
+/**
+ * Apply single selection to a specific item
+ */
+export function applySingleSelection(items: CanvasItem[], itemId: string): CanvasItem[] {
+  return items.map((i) => ({
+    ...i,
+    isSelected: i.id === itemId,
+  }));
+}
+
 /**
  * Calculate selection state update when an item is clicked
  */
@@ -29,26 +71,43 @@ export function calculateSelectionUpdate(
   currentState: SelectionState,
   isCtrlPressed: boolean,
   isShiftPressed: boolean,
+  deferSingleSelect: boolean = false,
 ): SelectionUpdate {
   const isMultiSelect = isCtrlPressed || isShiftPressed;
   const isAlreadySelected = item.isSelected;
+  const selectedCount = currentState.items.filter((i) => i.isSelected).length;
 
   let updatedItems: CanvasItem[];
 
   if (isMultiSelect) {
-    // Toggle selection for multi-select
+    // Toggle selection for multi-select - this should work for both selected and unselected items
     updatedItems = currentState.items.map((currentItem) =>
       currentItem.id === item.id ? { ...currentItem, isSelected: !currentItem.isSelected } : currentItem,
     );
-  } else if (!isAlreadySelected) {
-    // Single select - deselect all others, select this one
-    updatedItems = currentState.items.map((currentItem) => ({
-      ...currentItem,
-      isSelected: currentItem.id === item.id,
-    }));
   } else {
-    // Item is already selected and no multi-select - keep current state
-    updatedItems = currentState.items;
+    // Without modifier keys, if multiple items are selected and clicking on an already selected item,
+    // defer single selection switch if requested (for drag detection)
+    if (isAlreadySelected && selectedCount > 1) {
+      if (deferSingleSelect) {
+        // Keep all items selected for now, will switch to single selection later if not dragging
+        updatedItems = currentState.items;
+      } else {
+        // Switch to single selection immediately
+        updatedItems = currentState.items.map((currentItem) => ({
+          ...currentItem,
+          isSelected: currentItem.id === item.id,
+        }));
+      }
+    } else if (!isAlreadySelected) {
+      // Single select - deselect all others, select this one
+      updatedItems = currentState.items.map((currentItem) => ({
+        ...currentItem,
+        isSelected: currentItem.id === item.id,
+      }));
+    } else {
+      // Item is already selected and is the only selected item - keep current state
+      updatedItems = currentState.items;
+    }
   }
 
   return { items: updatedItems };

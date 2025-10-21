@@ -7,6 +7,8 @@ import { generateTitle$ } from "../context-tray/llm/generate-title";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
 import {
+  analyzeClick,
+  applySingleSelection,
   calculateFinalPositions,
   calculateSelectionUpdate,
   deselectAll,
@@ -147,8 +149,17 @@ export const CanvasComponent = createComponent(
         items: props.items$.value,
       };
 
-      // Calculate selection update
-      const selectionUpdate = calculateSelectionUpdate(item, currentState, isCtrl, isShift);
+      // Analyze the click context
+      const analysis = analyzeClick({ item, currentState, isCtrl, isShift });
+
+      // Calculate selection update, but defer single-selection if we might be dragging
+      const selectionUpdate = calculateSelectionUpdate(
+        item,
+        currentState,
+        isCtrl,
+        isShift,
+        analysis.shouldDeferSingleSelect,
+      );
       props.items$.next(selectionUpdate.items);
 
       // Check if the clicked item is selected after update
@@ -170,15 +181,25 @@ export const CanvasComponent = createComponent(
       const canvas = (e.currentTarget as HTMLElement).parentElement as HTMLElement;
       const draggedData = prepareDragData(canvas, allSelectedItems, e);
 
+      let hasMoved = false;
+
       const handleMouseMove = (moveEvent: MouseEvent) => {
+        hasMoved = true;
         updateDragPositions(draggedData, moveEvent);
       };
 
       const handleMouseUp = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-        const newPositions = calculateFinalPositions(draggedData);
-        moveItems$.next({ moves: newPositions });
+
+        if (hasMoved) {
+          const newPositions = calculateFinalPositions(draggedData);
+          moveItems$.next({ moves: newPositions });
+        } else if (analysis.shouldDeferSingleSelect) {
+          // If we didn't move and should switch to single selection, do it now
+          const singleSelectItems = applySingleSelection(props.items$.value, item.id);
+          props.items$.next(singleSelectItems);
+        }
       };
 
       document.addEventListener("mousemove", handleMouseMove);

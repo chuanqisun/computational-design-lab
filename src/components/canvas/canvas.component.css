@@ -49,7 +49,7 @@
 }
 
 .canvas-item:hover {
-  outline: 3px solid var(--color-selection-outline);
+  outline: 3px solid var(--color-hover-outline);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -79,7 +79,7 @@
 }
 
 .canvas-image:hover {
-  outline: 3px solid var(--color-selection-outline);
+  outline: 3px solid var(--color-hover-outline);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -112,7 +112,7 @@
 }
 
 .canvas-text:hover {
-  outline: 3px solid var(--color-selection-outline);
+  outline: 3px solid var(--color-hover-outline);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
