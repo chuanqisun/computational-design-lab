@@ -40,7 +40,7 @@ export const BlendTool = createComponent(
           return;
         }
 
-        const positionGenerator = getNextPositions(items$.value);
+        const positionGenerator = getNextPositions(items$.value.filter((item) => item.isSelected));
         const task$ = blendImages({
           instruction: instruction.trim(),
           images: selectedImages,

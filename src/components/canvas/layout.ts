@@ -85,7 +85,6 @@ export function gatherItemsIntoViewport(
   items: CanvasItem[],
   viewport: { width: number; height: number; scrollX: number; scrollY: number },
 ): Array<{ id: string; x: number; y: number }> {
-  debugger;
   const margin = 20; // Padding from viewport edges
   const gap = 20; // Gap between items in grid
 

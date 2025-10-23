@@ -72,7 +72,7 @@ export const ConceptualScanTool = createComponent(
           throw new Error("Invalid item type");
         });
 
-        const positionGenerator = getNextPositions(items$.value);
+        const positionGenerator = getNextPositions(selectedItems);
         const task$ = scanConcepts$({
           items: scanInputs,
           instruction: scanType.instruction,

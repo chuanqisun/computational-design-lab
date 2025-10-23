@@ -52,7 +52,7 @@ export const VisualizeTool = createComponent(
         const description = selectedTexts.map((txt) => txt.content).join(" ");
         const concept = { title, description };
 
-        const positionGenerator = getNextPositions(items$.value);
+        const positionGenerator = getNextPositions(items$.value.filter((item) => item.isSelected));
         const task$ = visualizeConcept$({
           concept,
           instruction: vizType.instruction,
