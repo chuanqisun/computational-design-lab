@@ -12,6 +12,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
 import { submitTask } from "../tasks";
@@ -52,12 +53,15 @@ export const RenderTool = createComponent(
           images: images.length > 0 ? images : undefined,
         }).pipe(
           map((result) => {
+            const canvasElement = document.querySelector(".canvas") as HTMLElement;
+            const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+
             const newImage: CanvasItem = {
               id: `rendered-${Date.now()}`,
               type: "image",
               src: result.url,
-              x: Math.random() * 400,
-              y: Math.random() * 400,
+              x: center.x - 100,
+              y: center.y - 100,
               width: 200,
               height: 200,
               isSelected: false,

@@ -19,6 +19,25 @@ export interface SortAxisConfig<T, V> {
 }
 
 /**
+ * Returns the center position of the visible portion of a scrollable element.
+ * Uses the parent's scroll position and dimensions to find the visible center.
+ */
+export function getViewportCenter(element: HTMLElement): {
+  x: number;
+  y: number;
+} {
+  const parent = element.parentElement;
+  if (!parent) {
+    return { x: 0, y: 0 };
+  }
+
+  return {
+    x: parent.scrollLeft + parent.clientWidth / 2,
+    y: parent.scrollTop + parent.clientHeight / 2,
+  };
+}
+
+/**
  * Creates an infinite generator that yields positions offset diagonally
  * from the center of the anchor items. Each position moves right and down.
  *

@@ -6,6 +6,7 @@ import type { ApiKeys } from "../connections/storage";
 import { generateTitle$ } from "../context-tray/llm/generate-title";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
+import { getViewportCenter } from "./layout";
 import {
   analyzeClick,
   applySingleSelection,
@@ -68,12 +69,15 @@ export const CanvasComponent = createComponent(
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
       tap((src) => {
+        const canvasElement = document.querySelector(".canvas") as HTMLElement;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+
         const newImage: CanvasItem = {
           id: `img-${Date.now()}`,
           type: "image",
           src,
-          x: Math.random() * 400, // Random position
-          y: Math.random() * 400,
+          x: center.x - 100,
+          y: center.y - 100,
           width: 200,
           height: 200,
           zIndex: getNextZIndex(),
@@ -84,14 +88,17 @@ export const CanvasComponent = createComponent(
 
     const pasteTextEffect$ = pasteText$.pipe(
       tap((text) => {
+        const canvasElement = document.querySelector(".canvas") as HTMLElement;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+
         const textId = `text-${Date.now()}`;
         const newText: CanvasItem = {
           id: textId,
           type: "text",
           title: "Text",
           content: text,
-          x: Math.random() * 400,
-          y: Math.random() * 400,
+          x: center.x - 100,
+          y: center.y - 100,
           width: 200,
           height: 200,
           zIndex: getNextZIndex(),
