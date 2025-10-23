@@ -53,7 +53,7 @@ export const RenderTool = createComponent(
           images: images.length > 0 ? images : undefined,
         }).pipe(
           map((result) => {
-            const canvasElement = document.querySelector(".canvas") as HTMLElement;
+            const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
             const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
 
             const newImage: CanvasItem = {

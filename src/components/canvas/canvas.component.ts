@@ -69,7 +69,7 @@ export const CanvasComponent = createComponent(
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
       tap((src) => {
-        const canvasElement = document.querySelector(".canvas") as HTMLElement;
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
 
         const newImage: CanvasItem = {
@@ -88,7 +88,7 @@ export const CanvasComponent = createComponent(
 
     const pasteTextEffect$ = pasteText$.pipe(
       tap((text) => {
-        const canvasElement = document.querySelector(".canvas") as HTMLElement;
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
 
         const textId = `text-${Date.now()}`;
@@ -248,7 +248,14 @@ export const CanvasComponent = createComponent(
     const template$ = items$.pipe(
       map(
         (items) => html`
-          <div class="canvas" tabindex="0" @paste=${handlePaste} @click=${handleCanvasClick} @keydown=${handleKeyDown}>
+          <div
+            class="canvas"
+            data-canvas
+            tabindex="0"
+            @paste=${handlePaste}
+            @click=${handleCanvasClick}
+            @keydown=${handleKeyDown}
+          >
             ${repeat(
               items,
               (item) => item.id,
