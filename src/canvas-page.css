@@ -234,6 +234,13 @@ generative-image {
   min-height: 0;
 }
 
+@media (orientation: portrait) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+}
+
 .canvas-area {
   overflow: auto;
 }
@@ -247,4 +254,11 @@ generative-image {
   gap: 1ch;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+@media (orientation: portrait) {
+  .context-tray-area {
+    max-height: var(--tray-width, 20rem);
+    overflow-x: auto;
+  }
 }
