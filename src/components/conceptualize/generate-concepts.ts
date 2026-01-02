@@ -77,10 +77,10 @@ Respond in this JSON format:
 
         const responseStream = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: prompt,
             text: { format: { type: "json_object" } },
-            temperature: 0.3,
+            reasoning: null,
             stream: true,
           },
           {
