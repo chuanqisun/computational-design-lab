@@ -118,11 +118,11 @@ Respond in this JSON format:
 
         const responseStream = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: prompt,
             text: { format: { type: "json_object" } },
             stream: true,
-            temperature: 0.3,
+            reasoning: null,
           },
           {
             signal: abortController.signal,
@@ -224,11 +224,11 @@ Respond in this JSON format:
 
         const responseStream = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: prompt,
             text: { format: { type: "json_object" } },
             stream: true,
-            temperature: 0.3,
+            reasoning: null,
           },
           {
             signal: abortController.signal,
@@ -320,7 +320,7 @@ Respond in this JSON format:
 
         const response = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: [
               { role: "developer", content: prompt },
 
@@ -335,7 +335,7 @@ Respond in this JSON format:
 
               { role: "user", content: params.designIdea },
             ],
-            temperature: 0.3,
+            reasoning: null,
             text: { format: { type: "json_object" } },
           },
           {

@@ -88,10 +88,10 @@ Respond in this JSON format:
         `.trim();
 
         const responseStream = await openai.responses.create({
-          model: "gpt-4.1",
+          model: "gpt-5.2",
           input: prompt,
           text: { format: { type: "json_object" } },
-          temperature: 0.3,
+          reasoning: null,
           stream: true,
         });
 
@@ -130,7 +130,7 @@ export function regenerateArtifactDescription$(params: {
       try {
         const response = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: [
               {
                 role: "developer",
@@ -146,7 +146,7 @@ export function regenerateArtifactDescription$(params: {
 
               { role: "user", content: params.artifactName },
             ],
-            temperature: 0.3,
+            reasoning: null,
           },
           {
             signal: abortController.signal,
@@ -200,7 +200,8 @@ export function generateArtifactFromImage$(params: {
 
         const response = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
+            reasoning: null,
             input: [
               {
                 role: "user",

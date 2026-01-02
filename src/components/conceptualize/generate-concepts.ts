@@ -127,7 +127,7 @@ export function regenerateDescription$(params: {
       try {
         const response = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: [
               { role: "developer", content: "Write a short one-sentence description for the provided concept." },
 
@@ -139,7 +139,7 @@ export function regenerateDescription$(params: {
 
               { role: "user", content: params.concept },
             ],
-            temperature: 0.3,
+            reasoning: null,
           },
           {
             signal: abortController.signal,

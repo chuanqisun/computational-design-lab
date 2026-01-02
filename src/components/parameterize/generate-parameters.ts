@@ -95,10 +95,10 @@ Respond in this JSON format:
         `.trim();
 
         const responseStream = await openai.responses.create({
-          model: "gpt-4.1",
+          model: "gpt-5.2",
           input: prompt,
           text: { format: { type: "json_object" } },
-          temperature: 0.3,
+          reasoning: null,
           stream: true,
         });
 
@@ -138,7 +138,7 @@ export function regenerateParameterDescription$(params: {
       try {
         const response = await openai.responses.create(
           {
-            model: "gpt-4.1",
+            model: "gpt-5.2",
             input: [
               {
                 role: "developer",
@@ -153,7 +153,7 @@ export function regenerateParameterDescription$(params: {
 
               { role: "user", content: params.parameterName },
             ],
-            temperature: 0.3,
+            reasoning: null,
           },
           {
             signal: abortController.signal,
