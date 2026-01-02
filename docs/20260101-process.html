@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Assisted Design Workflow and Prompt Guide</title>
+    <style>
+      :root {
+        --text-color: #1a1a1a;
+        --secondary-text: #666;
+        --bg-color: #fff;
+        --code-bg: #f5f5f5;
+        --border-color: #eee;
+        --spacing: 2ch;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Monaco, Consolas, "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-color);
+        background-color: var(--bg-color);
+        max-width: 90rem;
+        margin: 0 auto;
+        padding: 4ch;
+      }
+
+      header {
+        margin-bottom: 8ch;
+      }
+
+      h1 {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 4ch;
+        text-transform: uppercase;
+        letter-spacing: 0.1ch;
+      }
+
+      h2 {
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 8ch;
+        margin-bottom: 2ch;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1ch;
+      }
+
+      h3 {
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 4ch;
+        margin-bottom: 1ch;
+        color: var(--secondary-text);
+      }
+
+      p {
+        margin-bottom: 2ch;
+      }
+
+      ul {
+        margin-bottom: 2ch;
+        list-style: none;
+      }
+
+      li {
+        margin-bottom: 1ch;
+        padding-left: 2ch;
+        position: relative;
+      }
+
+      li::before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: var(--secondary-text);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2ch;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 1ch;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      th {
+        font-weight: bold;
+        color: var(--secondary-text);
+      }
+
+      pre {
+        background-color: var(--code-bg);
+        padding: 2ch;
+        margin-bottom: 2ch;
+        overflow-x: auto;
+        border-radius: 2px;
+      }
+
+      code {
+        font-family: inherit;
+      }
+
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 2ch;
+        margin-top: 4ch;
+        margin-bottom: 4ch;
+      }
+
+      .image-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .image-item img {
+        width: 100%;
+        height: auto;
+      }
+
+      .image-caption {
+        font-size: 12px;
+        color: var(--secondary-text);
+        margin-top: 1ch;
+      }
+
+      strong {
+        font-weight: bold;
+      }
+
+      section {
+        margin-bottom: 8ch;
+      }
+
+      .params-list {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1ch 4ch;
+        margin-bottom: 2ch;
+      }
+
+      .params-list dt {
+        font-weight: bold;
+      }
+
+      .params-list dd {
+        margin-bottom: 1ch;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AI Assisted Design Workflow and Prompt Guide</h1>
+      <p>
+        This guide outlines the multi-stage process for using AI to move from a high-level design goal to a fully
+        realized product concept. Each stage uses specific prompts to refine the design direction.
+      </p>
+    </header>
+
+    <section id="conceptualize">
+      <h2>1. Conceptualize</h2>
+      <p>
+        <strong>Purpose:</strong> Expand a high-level design goal (the "Parti") into a set of related conceptual
+        keywords that provide depth and nuance to the initial idea.
+      </p>
+
+      <h3>Data Input</h3>
+      <ul>
+        <li><strong>Parti:</strong> A high-level goal or theme (e.g., "Playfulness").</li>
+      </ul>
+
+      <h3>Prompt</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gpt-5.2</code></td>
+            <td><code>reasoning: null</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Generate conceptual keywords that best represent this Parti:
+
+[Parti Text]
+
+Generate up to 5 new concepts (one word, or compound word) with short descriptions that capture some essence of the Parti. Each concept should be unique and meaningful.</code></pre>
+
+      <h3>Output Examples</h3>
+      <pre><code>- Whimsy: Lighthearted spontaneity that invites delight and surprise.
+- Frolic: Playful, carefree activity marked by energetic joy and a sense of freedom.
+- Gamefulness: A playful mindset that treats tasks and interactions like games—full of curiosity, challenge, and fun.
+- Multi-sensory: Engaging multiple senses at once to create a richer, more immersive experience.
+- Improvisation: Creating and responding in the moment without a fixed plan, guided by intuition and adaptability.</code></pre>
+    </section>
+
+    <section id="embody">
+      <h2>2. Embody (Moodboard)</h2>
+      <p>
+        <strong>Purpose:</strong> Translate abstract concepts into tangible visual artifacts and detailed descriptions
+        suitable for image generation.
+      </p>
+
+      <h3>Data Input</h3>
+      <ul>
+        <li><strong>Parti:</strong> The original design goal.</li>
+        <li><strong>Concepts:</strong> The list of keywords generated in the previous step.</li>
+      </ul>
+
+      <h3>Prompt</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gpt-5.2</code></td>
+            <td><code>reasoning: null</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Generate moodboard artifacts based on this Parti and concepts:
+
+Parti: [Parti Text]
+Concepts: [List of Concepts]
+
+Generate 5 diverse artifacts that would be commonly seen in a moodboard. Each artifact should represent or evoke the Parti and be suitable for image generation.
+An artifact should be grounded in the real world (object, material, texture, color, etc.).
+
+Artifact name should be very short.
+Artifact description should be one detailed sentence including subject, scene, and style for AI image generation.</code></pre>
+
+      <h3>Image Generation</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gemini-2.5-flash-image</code></td>
+            <td><code>responseModalities: ["IMAGE"]</code></td>
+          </tr>
+          <tr>
+            <td><code>FLUX.1-schnell-free</code></td>
+            <td><code>steps: 4</code>, <code>disable_safety_checker: true</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Output Examples</h3>
+      <pre><code>- Confetti burst: A candid street-level photo of a hand popping a biodegradable confetti cannon on a sunny sidewalk, with colorful paper pieces mid-air, surprised laughing faces in soft focus, and a bright high-saturation editorial style with crisp freeze-frame motion.
+- Neon hopscotch: A dusk scene of a city plaza where glow-in-the-dark hopscotch lines and playful doodles are painted across the pavement, kids and adults mid-jump in energetic poses, captured in a cinematic wide-angle shot with vibrant neon accents and shallow depth of field.
+- Jelly textures: A macro still-life of wobbly translucent jelly cubes in candy colors on a glossy plate with condensation beads, light refracting into prismatic highlights, photographed in a clean studio setup with playful pastel gradients and tactile realism.
+- Mismatched socks: A cozy bedroom scene showing feet in brightly patterned mismatched socks kicking playfully off a rumpled duvet, scattered polaroids and stickers nearby, shot in warm natural window light with a whimsical lifestyle photography aesthetic.
+- Bubble parade: A park walkway filled with oversized soap bubbles drifting through golden-hour light as someone runs with a giant bubble wand, bystanders reaching and laughing, rendered in dreamy high-key photography with iridescent reflections and gentle motion blur.</code></pre>
+
+      <div class="image-grid">
+        <div class="image-item">
+          <img src="./images/image-1.png" alt="Confetti burst" />
+          <div class="image-caption">Confetti burst</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/image-2.png" alt="Neon hopscotch" />
+          <div class="image-caption">Neon hopscotch</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/image-3.png" alt="Jelly textures" />
+          <div class="image-caption">Jelly textures</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/image-4.png" alt="Mismatched socks" />
+          <div class="image-caption">Mismatched socks</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/image-5.png" alt="Bubble parade" />
+          <div class="image-caption">Bubble parade</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="parameterize">
+      <h2>3. Parameterize</h2>
+      <p>
+        <strong>Purpose:</strong> Identify the key design decisions (parameters) that must be made for a specific
+        product domain, informed by the established visual and conceptual direction.
+      </p>
+
+      <h3>Data Input</h3>
+      <ul>
+        <li><strong>Domain:</strong> The product category (e.g., "Baby care packaging").</li>
+        <li><strong>Parti, Concepts, and Artifacts:</strong> The context established in previous steps.</li>
+      </ul>
+
+      <h3>Prompt</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gpt-5.2</code></td>
+            <td><code>reasoning: null</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Generate design parameters for [Domain] based on this Parti, concepts, and artifacts:
+
+Parti: [Parti Text]
+Concepts: [List of Concepts]
+Artifacts: [List of Artifacts]
+
+Generate design parameters that represent specific design decisions that a designer must make for [Domain].
+Each parameter should be single purpose, representing an atomic decision.
+
+Parameter name should be concrete and concise.
+Parameter description should define what this decision encompasses, including example values.</code></pre>
+
+      <h3>Output Examples</h3>
+      <dl class="params-list">
+        <dt>Cap interaction mechanism</dt>
+        <dd>
+          Defines how the cap opens/closes and enables playful use, e.g., flip-top, pump, twist-off, squeeze-to-pop, or
+          one-handed press-and-release.
+        </dd>
+
+        <dt>Bottle silhouette profile</dt>
+        <dd>
+          Specifies the overall container shape language and ergonomics, e.g., rounded pebble, wavy/jelly-like form,
+          hourglass grip, character-inspired outline, or tall cylindrical.
+        </dd>
+
+        <dt>Front-label graphic motif</dt>
+        <dd>
+          Determines the primary visual pattern/illustration style used on-pack, e.g., confetti burst shapes,
+          bubble/iridescent dots, neon doodle lines, mismatched pattern patches, or pastel gradient jelly textures.
+        </dd>
+
+        <dt>Surface finish treatment</dt>
+        <dd>
+          Defines the tactile and visual finish of the bottle/label surfaces, e.g., soft-touch matte, high-gloss, satin,
+          micro-embossed texture, prismatic/iridescent varnish accents, or spot UV.
+        </dd>
+
+        <dt>Color palette strategy</dt>
+        <dd>
+          Specifies the packaging color system and intensity, e.g., pastel gradients, candy-bright high saturation, neon
+          accent pops on a neutral base, warm golden tones, or limited two-color + highlight scheme.
+        </dd>
+
+        <dt>Acoustic experience</dt>
+        <dd>
+          Defines the sounds the package makes during handling and use, e.g., quiet damped flip, crisp snap-close click,
+          soft squeeze "whoosh," subtle rattle from internal bead, or near-silent pump stroke.
+        </dd>
+      </dl>
+    </section>
+
+    <section id="design">
+      <h2>4. Design</h2>
+      <p>
+        <strong>Purpose:</strong> Synthesize all previous inputs into cohesive product design concepts by assigning
+        specific values to each parameter.
+      </p>
+
+      <h3>Data Input</h3>
+      <ul>
+        <li><strong>Domain, Parti, Concepts, Artifacts, and Parameters.</strong></li>
+      </ul>
+
+      <h3>Prompt</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gpt-5.2</code></td>
+            <td><code>reasoning: null</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Generate product design concepts for [Domain] based on this Parti, concepts, visual artifacts, and parameters:
+
+[Context from previous steps]
+
+Generate diverse designs for [Domain]. Each design assigns concrete values to the parameters. Each design should reflect cohesive design decisions that align with the established direction.
+
+Design name should be descriptive but concise.
+Parameter assignments should map each parameter name to a specific value.</code></pre>
+
+      <h3>Output Examples</h3>
+      <div style="margin-bottom: 4ch">
+        <p><strong>Concept name: Bubble Parade Pop-Top</strong></p>
+        <ul style="margin-left: 2ch">
+          <li>
+            <strong>Cap interaction mechanism:</strong> One-handed press-and-release flip-top with a soft domed button;
+            opens with a crisp snap-close click to feel like a tiny ‘pop’
+          </li>
+          <li>
+            <strong>Bottle silhouette profile:</strong> Rounded pebble with a gentle hourglass grip for wet hands; wide,
+            stable base for bath ledges
+          </li>
+          <li>
+            <strong>Front-label graphic motif:</strong> Bubble/iridescent dots drifting upward with a few oversized
+            ‘hero’ bubbles and subtle motion-blur arcs
+          </li>
+          <li>
+            <strong>Surface finish treatment:</strong> Soft-touch matte bottle + spot UV glossy bubbles + small
+            prismatic/iridescent varnish hits inside select bubbles
+          </li>
+          <li>
+            <strong>Color palette strategy:</strong> Milky cloud-white base with pastel gradients (aqua→lavender→peach)
+            and subtle pearlescent sheen
+          </li>
+          <li>
+            <strong>Acoustic experience:</strong> Crisp snap-close click on shut; near-silent open to avoid startling
+            baby
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <p><strong>Concept name: Jelly Wiggle Squeeze-Whoosh</strong></p>
+        <ul style="margin-left: 2ch">
+          <li>
+            <strong>Cap interaction mechanism:</strong> Squeeze-to-pop push cap: pinch the sides to lift a short spout;
+            closes by pressing down flat (safe, spill-resistant)
+          </li>
+          <li>
+            <strong>Bottle silhouette profile:</strong> Wavy/jelly-like form with soft ribs for tactile grip; slightly
+            squishy wall for playful ‘wiggle’ feedback
+          </li>
+          <li>
+            <strong>Front-label graphic motif:</strong> Pastel gradient jelly textures with translucent cube shapes and
+            condensation-like dot clusters
+          </li>
+          <li>
+            <strong>Surface finish treatment:</strong> High-gloss bottle with micro-embossed ‘dewdrop’ texture around
+            grip zones; clear label with satin ink for the jelly cubes
+          </li>
+          <li>
+            <strong>Color palette strategy:</strong> Candy-pastel translucents (mint, strawberry, lemon) kept light and
+            milky for baby-suitable softness
+          </li>
+          <li>
+            <strong>Acoustic experience:</strong> Soft squeeze “whoosh” as the cap pops open and the bottle compresses
+            slightly
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="render">
+      <h2>5. Render</h2>
+      <p>
+        <strong>Purpose:</strong> Generate detailed visual descriptions (mockups) of the final designs to be used as
+        prompts for high-fidelity image generation.
+      </p>
+
+      <h3>Data Input</h3>
+      <ul>
+        <li><strong>Design Specifications:</strong> The name and parameter assignments for a chosen design.</li>
+        <li><strong>Domain:</strong> The product category.</li>
+      </ul>
+
+      <h3>Prompt</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gpt-5.2</code></td>
+            <td><code>reasoning: null</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre><code>Generate product design renderings for [Domain] based on these design specifications:
+
+[Design Specifications]
+
+Generate different views or aspects of the same unified product. Each rendering should showcase different details, usage contexts, or configurations.
+
+Mockup name should be the name of the view (e.g., "Front", "Detail", "In Use").
+Mockup description must be fully self-contained and descriptive enough to serve as an accessibility caption. Describe the product, view, materials, colors, setting, lighting, and how the design parameters manifest visually.</code></pre>
+
+      <h3>Image Generation</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Parameters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gemini-2.5-flash-image</code></td>
+            <td><code>responseModalities: ["IMAGE"]</code></td>
+          </tr>
+          <tr>
+            <td><code>FLUX.1-schnell-free</code></td>
+            <td><code>steps: 4</code>, <code>disable_safety_checker: true</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Output Examples</h3>
+      <pre><code>- Front View: A studio shot of the Jelly Wiggle Squeeze-Whoosh bottle against a soft peach background. The bottle has a wavy, translucent mint-green body with visible condensation-like textures. The squeeze-to-pop cap is in a contrasting soft lemon yellow.
+- Detail View: A close-up of the high-gloss surface showing the micro-embossed 'dewdrop' texture and the clear label with satin-ink jelly cube graphics.
+- In Use: A lifestyle photo of a parent's hand squeezing the wobbly bottle during bath time, with soft golden-hour light refracting through the translucent material.</code></pre>
+
+      <div class="image-grid">
+        <div class="image-item">
+          <img src="./images/render-1.png" alt="Render 1" />
+          <div class="image-caption">Front View</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/render-2.png" alt="Render 2" />
+          <div class="image-caption">Detail View</div>
+        </div>
+        <div class="image-item">
+          <img src="./images/render-3.png" alt="Render 3" />
+          <div class="image-caption">In Use</div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>
