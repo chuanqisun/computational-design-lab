@@ -16,7 +16,7 @@ export async function get<T>(key: string): Promise<T | undefined> {
 }
 
 export async function set(key: string, val: any): Promise<void> {
-  return (await dbPromise).put(STORE_NAME, val, key);
+  return void (await dbPromise).put(STORE_NAME, val, key);
 }
 
 /**
