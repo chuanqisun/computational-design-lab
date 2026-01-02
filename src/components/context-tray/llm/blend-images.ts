@@ -21,7 +21,7 @@ export function blendImages(input: { instruction: string; images: ImageItem[]; a
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-2.5-flash-image-preview";
+        const model = "gemini-2.5-flash-image";
         const config = {
           responseModalities: ["IMAGE"],
           abortSignal: abortController.signal,

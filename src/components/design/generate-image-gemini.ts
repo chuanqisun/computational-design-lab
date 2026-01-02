@@ -45,7 +45,7 @@ export function generateImage(
         responseModalities: ["IMAGE"],
         abortSignal: abortController.signal,
       };
-      const model = "gemini-2.5-flash-image-preview";
+      const model = "gemini-2.5-flash-image";
       const contents: ContentListUnion = [
         {
           role: "user",

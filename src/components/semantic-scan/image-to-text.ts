@@ -8,7 +8,7 @@ export function imageToText(input: { instruction: string; image: string; apiKey:
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-2.5-flash-image-preview";
+        const model = "gemini-2.5-flash-image";
         const config: GenerateContentConfig = {
           responseModalities: ["TEXT"],
         };
