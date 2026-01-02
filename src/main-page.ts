@@ -8,6 +8,7 @@ import { GenerativeImageElement } from "./components/generative-image/generative
 import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
 import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
 import { PartiComponent } from "./components/parti/parti.component";
+import { persistSubject } from "./lib/persistence";
 import "./main-page.css";
 import { createComponent } from "./sdk/create-component";
 
@@ -26,6 +27,14 @@ const Main = createComponent(() => {
   const domain$ = new BehaviorSubject<string>("");
   const designs$ = new BehaviorSubject<DesignWithId[]>([]);
   const mockups$ = new BehaviorSubject<MockupWithId[]>([]);
+
+  persistSubject(partiText$, "partiText");
+  persistSubject(concepts$, "concepts");
+  persistSubject(artifacts$, "artifacts");
+  persistSubject(parameters$, "parameters");
+  persistSubject(domain$, "domain");
+  persistSubject(designs$, "designs");
+  persistSubject(mockups$, "mockups");
 
   return html`
     <header class="header">
