@@ -63,9 +63,10 @@ p {
 
 /* Header */
 .header {
-  gap: var(--spacing-unit);
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--spacing-unit);
 }
 
 .header summary {

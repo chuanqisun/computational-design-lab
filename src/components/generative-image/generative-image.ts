@@ -1,6 +1,7 @@
 import { html, render } from "lit-html";
-import { combineLatest, concat, of, Subject } from "rxjs";
+import { combineLatest, concat, from, of, Subject } from "rxjs";
 import { catchError, distinctUntilChanged, map, switchMap, tap } from "rxjs/operators";
+import { getCachedImage, setCachedImage } from "../../lib/persistence";
 import { generateImage as generateImageFlux, type FluxConnection } from "../design/generate-image-flux";
 import { generateImage as generateImageGemini } from "../design/generate-image-gemini";
 import "./generative-image.css";
@@ -78,47 +79,65 @@ export class GenerativeImageElement extends HTMLElement {
           });
         }
 
-        const loadingState: ImageState = {
-          status: "loading",
-          imageUrl: this.getGeneratingUrl(attrs),
-          altText: attrs.prompt ?? "<blank>",
-        };
+        const cacheKey = `img:${attrs.model ?? "default"}:${attrs.width}x${attrs.height}:${attrs.prompt}`;
 
-        try {
-          const connections = GenerativeImageElement.getConnections();
-          const isFlux = attrs.model && attrs.model.startsWith("black-forest-labs/");
-          const useGemini = !attrs.model || !isFlux;
-          const connection = useGemini ? connections.gemini : connections.flux;
-          const generateFn = useGemini ? generateImageGemini : generateImageFlux;
+        return from(getCachedImage(cacheKey)).pipe(
+          switchMap((cachedUrl) => {
+            // If we have a cached URL and it's NOT a retry, use it
+            if (cachedUrl && attrs.retryCounter === 0) {
+              return of({
+                status: "success" as Status,
+                imageUrl: cachedUrl,
+                altText: attrs.prompt || "Cached image",
+              });
+            }
 
-          const generation$ = generateFn(connection, {
-            prompt: attrs.prompt,
-            width: attrs.width,
-            height: attrs.height,
-            model: attrs.model,
-          }).pipe(
-            map((result) => ({
-              status: "success" as Status,
-              imageUrl: result.url,
-              altText: attrs.prompt || "Generated image",
-            })),
-            catchError((error) =>
-              of({
+            const loadingState: ImageState = {
+              status: "loading",
+              imageUrl: this.getGeneratingUrl(attrs),
+              altText: attrs.prompt ?? "<blank>",
+            };
+
+            try {
+              const connections = GenerativeImageElement.getConnections();
+              const isFlux = attrs.model && attrs.model.startsWith("black-forest-labs/");
+              const useGemini = !attrs.model || !isFlux;
+              const connection = useGemini ? connections.gemini : connections.flux;
+              const generateFn = useGemini ? generateImageGemini : generateImageFlux;
+
+              const generation$ = generateFn(connection, {
+                prompt: attrs.prompt,
+                width: attrs.width,
+                height: attrs.height,
+                model: attrs.model,
+              }).pipe(
+                tap((result) => {
+                  setCachedImage(cacheKey, result.url);
+                }),
+                map((result) => ({
+                  status: "success" as Status,
+                  imageUrl: result.url,
+                  altText: attrs.prompt || "Generated image",
+                })),
+                catchError((error) =>
+                  of({
+                    status: "error" as Status,
+                    imageUrl: this.getErrorUrl(attrs),
+                    altText: error.message || "Failed to generate image",
+                  }),
+                ),
+              );
+
+              return concat(of(loadingState), generation$);
+            } catch (error) {
+              return of({
                 status: "error" as Status,
                 imageUrl: this.getErrorUrl(attrs),
-                altText: error.message || "Failed to generate image",
-              }),
-            ),
-          );
-
-          return concat(of(loadingState), generation$);
-        } catch (error) {
-          return of({
-            status: "error" as Status,
-            imageUrl: this.getErrorUrl(attrs),
-            altText: error instanceof Error ? error.message : "Failed to generate image",
-          });
-        }
+                altText: error instanceof Error ? error.message : "Failed to generate image",
+              });
+            }
+          }),
+        );
       }),
       tap((state) => this.setAttribute("status", state.status)),
     );

@@ -8,7 +8,7 @@ import { GenerativeImageElement } from "./components/generative-image/generative
 import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
 import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
 import { PartiComponent } from "./components/parti/parti.component";
-import { persistSubject } from "./lib/persistence";
+import { clearAllPersistence, persistSubject } from "./lib/persistence";
 import "./main-page.css";
 import { createComponent } from "./sdk/create-component";
 
@@ -36,9 +36,17 @@ const Main = createComponent(() => {
   persistSubject(designs$, "designs");
   persistSubject(mockups$, "mockups");
 
+  const onReset = async () => {
+    if (confirm("Are you sure you want to reset the entire app? All data will be lost.")) {
+      await clearAllPersistence();
+      window.location.reload();
+    }
+  };
+
   return html`
     <header class="header">
       <h1>Computational Design Lab</h1>
+      <button class="reset-button" @click=${onReset}>Reset App</button>
     </header>
 
     <main class="main">

@@ -4,10 +4,16 @@ import { skip } from "rxjs/operators";
 
 const DB_NAME = "computational-design-lab-persistence";
 const STORE_NAME = "keyval";
+const IMAGE_CACHE_STORE = "image-cache";
 
-const dbPromise = openDB(DB_NAME, 1, {
-  upgrade(db) {
-    db.createObjectStore(STORE_NAME);
+const dbPromise = openDB(DB_NAME, 2, {
+  upgrade(db, oldVersion) {
+    if (oldVersion < 1) {
+      db.createObjectStore(STORE_NAME);
+    }
+    if (oldVersion < 2) {
+      db.createObjectStore(IMAGE_CACHE_STORE);
+    }
   },
 });
 
@@ -17,6 +23,20 @@ export async function get<T>(key: string): Promise<T | undefined> {
 
 export async function set(key: string, val: any): Promise<void> {
   return void (await dbPromise).put(STORE_NAME, val, key);
+}
+
+export async function getCachedImage(key: string): Promise<string | undefined> {
+  return (await dbPromise).get(IMAGE_CACHE_STORE, key);
+}
+
+export async function setCachedImage(key: string, url: string): Promise<void> {
+  return void (await dbPromise).put(IMAGE_CACHE_STORE, url, key);
+}
+
+export async function clearAllPersistence(): Promise<void> {
+  const db = await dbPromise;
+  await db.clear(STORE_NAME);
+  await db.clear(IMAGE_CACHE_STORE);
 }
 
 /**
