@@ -5,17 +5,15 @@
     align-items: center;
   }
 
-  .image-preview {
-    display: flex;
-    flex-direction: column;
-    gap: calc(4 * var(--spacing-unit));
+  .previews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30ch, 1fr));
+    gap: 4ch;
   }
 
   generative-image {
     display: block;
     width: 100%;
-    max-width: 512px;
-    margin: 0 auto;
     background: #eee;
     transition: opacity 0.3s;
   }

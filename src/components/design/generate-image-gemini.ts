@@ -42,7 +42,7 @@ export function generateImage(
       const ai = new GoogleGenAI({
         apiKey: connection.apiKey,
       });
-      debugger;
+
       const config: GenerateContentConfig = {
         responseModalities: ["IMAGE"],
         abortSignal: abortController.signal,

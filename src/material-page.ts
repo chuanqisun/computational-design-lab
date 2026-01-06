@@ -32,7 +32,7 @@ const setupDialogContent = setupDialog.querySelector(".dialog-content") as HTMLE
 const pickerButtons = document.querySelectorAll(".image-picker") as NodeListOf<HTMLButtonElement>;
 const renderButton = document.getElementById("render-button") as HTMLButtonElement;
 const setupButton = document.getElementById("setup-button") as HTMLButtonElement;
-const imagePreview = document.querySelector(".image-preview") as HTMLElement;
+const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
 
 // Render Setup Dialog
 function renderSetup() {
@@ -129,7 +129,7 @@ renderButton.addEventListener("click", () => {
   genImage.setAttribute("aspect-ratio", "9:16");
   genImage.setAttribute("model", "gemini-2.5-flash-image");
 
-  imagePreview.prepend(genImage);
+  previewsGrid.prepend(genImage);
 });
 
 // Setup button click handlers
