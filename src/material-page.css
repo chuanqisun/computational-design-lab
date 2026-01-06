@@ -7,7 +7,7 @@
 
   .previews-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(30ch, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(24ch, 1fr));
     gap: 4ch;
   }
 
@@ -84,7 +84,6 @@
 dialog#setup-dialog {
   padding: 4ch;
   border: 1px solid #000;
-  max-width: 60ch;
   width: 100%;
   margin: auto;
 
