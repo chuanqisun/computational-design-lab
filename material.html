@@ -8,6 +8,11 @@
   </head>
   <body>
     <div id="app" class="material-page">
+      <header class="header">
+        <h1>Material Lab</h1>
+        <button id="setup-button">Setup</button>
+      </header>
+
       <section class="section">
         <header class="section-header">
           <h2>Components</h2>
@@ -39,6 +44,7 @@
       <section class="section">
         <header class="section-header">
           <h2>Previews</h2>
+          <button id="render-button">Render</button>
         </header>
         <div class="preview-grid">
           <div class="preview-column image-preview"></div>
@@ -48,6 +54,10 @@
     </div>
 
     <dialog id="picker-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <dialog id="setup-dialog">
       <div class="dialog-content"></div>
     </dialog>
 

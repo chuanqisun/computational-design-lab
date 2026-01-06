@@ -12,6 +12,7 @@ export interface GenerateImageOptions {
   height: number;
   model?: string;
   images?: string[];
+  aspectRatio?: string;
 }
 
 export interface GenerateImageResult {
@@ -41,9 +42,17 @@ export function generateImage(
       const ai = new GoogleGenAI({
         apiKey: connection.apiKey,
       });
+      debugger;
       const config: GenerateContentConfig = {
         responseModalities: ["IMAGE"],
         abortSignal: abortController.signal,
+        ...(options.aspectRatio
+          ? {
+              imageConfig: {
+                aspectRatio: options.aspectRatio,
+              },
+            }
+          : {}),
       };
       const model = "gemini-2.5-flash-image";
       const contents: ContentListUnion = [

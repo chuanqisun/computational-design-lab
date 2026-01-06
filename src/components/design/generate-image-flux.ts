@@ -11,6 +11,7 @@ export interface GenerateImageOptions {
   width: number;
   height: number;
   model?: string;
+  aspectRatio?: string;
 }
 
 export interface GenerateImageResult {

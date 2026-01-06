@@ -1,0 +1,80 @@
+.material-page {
+  .section-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .image-preview {
+    display: flex;
+    flex-direction: column;
+    gap: calc(4 * var(--spacing-unit));
+  }
+
+  generative-image {
+    display: block;
+    width: 100%;
+    max-width: 512px;
+    margin: 0 auto;
+    background: #eee;
+    transition: opacity 0.3s;
+  }
+
+  generative-image[status="loading"] {
+    opacity: 0.6;
+  }
+
+  generative-image[status="error"] {
+    outline: 1px solid var(--color-error);
+  }
+
+  generative-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  button#render-button {
+    padding: 0.5ch 2ch;
+    cursor: pointer;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-weight: bold;
+  }
+
+  button#render-button:hover {
+    background: #333;
+  }
+
+  button#setup-button {
+    background: none;
+    border: 1px solid #ccc;
+    padding: 0.5ch 2ch;
+    cursor: pointer;
+    font-weight: normal;
+  }
+
+  button#setup-button:hover {
+    background: #f0f0f0;
+    border-color: #000;
+  }
+
+  .setup-form {
+    padding-top: 2ch;
+  }
+}
+
+dialog#setup-dialog {
+  padding: 4ch;
+  border: 1px solid #000;
+  max-width: 60ch;
+  width: 100%;
+  margin: auto;
+
+  .dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4ch;
+  }
+}

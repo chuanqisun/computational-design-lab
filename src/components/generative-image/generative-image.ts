@@ -21,7 +21,7 @@ interface ImageConnections {
 
 export class GenerativeImageElement extends HTMLElement {
   static getConnections: () => ImageConnections;
-  static observedAttributes = ["prompt", "width", "height", "placeholderSrc", "model"];
+  static observedAttributes = ["prompt", "width", "height", "placeholderSrc", "model", "aspect-ratio"];
 
   static define(getConnections: () => ImageConnections, tagName = "generative-image") {
     if (!customElements.get(tagName)) {
@@ -57,6 +57,7 @@ export class GenerativeImageElement extends HTMLElement {
         height: parseInt(this.getAttribute("height") ?? "400"),
         placeholderSrc: this.getAttribute("placeholderSrc"),
         model: this.getAttribute("model") ?? undefined,
+        aspectRatio: this.getAttribute("aspect-ratio") ?? undefined,
         retryCounter: this.retryCounter,
       })),
       distinctUntilChanged(
@@ -65,6 +66,7 @@ export class GenerativeImageElement extends HTMLElement {
           a.width === b.width &&
           a.height === b.height &&
           a.model === b.model &&
+          a.aspectRatio === b.aspectRatio &&
           a.retryCounter === b.retryCounter,
       ),
     );
@@ -79,7 +81,7 @@ export class GenerativeImageElement extends HTMLElement {
           });
         }
 
-        const cacheKey = `img:${attrs.model ?? "default"}:${attrs.width}x${attrs.height}:${attrs.prompt}`;
+        const cacheKey = `img:${attrs.model ?? "default"}:${attrs.width}x${attrs.height}:${attrs.aspectRatio ?? "auto"}:${attrs.prompt}`;
 
         return from(getCachedImage(cacheKey)).pipe(
           switchMap((cachedUrl) => {
@@ -110,6 +112,7 @@ export class GenerativeImageElement extends HTMLElement {
                 width: attrs.width,
                 height: attrs.height,
                 model: attrs.model,
+                aspectRatio: attrs.aspectRatio,
               }).pipe(
                 tap((result) => {
                   setCachedImage(cacheKey, result.url);
