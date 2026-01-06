@@ -11,6 +11,7 @@ export function getRenderPrompt(
   cap: ComponentInfo,
   surface: ComponentInfo,
   view: ViewType,
+  capColor: string = "#ffffff",
 ) {
   const perspectiveMap = {
     front: "Frontal eye-level perspective focusing on the primary silhouette.",
@@ -31,8 +32,15 @@ export function getRenderPrompt(
   <subject>
     <object type="designed_product_bottle">
       <geometry>
-        <shape>${shape.name}: ${shape.description}</shape>
-        <cap>${cap.name}: ${cap.description}</cap>
+        <shape>
+          <name>${shape.name}</name>
+          <description>${shape.description}</description>
+        </shape>
+        <cap>
+          <name>${cap.name}</name>
+          <description>${cap.description}</description>
+          <color_hex_code>${capColor}</color_hex_code>
+        </cap>
       </geometry>
       <appearance>
         <material>${material.name}: ${material.description}</material>
@@ -61,9 +69,10 @@ export function getFullRenderPrompts(
   material: ComponentInfo,
   cap: ComponentInfo,
   surface: ComponentInfo,
+  capColor: string = "#ffffff",
 ) {
   return (["front", "three-quarters", "in-use"] as ViewType[]).map((view) => ({
     view,
-    prompt: getRenderPrompt(shape, material, cap, surface, view),
+    prompt: getRenderPrompt(shape, material, cap, surface, view, capColor),
   }));
 }

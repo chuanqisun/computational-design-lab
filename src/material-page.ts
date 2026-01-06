@@ -34,6 +34,7 @@ const pickerButtons = document.querySelectorAll(".image-picker") as NodeListOf<H
 const renderButtons = document.querySelectorAll(".render-perspective") as NodeListOf<HTMLButtonElement>;
 const setupButton = document.getElementById("setup-button") as HTMLButtonElement;
 const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
+const capColorPicker = document.getElementById("cap-color") as HTMLInputElement;
 
 // Render Setup Dialog
 function renderSetup() {
@@ -126,6 +127,7 @@ renderButtons.forEach((button) => {
       selectedComponents.cap,
       selectedComponents.surface,
       view,
+      capColorPicker.value,
     );
 
     const genImage = document.createElement("generative-image");

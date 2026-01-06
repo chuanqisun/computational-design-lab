@@ -66,6 +66,19 @@
   .setup-form {
     padding-top: 2ch;
   }
+
+  .slot-color-picker {
+    position: absolute;
+    bottom: 1ch;
+    right: 1ch;
+    width: 3ch;
+    height: 3ch;
+    border: 1px solid #ccc;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+    z-index: 10;
+  }
 }
 
 dialog#setup-dialog {

@@ -260,6 +260,7 @@ generative-image {
   .slot {
     aspect-ratio: 1;
     border: 1px solid #eee;
+    position: relative;
 
     .image-picker {
       width: 100%;
