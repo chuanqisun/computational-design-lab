@@ -29,7 +29,7 @@ function updateButton(button: HTMLButtonElement, imageUrl: string | null) {
 
 // Render dialog content
 function renderDialog(componentType: ComponentType) {
-  const items = library[componentType];
+  const items = library.filter((item) => item.type === componentType);
   const selected = selectedComponents[componentType];
 
   const template = html`
@@ -39,14 +39,15 @@ function renderDialog(componentType: ComponentType) {
     </div>
     <div class="dialog-grid">
       ${items.map(
-        (url, index) => html`
+        (item) => html`
           <button
             class="dialog-item"
-            data-url="${url}"
-            data-selected="${url === selected}"
-            @click="${() => selectItem(componentType, url)}"
+            data-url="${item.url}"
+            data-selected="${item.url === selected}"
+            @click="${() => selectItem(componentType, item.url)}"
           >
-            <img src="${url}" alt="${componentType} ${index + 1}" />
+            <img src="${item.url}" alt="${item.name}" />
+            <div class="item-name">${item.name}</div>
           </button>
         `,
       )}
