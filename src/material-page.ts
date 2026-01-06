@@ -4,6 +4,7 @@ import { library, type ComponentType, type LibraryItem } from "./assets/library/
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
 import "./main-page.css";
 import "./material-page.css";
 
@@ -30,7 +31,7 @@ const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
 const setupDialog = document.getElementById("setup-dialog") as HTMLDialogElement;
 const setupDialogContent = setupDialog.querySelector(".dialog-content") as HTMLElement;
 const pickerButtons = document.querySelectorAll(".image-picker") as NodeListOf<HTMLButtonElement>;
-const renderButton = document.getElementById("render-button") as HTMLButtonElement;
+const renderButtons = document.querySelectorAll(".render-perspective") as NodeListOf<HTMLButtonElement>;
 const setupButton = document.getElementById("setup-button") as HTMLButtonElement;
 const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
 
@@ -106,30 +107,36 @@ function selectItem(componentType: ComponentType, item: LibraryItem) {
 }
 
 // Render button logic
-renderButton.addEventListener("click", () => {
-  const promptParts = [
-    selectedComponents.shape ? `Shape: ${selectedComponents.shape.name}. ${selectedComponents.shape.description}` : "",
-    selectedComponents.cap ? `Cap: ${selectedComponents.cap.name}. ${selectedComponents.cap.description}` : "",
-    selectedComponents.material
-      ? `Material: ${selectedComponents.material.name}. ${selectedComponents.material.description}`
-      : "",
-    selectedComponents.surface
-      ? `Surface: ${selectedComponents.surface.name}. ${selectedComponents.surface.description}`
-      : "",
-  ].filter(Boolean);
+renderButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const view = button.dataset.view as ViewType;
+    if (
+      !selectedComponents.shape ||
+      !selectedComponents.material ||
+      !selectedComponents.cap ||
+      !selectedComponents.surface
+    ) {
+      alert("Please select all components (Shape, Cap, Material, Surface) before rendering.");
+      return;
+    }
 
-  if (promptParts.length === 0) return;
+    const prompt = getRenderPrompt(
+      selectedComponents.shape,
+      selectedComponents.material,
+      selectedComponents.cap,
+      selectedComponents.surface,
+      view,
+    );
 
-  const prompt = promptParts.join("\n");
+    const genImage = document.createElement("generative-image");
+    genImage.setAttribute("prompt", prompt);
+    genImage.setAttribute("width", "720");
+    genImage.setAttribute("height", "1280");
+    genImage.setAttribute("aspect-ratio", "9:16");
+    genImage.setAttribute("model", "gemini-2.5-flash-image");
 
-  const genImage = document.createElement("generative-image");
-  genImage.setAttribute("prompt", prompt);
-  genImage.setAttribute("width", "720");
-  genImage.setAttribute("height", "1280");
-  genImage.setAttribute("aspect-ratio", "9:16");
-  genImage.setAttribute("model", "gemini-2.5-flash-image");
-
-  previewsGrid.prepend(genImage);
+    previewsGrid.prepend(genImage);
+  });
 });
 
 // Setup button click handlers

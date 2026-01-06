@@ -32,7 +32,12 @@
     display: block;
   }
 
-  button#render-button {
+  .render-actions {
+    display: flex;
+    gap: 1ch;
+  }
+
+  button.render-perspective {
     padding: 0.5ch 2ch;
     cursor: pointer;
     background: #000;
@@ -41,7 +46,7 @@
     font-weight: bold;
   }
 
-  button#render-button:hover {
+  button.render-perspective:hover {
     background: #333;
   }
 
