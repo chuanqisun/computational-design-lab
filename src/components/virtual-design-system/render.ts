@@ -15,13 +15,15 @@ export function getRenderPrompt(
   const perspectiveMap = {
     front: "Frontal eye-level perspective focusing on the primary silhouette.",
     "three-quarters": "Three-quarter view from a slightly elevated angle, revealing volume and top details.",
-    "in-use": "A human hand is shown interacting with the product, demonstrating its use and scale.",
+    "in-use":
+      "The product is shown resting naturally in its environment, demonstrating its use-case and aesthetic integration. No people or hands are visible.",
   };
 
   const backdropMap = {
     front: "Professional studio shot with a plain white background.",
     "three-quarters": "Professional studio shot with a plain white background.",
-    "in-use": "An environment where the product is being used.",
+    "in-use":
+      "A realistic and appropriate lifestyle environment where the product would naturally be used. The scene is empty of people.",
   };
 
   return `
