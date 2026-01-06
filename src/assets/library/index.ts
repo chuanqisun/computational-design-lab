@@ -61,4 +61,226 @@ export const library = {
   surface: [surface01, surface02, surface03, surface04, surface05, surface06, surface07, surface08, surface09],
 };
 
+export const metadata = [
+  {
+    type: "dispensing",
+    name: "Top-press pump dispenser",
+    description:
+      "Top-mounted circular button activates an internal manual pump to eject fluid through a prominent horizontal cylindrical spout.",
+  },
+  {
+    type: "dispensing",
+    name: "Push-button dropper",
+    description:
+      "Features a rounded compressible dome atop a cylindrical collar that utilizes air displacement to suction and dispense liquid through an internal pipette when pressed.",
+  },
+  {
+    type: "dispensing",
+    name: "Flip-top cap",
+    description:
+      "Features a hinged lid with a recessed thumb tab that flips upward to expose a central dispensing aperture.",
+  },
+  {
+    type: "dispensing",
+    name: "Child-resistant squeeze-and-turn cap",
+    description:
+      "Tall plastic cap featuring a vertically ribbed exterior and a child-resistant mechanism that requires lateral pressure on the smooth base collar to disengage internal locking tabs before it can be unscrewed.",
+  },
+  {
+    type: "dispensing",
+    name: "Screw cap",
+    description:
+      "Features a smooth-topped cylindrical lid that unscrews from a vertically ribbed base to provide wide-mouth access to internal contents.",
+  },
+  {
+    type: "dispensing",
+    name: "Flip-top lid",
+    description:
+      "Hinged circular cover with a protruding thumb tab that flips upward to reveal a wide-mouth opening for accessing the jar's contents.",
+  },
+  {
+    type: "dispensing",
+    name: "Cross-slit valve cap",
+    description:
+      "Features a flexible, cross-slit membrane recessed within a cylindrical body that opens under internal pressure to dispense liquid and automatically reseals upon pressure release.",
+  },
+  {
+    type: "dispensing",
+    name: "Thumb-press pump dispenser",
+    description:
+      "A circular button integrated into the flat top surface activates an internal pressure mechanism to discharge liquid through a small, horizontal side spout.",
+  },
+  {
+    type: "dispensing",
+    name: "thumb-press pressure pump cap",
+    description:
+      "A cylindrical cap featuring a recessed circular pressure pump on the top surface that forces contents through a rectangular side aperture.",
+  },
+  {
+    type: "shape",
+    name: "Cylindrical body",
+    description: "An elongated vertical cylinder featuring a flat circular top and a base with subtly rounded edges.",
+  },
+  {
+    type: "shape",
+    name: "Rounded rectangular prism",
+    description: "Tall vertical cuboid featuring uniformly rounded edges and corners on all its faces.",
+  },
+  {
+    type: "shape",
+    name: "Truncated Cone",
+    description:
+      "A conical frustum featuring a circular base and straight sides that taper uniformly to a smaller circular top surface.",
+  },
+  {
+    type: "shape",
+    name: "Elongated ovoid vessel",
+    description:
+      "Elongated ovoid body with a flat base, tapering into a short cylindrical neck that terminates in a shallow, flat-topped disc.",
+  },
+  {
+    type: "shape",
+    name: "Low-profile rounded cylinder",
+    description:
+      "Short cylindrical structure composed of a base with rounded bottom edges and a flush-fitting flat-topped lid separated by a horizontal seam.",
+  },
+  {
+    type: "shape",
+    name: "Domed cylinder",
+    description: "Vertically oriented cylindrical body with a circular base and a hemispherical top cap.",
+  },
+  {
+    type: "shape",
+    name: "Tapered tube with cylindrical base",
+    description:
+      "Vertical structure consisting of a short cylindrical base supporting a body that transitions from a circular cross-section to a flattened, wide rectangular seal at the top.",
+  },
+  {
+    type: "shape",
+    name: "Stand-up gusseted pouch",
+    description:
+      "Rectangular vertical volume featuring sealed side margins, a top horizontal seal with small corner notches, an internal resealable track, and a curved bottom gusset that forms a self-standing base.",
+  },
+  {
+    type: "shape",
+    name: "Faceted rectangular container body",
+    description:
+      "Symmetrical vertically oriented vessel with a rectangular profile, featuring beveled vertical corners, sloped upper and lower transitions, and a recessed central midsection.",
+  },
+  {
+    type: "surface",
+    name: "Concentric Circular Ripple",
+    description:
+      "Features a series of raised concentric circular ridges alternating with recessed valleys that radiate from a central point, creating a rhythmic ripple effect across a matte, finely granular plane.",
+  },
+  {
+    type: "surface",
+    name: "Pyramidal Studded Grid",
+    description:
+      "Uniform array of elevated, four-sided pyramids arranged in a repeating grid pattern with precise geometric peaks.",
+  },
+  {
+    type: "surface",
+    name: "Recessed cellular texture",
+    description:
+      "Clustered arrangement of shallow, irregular concave cells of varying sizes forming a recessed geometric pattern with a fine, matte granular finish.",
+  },
+  {
+    type: "surface",
+    name: "Woven Braid Relief",
+    description:
+      "Consists of a repeating three-dimensional pattern of smooth, interlocking strands that create a continuous over-and-under woven effect across the surface.",
+  },
+  {
+    type: "surface",
+    name: "Fragmented angular topography",
+    description:
+      "An irregular arrangement of sharply angled, flat-faced geometric shards of varying heights creating a deeply textured, jagged relief.",
+  },
+  {
+    type: "surface",
+    name: "Sinusoidal Wave Texture",
+    description:
+      "Parallel sinusoidal ridges and grooves create an undulating, rhythmic pattern across a planar surface.",
+  },
+  {
+    type: "surface",
+    name: "Hemispherical studded texture",
+    description:
+      "A grid of uniformly spaced, smooth hemispherical nodules creates a repetitive raised texture across the entire flat expanse.",
+  },
+  {
+    type: "surface",
+    name: "Topographic Contouring",
+    description:
+      "Consists of multiple stepped elevations forming undulating, wavy ridges and valleys that replicate topographical contour lines.",
+  },
+  {
+    type: "surface",
+    name: "Sloped Diamond Grid",
+    description:
+      "Repeating grid of raised, diamond-shaped blocks with sloped faces formed by intersecting diagonal channels.",
+  },
+  {
+    type: "material",
+    name: "Frosted blue translucent acrylic",
+    description:
+      "Semi-transparent blue polymer characterized by a fine, light-scattering grain and soft, diffuse visual properties.",
+  },
+  {
+    type: "material",
+    name: "White Veined Marble",
+    description:
+      "Metamorphic stone featuring a bright white, crystalline ground intersected by soft, feathered veins of smoky grey.",
+  },
+  {
+    type: "material",
+    name: "Green Terrazzo",
+    description:
+      "Sage green cementitious matrix densely embedded with small, variegated mineral aggregates in shades of terracotta, white, and dark charcoal.",
+  },
+  {
+    type: "material",
+    name: "Perforated Charcoal Aluminum",
+    description:
+      "Opaque, dark grey metallic substance featuring a dense and uniform grid of minute circular apertures.",
+  },
+  {
+    type: "material",
+    name: "Royal blue velvet",
+    description:
+      "Vibrant royal blue textile characterized by a dense, plush pile with a soft, velvety hand and light-absorbing matte quality.",
+  },
+  {
+    type: "material",
+    name: "Porous Gray Concrete",
+    description:
+      "Uniform light gray mineral composite with a dense, granular matrix containing numerous small, irregular air pockets throughout its surface.",
+  },
+  {
+    type: "material",
+    name: "Fluted glass",
+    description:
+      "Translucent, rigid mineral-based material with a subtle aquatic green tint and a light-refracting series of parallel linear ridges.",
+  },
+  {
+    type: "material",
+    name: "Anodized aluminum",
+    description:
+      "Uniformly light-gray metal with a micro-granular, non-reflective appearance and a smooth, solid texture that softly diffuses light.",
+  },
+  {
+    type: "material",
+    name: "Blue Opaque Acrylic",
+    description:
+      "Uniformly pigmented, opaque blue synthetic polymer with a dense, non-porous texture and solid color saturation.",
+  },
+  {
+    type: "material",
+    name: "Iridescent metallic material",
+    description:
+      "Features an opaque surface that reflects a shifting, prismatic spectrum of rainbow colors depending on the angle of illumination and observation.",
+  },
+];
+
 export type ComponentType = keyof typeof library;
