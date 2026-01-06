@@ -7,7 +7,50 @@
     <title>Computational Design Lab</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app" class="material-page">
+      <section class="section">
+        <header class="section-header">
+          <h2>Components</h2>
+        </header>
+        <div class="slots-grid">
+          <div class="slot">
+            <button class="image-picker" data-component="shape" commandfor="picker-dialog" command="show-modal">
+              Body Geometry
+            </button>
+          </div>
+          <div class="slot">
+            <button class="image-picker" data-component="cap" commandfor="picker-dialog" command="show-modal">
+              Dispensing Mechanism
+            </button>
+          </div>
+          <div class="slot">
+            <button class="image-picker" data-component="material" commandfor="picker-dialog" command="show-modal">
+              Main Material
+            </button>
+          </div>
+          <div class="slot">
+            <button class="image-picker" data-component="surface" commandfor="picker-dialog" command="show-modal">
+              Surface Finish
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <header class="section-header">
+          <h2>Previews</h2>
+        </header>
+        <div class="preview-grid">
+          <div class="preview-column image-preview"></div>
+          <div class="preview-column video-preview"></div>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="picker-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
     <script type="module" src="/src/material-page.ts"></script>
   </body>
 </html>
