@@ -52,6 +52,7 @@ export interface LibraryItem {
   name: string;
   description: string;
   url: string;
+  animationHint?: string;
 }
 
 export const library: LibraryItem[] = [
@@ -62,6 +63,8 @@ export const library: LibraryItem[] = [
     description:
       "Top-mounted circular button activates an internal manual pump to eject fluid through a prominent horizontal cylindrical spout.",
     url: cap01,
+    animationHint:
+      "A hand presses down on the circular button at the top of the dispenser, activating the pump mechanism and ejecting liquid through the horizontal spout.",
   },
   {
     id: 2,
@@ -70,6 +73,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a rounded compressible dome atop a cylindrical collar that utilizes air displacement to suction and dispense liquid through an internal pipette when pressed.",
     url: cap02,
+    animationHint:
+      "A hand gently squeezes and releases the rounded dome, causing the dropper to suction liquid upward and then dispense it drop by drop.",
   },
   {
     id: 3,
@@ -78,6 +83,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a hinged lid with a recessed thumb tab that flips upward to expose a central dispensing aperture.",
     url: cap03,
+    animationHint:
+      "A thumb pushes the recessed tab upward, causing the hinged lid to flip open and reveal the dispensing aperture beneath.",
   },
   {
     id: 4,
@@ -86,6 +93,8 @@ export const library: LibraryItem[] = [
     description:
       "Tall plastic cap featuring a vertically ribbed exterior and a child-resistant mechanism that requires lateral pressure on the smooth base collar to disengage internal locking tabs before it can be unscrewed.",
     url: cap04,
+    animationHint:
+      "Two hands squeeze the smooth base collar inward while simultaneously rotating the ribbed cap counterclockwise to unlock and unscrew it from the container.",
   },
   {
     id: 5,
@@ -94,6 +103,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a smooth-topped cylindrical lid that unscrews from a vertically ribbed base to provide wide-mouth access to internal contents.",
     url: cap05,
+    animationHint:
+      "A hand grips the smooth cylindrical cap and rotates it counterclockwise, unscrewing it from the ribbed base to reveal the wide opening.",
   },
   {
     id: 6,
@@ -102,6 +113,8 @@ export const library: LibraryItem[] = [
     description:
       "Hinged circular cover with a protruding thumb tab that flips upward to reveal a wide-mouth opening for accessing the jar's contents.",
     url: cap06,
+    animationHint:
+      "A thumb presses on the protruding tab, lifting the hinged circular lid upward to fully expose the wide-mouth jar opening.",
   },
   {
     id: 7,
@@ -110,6 +123,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a flexible, cross-slit membrane recessed within a cylindrical body that opens under internal pressure to dispense liquid and automatically reseals upon pressure release.",
     url: cap07,
+    animationHint:
+      "A hand squeezes the container body, forcing liquid upward through the cross-slit membrane which opens momentarily and then automatically reseals.",
   },
   {
     id: 8,
@@ -118,6 +133,8 @@ export const library: LibraryItem[] = [
     description:
       "A circular button integrated into the flat top surface activates an internal pressure mechanism to discharge liquid through a small, horizontal side spout.",
     url: cap08,
+    animationHint:
+      "A thumb presses down firmly on the circular button embedded in the top surface, triggering the pump to dispense liquid through the side spout.",
   },
   {
     id: 9,
@@ -126,6 +143,8 @@ export const library: LibraryItem[] = [
     description:
       "A cylindrical cap featuring a recessed circular pressure pump on the top surface that forces contents through a rectangular side aperture.",
     url: cap09,
+    animationHint:
+      "A thumb presses down into the recessed circular pump on top, activating the pressure mechanism to expel product through the rectangular opening on the side.",
   },
   {
     id: 10,

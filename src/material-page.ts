@@ -254,7 +254,14 @@ function createPreviewItem(element: HTMLElement) {
     const img = element.querySelector("img");
     if (!img || !img.src) return;
 
-    const videoPrompt = `A person dispenses content from the container.`;
+    // Get animation hint from first component that has one
+    const animationHint =
+      selectedComponents.shape?.animationHint ||
+      selectedComponents.cap?.animationHint ||
+      selectedComponents.material?.animationHint ||
+      selectedComponents.surface?.animationHint;
+
+    const videoPrompt = animationHint || `A person dispenses content from the container.`;
 
     const genVideo = document.createElement("generative-video");
     genVideo.setAttribute("prompt", videoPrompt);
