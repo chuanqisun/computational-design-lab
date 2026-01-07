@@ -1,0 +1,49 @@
+.generative-video {
+  display: block;
+  width: 100%;
+  background: #f0f0f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.generative-video[aspect-ratio="16:9"] {
+  aspect-ratio: 16 / 9;
+}
+
+.generative-video[aspect-ratio="9:16"] {
+  aspect-ratio: 9 / 16;
+}
+
+.generative-video video,
+.generative-video img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.generative-video[status="loading"] {
+  opacity: 0.7;
+}
+
+.generative-video[status="error"] {
+  border: 1px solid red;
+}
+
+.generative-video .loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2ch;
+  height: 2ch;
+  border: 2px solid #000;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}

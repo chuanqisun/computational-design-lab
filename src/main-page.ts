@@ -5,6 +5,7 @@ import { ConnectionsComponent } from "./components/connections/connections.compo
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { DesignComponent, type DesignWithId, type MockupWithId } from "./components/design/design.component";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { MoodboardComponent, type ArtifactWithId } from "./components/moodboard/moodboard.component";
 import { ParameterizeComponent, type ParameterWithId } from "./components/parameterize/parameterize.component";
 import { PartiComponent } from "./components/parti/parti.component";
@@ -15,6 +16,10 @@ import { createComponent } from "./sdk/create-component";
 // Register custom elements
 GenerativeImageElement.define(() => ({
   flux: { apiKey: loadApiKeys().together || "" },
+  gemini: { apiKey: loadApiKeys().gemini || "" },
+}));
+
+GenerativeVideoElement.define(() => ({
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 

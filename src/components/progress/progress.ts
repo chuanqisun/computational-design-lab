@@ -4,6 +4,7 @@ import { stopAllTasks } from "../context-tray/tasks";
 export interface AppProgress {
   imageGen: number;
   textGen: number;
+  videoGen: number;
 }
 
 /**
@@ -16,6 +17,7 @@ export interface AppProgress {
 export const progress$ = new BehaviorSubject<AppProgress>({
   imageGen: 0,
   textGen: 0,
+  videoGen: 0,
 });
 
 export const progressText = progress$.pipe(
@@ -23,11 +25,14 @@ export const progressText = progress$.pipe(
     const tasks = [];
     if (status.textGen > 0) tasks.push(`Writing ${status.textGen}`);
     if (status.imageGen > 0) tasks.push(`Rendering ${status.imageGen}`);
+    if (status.videoGen > 0) tasks.push(`Directing ${status.videoGen}`);
     return tasks.join(" | ") || "Idle";
   }),
 );
 
-export const hasActiveTasks = progress$.pipe(map((status) => status.imageGen > 0 || status.textGen > 0));
+export const hasActiveTasks = progress$.pipe(
+  map((status) => status.imageGen > 0 || status.textGen > 0 || status.videoGen > 0),
+);
 
 export const stopTasks = () => {
   stopAllTasks();

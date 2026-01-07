@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Video Lab</title>
+    <style>
+      :root {
+        --color-text-primary: #333;
+        --color-text-secondary: #555;
+        --color-border-light: #eee;
+        --color-border-medium: #ccc;
+        --color-accent: #4285f4;
+        --color-white: white;
+        --color-drag-handle: #999;
+        --color-drag-handle-hover: #666;
+        --color-insert-indicator: #4285f4;
+        --color-action-button-hover: #f1f3f4;
+        --color-bg-app: #f9f9f9;
+        --color-error: #d93025;
+        --color-success: #188038;
+      }
+
+      * {
+        font-size: inherit;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: 20px;
+        color: var(--color-text-primary);
+        background-color: var(--color-bg-app);
+        line-height: 1.5;
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      h2 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--color-text-secondary);
+      }
+
+      /* Inputs */
+      input[type="text"],
+      input[type="password"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--color-border-medium);
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-family: inherit;
+        background: var(--color-white);
+      }
+
+      textarea {
+        field-sizing: content;
+        resize: none;
+        min-height: 60px;
+      }
+
+      /* Buttons */
+      button {
+        cursor: pointer;
+        background-color: var(--color-white);
+        border: 1px solid var(--color-border-medium);
+        padding: 8px 16px;
+        border-radius: 6px;
+        color: var(--color-text-primary);
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background-color: var(--color-action-button-hover);
+      }
+      button.primary {
+        background-color: var(--color-accent);
+        color: white;
+        border: none;
+      }
+      button.primary:hover {
+        opacity: 0.9;
+      }
+
+      .action-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+
+      /* Config Grid */
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+        background: var(--color-white);
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid var(--color-border-medium);
+      }
+      .config-item label {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--color-text-secondary);
+        margin-bottom: 4px;
+      }
+      .config-item select {
+        margin-bottom: 0;
+      }
+
+      /* Input List */
+      #input-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .input-item {
+        display: grid;
+        grid-template-columns: 32px 1fr auto; /* Drag | Content | Controls */
+        background: var(--color-white);
+        border: 1px solid var(--color-border-medium);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+
+      .input-item.has-media {
+        grid-template-columns: 32px 100px 1fr auto; /* Drag | Thumb | Content | Controls */
+      }
+
+      /* Drag Handle */
+      .drag-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f4f4;
+        cursor: grab;
+        color: var(--color-drag-handle);
+        border-right: 1px solid var(--color-border-light);
+        user-select: none;
+      }
+      .drag-handle:hover {
+        color: var(--color-drag-handle-hover);
+      }
+      .input-item.dragging {
+        opacity: 0.5;
+      }
+
+      .input-item.drag-over-top::before,
+      .input-item.drag-over-bottom::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background-color: var(--color-insert-indicator);
+        z-index: 10;
+      }
+
+      .input-item.drag-over-top::before {
+        top: 0;
+      }
+
+      .input-item.drag-over-bottom::after {
+        bottom: 0;
+      }
+
+      /* Media Thumbnail */
+      .media-preview {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        background: #000;
+        border-right: 1px solid var(--color-border-light);
+      }
+      .video-icon-overlay {
+        position: absolute;
+        color: white;
+        font-size: 24px;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+      }
+
+      /* Content Area */
+      .item-content {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .item-content textarea {
+        margin: 0;
+        border: 1px solid var(--color-border-light);
+      }
+      .file-info {
+        font-size: 0.85rem;
+        color: var(--color-text-secondary);
+        word-break: break-all;
+      }
+
+      /* Controls Area */
+      .item-controls {
+        padding: 12px;
+        background: #fcfcfc;
+        border-left: 1px solid var(--color-border-light);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 140px;
+      }
+      .role-select {
+        font-size: 0.9rem;
+        padding: 4px;
+        margin: 0;
+      }
+      .role-select:has(option:checked:disabled) {
+        border-color: var(--color-error);
+        background-color: #fce8e6;
+      }
+      .delete-btn {
+        color: var(--color-error);
+        border-color: transparent;
+        padding: 4px;
+        align-self: flex-end;
+        font-size: 0.9rem;
+      }
+      .delete-btn:hover {
+        background: #fee;
+      }
+
+      /* Output Section */
+      .output-card {
+        background: var(--color-white);
+        border: 1px solid var(--color-border-medium);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+        color: var(--color-text-secondary);
+      }
+      .status-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+      .timer {
+        font-family: monospace;
+        font-weight: bold;
+      }
+
+      video {
+        width: 100%;
+        border-radius: 4px;
+        background: #000;
+        display: block;
+      }
+
+      .error-msg {
+        color: var(--color-error);
+        background: #fce8e6;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- Configuration -->
+      <section>
+        <h2>Configuration</h2>
+        <input type="password" id="api-key" placeholder="Enter Gemini API Key" />
+        <div class="config-grid">
+          <div class="config-item">
+            <label>Model</label>
+            <select id="cfg-model">
+              <option value="veo-3.1-generate-preview">Veo 3.1</option>
+              <option value="veo-3.1-fast-generate-preview" selected>Veo 3.1 Fast</option>
+              <option value="veo-3.0-generate-001">Veo 3.0</option>
+              <option value="veo-3.0-fast-generate-001">Veo 3.0 Fast</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>Duration</label>
+            <select id="cfg-duration">
+              <option value="4" selected>4 Seconds</option>
+              <option value="6">6 Seconds</option>
+              <option value="8">8 Seconds</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>Aspect Ratio</label>
+            <select id="cfg-aspect">
+              <option value="16:9">16:9 Landscape</option>
+              <option value="9:16">9:16 Portrait</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label>Resolution</label>
+            <select id="cfg-resolution">
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Inputs -->
+      <section>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem">
+          <h2 style="margin-bottom: 0">Inputs</h2>
+          <button id="btn-clear-inputs">Clear input</button>
+        </div>
+        <div id="input-list"></div>
+
+        <div class="action-bar">
+          <button id="btn-add-text">+ Text</button>
+          <button id="btn-add-image">+ Image</button>
+          <button id="btn-add-video">+ Video</button>
+          <span style="color: var(--color-text-secondary); font-size: 0.9rem; align-self: center"
+            >Drop or paste files</span
+          >
+        </div>
+      </section>
+
+      <!-- Generation Action -->
+      <div class="action-bar">
+        <button id="btn-generate" class="primary" style="width: 100%; padding: 12px">Generate Video</button>
+      </div>
+
+      <!-- Outputs -->
+      <section>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem">
+          <h2 style="margin-bottom: 0">Output</h2>
+          <button id="btn-clear-outputs">Clear output</button>
+        </div>
+        <div id="output-list"></div>
+      </section>
+    </main>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="file-picker" style="display: none" />
+
+    <script type="module">
+      import { GoogleGenAI } from "https://esm.sh/@google/genai";
+      import { get, set, createStore } from "https://esm.sh/idb-keyval";
+
+      /**
+       * Utility functions for the VeoApp.
+       */
+      class VeoUtils {
+        static blobToDataUrl(blob) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        static dataUrlToBase64(dataUrl) {
+          return dataUrl.split(",")[1];
+        }
+      }
+
+      /**
+       * Manages drag-and-drop reordering for a list of elements.
+       */
+      class SortableManager {
+        constructor({ itemSelector, handleSelector, onReorder, onReorderComplete }) {
+          this.itemSelector = itemSelector;
+          this.handleSelector = handleSelector;
+          this.onReorder = onReorder;
+          this.onReorderComplete = onReorderComplete;
+
+          this.draggedId = null;
+          this.lastMouseDownTarget = null;
+          this.pendingReorder = false;
+
+          this._init();
+        }
+
+        _init() {
+          // Robust mousedown tracking to restrict drag to handles
+          window.addEventListener(
+            "mousedown",
+            (e) => {
+              this.lastMouseDownTarget = e.target;
+              const item = e.target.closest(this.itemSelector);
+              const handle = e.target.closest(this.handleSelector);
+              if (item) {
+                // Only make the item draggable if the handle was clicked
+                item.draggable = !!handle;
+              }
+            },
+            true,
+          );
+
+          // Reset draggable state globally on mouseup
+          window.addEventListener(
+            "mouseup",
+            () => {
+              document.querySelectorAll(this.itemSelector).forEach((i) => (i.draggable = false));
+            },
+            true,
+          );
+        }
+
+        /**
+         * Attaches drag events to a specific element.
+         * @param {HTMLElement} el The element to make sortable
+         * @param {string} id Unique identifier for the item
+         */
+        attach(el, id) {
+          el.ondragstart = (e) => {
+            // If the user is dragging something else inside the item (like selected text), allow it.
+            if (e.target !== el) return;
+
+            const handle = this.lastMouseDownTarget ? this.lastMouseDownTarget.closest(this.handleSelector) : null;
+
+            if (!handle) {
+              e.preventDefault();
+              return;
+            }
+
+            this.draggedId = id;
+            this.pendingReorder = false;
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", id);
+
+            // Delay adding class to ensure the ghost image is solid
+            setTimeout(() => el.classList.add("dragging"), 0);
+          };
+
+          el.ondragend = () => {
+            el.classList.remove("dragging");
+            el.draggable = false;
+            document.querySelectorAll(this.itemSelector).forEach((i) => {
+              i.classList.remove("drag-over-top", "drag-over-bottom");
+            });
+
+            if (this.pendingReorder) {
+              this.onReorderComplete();
+              this.pendingReorder = false;
+            }
+            this.draggedId = null;
+          };
+
+          el.ondragover = (e) => {
+            if (!this.draggedId || el.dataset.id === this.draggedId) return;
+            e.preventDefault();
+
+            const rect = el.getBoundingClientRect();
+            const isTop = e.clientY < rect.top + rect.height / 2;
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+            el.classList.add(isTop ? "drag-over-top" : "drag-over-bottom");
+          };
+
+          el.ondragleave = () => el.classList.remove("drag-over-top", "drag-over-bottom");
+
+          el.ondrop = (e) => {
+            if (!this.draggedId || this.draggedId === id) return;
+            e.preventDefault();
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+
+            const rect = el.getBoundingClientRect();
+            const isTop = e.clientY < rect.top + rect.height / 2;
+
+            this.onReorder(this.draggedId, id, isTop);
+            this.pendingReorder = true;
+          };
+        }
+      }
+
+      class VeoApp {
+        static DB_NAME = "veo-workbench";
+        static STORE_NAME = "state";
+
+        // Role definitions by input type
+        static ROLES = {
+          text: [
+            { value: "prompt", label: "Positive Prompt" },
+            { value: "negativePrompt", label: "Negative Prompt" },
+          ],
+          image: [
+            { value: "image", label: "Start Frame" },
+            { value: "lastFrame", label: "End Frame" },
+            { value: "reference_asset", label: "Reference content", veo31Only: true },
+            { value: "reference_style", label: "Reference style", veo31Only: true },
+          ],
+          video: [{ value: "video", label: "Input Video (Extend)", veo31Only: true }],
+        };
+
+        constructor() {
+          this.store = createStore(VeoApp.DB_NAME, VeoApp.STORE_NAME);
+          this.inputs = [];
+          this.outputs = [];
+          this.nextId = 1;
+          this.activeGenerations = new Map();
+
+          this.dom = {
+            apiKey: document.getElementById("api-key"),
+            inputList: document.getElementById("input-list"),
+            outputList: document.getElementById("output-list"),
+            filePicker: document.getElementById("file-picker"),
+            config: {
+              model: document.getElementById("cfg-model"),
+              duration: document.getElementById("cfg-duration"),
+              aspect: document.getElementById("cfg-aspect"),
+              resolution: document.getElementById("cfg-resolution"),
+            },
+          };
+
+          this.sortable = new SortableManager({
+            itemSelector: ".input-item",
+            handleSelector: ".drag-handle",
+            onReorder: (fromId, toId, isTop) => this.handleReorder(fromId, toId, isTop),
+            onReorderComplete: () => {
+              this.render();
+              this.saveInputs();
+            },
+          });
+
+          this.bindEvents();
+          this.loadState();
+        }
+
+        // --- Config Helpers ---
+
+        get isVeo31() {
+          return this.dom.config.model.value.startsWith("veo-3.1");
+        }
+
+        getConfig() {
+          return {
+            model: this.dom.config.model.value,
+            duration: this.dom.config.duration.value,
+            aspect: this.dom.config.aspect.value,
+            resolution: this.dom.config.resolution.value,
+          };
+        }
+
+        setConfig(config) {
+          for (const [key, value] of Object.entries(config)) {
+            const el = this.dom.config[key];
+            if (el && [...el.options].some((o) => o.value === value)) {
+              el.value = value;
+            }
+          }
+        }
+
+        // --- Role Helpers ---
+
+        getRolesForType(type) {
+          return (VeoApp.ROLES[type] || []).map((r) => ({
+            ...r,
+            disabled: r.veo31Only && !this.isVeo31,
+          }));
+        }
+
+        getDefaultRole(type) {
+          const roles = this.getRolesForType(type);
+          const enabled = roles.find((r) => !r.disabled);
+          return enabled?.value || roles[0]?.value || "prompt";
+        }
+
+        isRoleValid(type, role) {
+          const roles = this.getRolesForType(type);
+          const r = roles.find((x) => x.value === role);
+          return r && !r.disabled;
+        }
+
+        // Fix any invalid roles based on current model
+        normalizeInputRoles() {
+          let changed = false;
+          for (const input of this.inputs) {
+            if (!this.isRoleValid(input.type, input.role)) {
+              input.role = this.getDefaultRole(input.type);
+              changed = true;
+            }
+          }
+          return changed;
+        }
+
+        bindEvents() {
+          document.getElementById("btn-add-text").onclick = () => this.addInput("text");
+          document.getElementById("btn-add-image").onclick = () => this.triggerFilePicker("image");
+          document.getElementById("btn-add-video").onclick = () => this.triggerFilePicker("video");
+          document.getElementById("btn-clear-inputs").onclick = () => {
+            this.inputs = [];
+            this.render();
+            this.saveInputs();
+          };
+          document.getElementById("btn-generate").onclick = () => this.handleGenerate();
+          document.getElementById("btn-clear-outputs").onclick = () => {
+            this.outputs = [];
+            this.dom.outputList.innerHTML = "";
+            this.saveOutputs();
+          };
+
+          // File input
+          this.dom.filePicker.onchange = (e) => this.handleFileSelection(e);
+
+          // Paste & drop
+          document.addEventListener("paste", (e) => this.handlePaste(e));
+          document.body.addEventListener("dragover", (e) => {
+            // Only handle file dragover, not reordering
+            if (e.dataTransfer.types.includes("Files")) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }
+          });
+          document.body.addEventListener("drop", (e) => {
+            // Only handle file drops, not reordering
+            if (e.dataTransfer.files?.length) {
+              this.handleDrop(e);
+            }
+          });
+
+          // Persistence on change
+          this.dom.apiKey.oninput = () => set("apiKey", this.dom.apiKey.value, this.store);
+          for (const el of Object.values(this.dom.config)) {
+            el.onchange = () => {
+              // When model changes, fix invalid roles
+              if (el === this.dom.config.model && this.normalizeInputRoles()) {
+                this.saveInputs();
+              }
+              this.saveConfig();
+              this.render();
+            };
+          }
+        }
+
+        // --- Input Management ---
+
+        async addInput(type, content = "") {
+          this.inputs.push({
+            id: String(this.nextId++),
+            type,
+            role: this.getDefaultRole(type),
+            content,
+            file: null,
+          });
+          this.render();
+          this.saveInputs();
+        }
+
+        async addMediaInput(type, file) {
+          const dataUrl = await VeoUtils.blobToDataUrl(file);
+          this.inputs.push({
+            id: String(this.nextId++),
+            type,
+            role: this.getDefaultRole(type),
+            content: "",
+            file: { dataUrl, mimeType: file.type, name: file.name || `pasted-${type}` },
+          });
+          this.render();
+          this.saveInputs();
+        }
+
+        triggerFilePicker(type) {
+          this.dom.filePicker.accept = type === "image" ? "image/*" : "video/*";
+          this.dom.filePicker.dataset.targetType = type;
+          this.dom.filePicker.click();
+        }
+
+        async handleFileSelection(e) {
+          const file = e.target.files?.[0];
+          if (file) {
+            await this.addMediaInput(this.dom.filePicker.dataset.targetType, file);
+          }
+          this.dom.filePicker.value = "";
+        }
+
+        async handlePaste(e) {
+          if (["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName)) return;
+
+          const files = e.clipboardData?.files;
+          if (files?.length) {
+            e.preventDefault();
+            for (const file of files) {
+              const type = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null;
+              if (type) await this.addMediaInput(type, file);
+            }
+            return;
+          }
+
+          const text = e.clipboardData?.getData("text/plain")?.trim();
+          if (text) {
+            e.preventDefault();
+            this.addInput("text", text);
+          }
+        }
+
+        async handleDrop(e) {
+          e.preventDefault();
+          for (const file of e.dataTransfer.files) {
+            const type = file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null;
+            if (type) await this.addMediaInput(type, file);
+          }
+        }
+
+        updateInput(id, updates) {
+          const input = this.inputs.find((i) => i.id === id);
+          if (input) {
+            Object.assign(input, updates);
+            this.saveInputs();
+          }
+        }
+
+        removeInput(id) {
+          this.inputs = this.inputs.filter((i) => i.id !== id);
+          this.render();
+          this.saveInputs();
+        }
+
+        // --- Rendering ---
+
+        render() {
+          this.dom.inputList.innerHTML = "";
+          for (const item of this.inputs) {
+            this.dom.inputList.appendChild(this.createInputElement(item));
+          }
+        }
+
+        createInputElement(item) {
+          const el = document.createElement("div");
+          el.className = `input-item ${item.file ? "has-media" : ""}`;
+          el.draggable = false;
+          el.dataset.id = item.id;
+
+          // Drag handle
+          el.innerHTML = `<div class="drag-handle">⋮</div>`;
+
+          // Media preview
+          if (item.file) {
+            const thumb = document.createElement("div");
+            thumb.style.cssText =
+              "position:relative;display:flex;align-items:center;justify-content:center;background:#000";
+            if (item.type === "image") {
+              thumb.innerHTML = `<img class="media-preview" src="${item.file.dataUrl}">`;
+            } else {
+              thumb.innerHTML = `<video class="media-preview" src="${item.file.dataUrl}" muted></video><div class="video-icon-overlay">▶</div>`;
+            }
+            el.appendChild(thumb);
+          }
+
+          // Content
+          const content = document.createElement("div");
+          content.className = "item-content";
+          if (item.type === "text") {
+            const ta = document.createElement("textarea");
+            ta.placeholder = "Enter text...";
+            ta.value = item.content;
+            ta.oninput = (e) => this.updateInput(item.id, { content: e.target.value });
+            content.appendChild(ta);
+          } else {
+            content.innerHTML = `<div class="file-info">${item.file?.name || "Unknown file"}</div>`;
+          }
+          el.appendChild(content);
+
+          // Controls
+          const controls = document.createElement("div");
+          controls.className = "item-controls";
+
+          const roleSelect = document.createElement("select");
+          roleSelect.className = "role-select";
+          for (const opt of this.getRolesForType(item.type)) {
+            const option = new Option(opt.label, opt.value, false, item.role === opt.value);
+            option.disabled = opt.disabled;
+            roleSelect.add(option);
+          }
+          roleSelect.onchange = (e) => this.updateInput(item.id, { role: e.target.value });
+          controls.appendChild(roleSelect);
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "delete-btn";
+          delBtn.textContent = "Remove";
+          delBtn.onclick = () => this.removeInput(item.id);
+          controls.appendChild(delBtn);
+
+          el.appendChild(controls);
+          this.sortable.attach(el, item.id);
+          return el;
+        }
+
+        // --- Drag & Drop Reordering ---
+
+        handleReorder(fromId, toId, isTop) {
+          const fromIdx = this.inputs.findIndex((i) => i.id === fromId);
+          const toIdx = this.inputs.findIndex((i) => i.id === toId);
+          if (fromIdx === -1 || toIdx === -1) return;
+
+          const [item] = this.inputs.splice(fromIdx, 1);
+          const newIdx = fromIdx < toIdx ? (isTop ? toIdx - 1 : toIdx) : isTop ? toIdx : toIdx + 1;
+          this.inputs.splice(newIdx, 0, item);
+        }
+
+        // --- Generation ---
+
+        async handleGenerate() {
+          const apiKey = this.dom.apiKey.value.trim();
+          if (!apiKey) return alert("Please enter an API Key");
+
+          const outputId = Date.now() + "-" + Math.random().toString(36).substring(2, 9);
+          const abortController = new AbortController();
+          this.activeGenerations.set(outputId, abortController);
+          const config = this.getConfig();
+
+          this.addOutputCard(outputId, config);
+
+          try {
+            const ai = new GoogleGenAI({ apiKey });
+            const params = await this.buildGenerationParams(config, abortController.signal);
+
+            let operation = await ai.models.generateVideos(params);
+
+            // Poll for completion
+            this.updateOutputStatus(outputId, "generating");
+            const startTime = Date.now();
+            const pollInterval = setInterval(() => {
+              this.updateOutputTimer(outputId, `${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+            }, 100);
+
+            while (!operation.done) {
+              if (abortController.signal.aborted) {
+                clearInterval(pollInterval);
+                throw new DOMException("Generation cancelled", "AbortError");
+              }
+              await new Promise((r) => setTimeout(r, 5000));
+              operation = await ai.operations.getVideosOperation({ operation });
+            }
+            clearInterval(pollInterval);
+
+            if (operation.error) throw new Error(JSON.stringify(operation.error, null, 2));
+
+            // Get video result
+            const vidData = operation.response.generatedVideos[0].video;
+            let videoBlob;
+
+            if (vidData.videoBytes) {
+              videoBlob = await (await fetch(`data:${vidData.mimeType};base64,${vidData.videoBytes}`)).blob();
+            } else if (vidData.uri) {
+              this.updateOutputStatus(outputId, "downloading");
+              const resp = await fetch(vidData.uri, { headers: { "x-goog-api-key": apiKey }, redirect: "follow" });
+              if (!resp.ok) throw new Error(`Failed to download: ${resp.status}`);
+              videoBlob = await resp.blob();
+            } else {
+              throw new Error("No video data returned.");
+            }
+
+            const dataUrl = await VeoUtils.blobToDataUrl(videoBlob);
+            this.renderOutputVideo(outputId, URL.createObjectURL(videoBlob));
+            this.outputs.push({ id: outputId, config, videoDataUrl: dataUrl });
+            await this.saveOutputs();
+          } catch (e) {
+            if (e.name !== "AbortError") {
+              console.error("Generation error:", e);
+              this.renderOutputError(outputId, e.message);
+            }
+          } finally {
+            this.activeGenerations.delete(outputId);
+          }
+        }
+
+        async buildGenerationParams(config, abortSignal) {
+          const params = {
+            model: config.model,
+            config: {
+              numberOfVideos: 1,
+              aspectRatio: config.aspect,
+              resolution: config.resolution,
+              abortSignal,
+            },
+          };
+
+          const prompts = [];
+          const negativePrompts = [];
+          const references = [];
+
+          for (const input of this.inputs) {
+            if (input.type === "text") {
+              (input.role === "negativePrompt" ? negativePrompts : prompts).push(input.content);
+            } else if (input.file) {
+              const b64 = VeoUtils.dataUrlToBase64(input.file.dataUrl);
+              const mediaObj = { imageBytes: b64, mimeType: input.file.mimeType };
+
+              if (input.type === "image") {
+                if (input.role === "image") params.image = mediaObj;
+                else if (input.role === "lastFrame") params.config.lastFrame = mediaObj;
+                else if (input.role.startsWith("reference_")) {
+                  references.push({
+                    image: mediaObj,
+                    referenceType: input.role === "reference_style" ? "STYLE" : "ASSET",
+                  });
+                }
+              } else if (input.type === "video") {
+                params.video = { videoBytes: b64, mimeType: input.file.mimeType };
+              }
+            }
+          }
+
+          if (prompts.length) params.prompt = prompts.join("\n");
+          if (negativePrompts.length) params.config.negativePrompt = negativePrompts.join(", ");
+          if (references.length) params.config.referenceImages = references;
+
+          // Duration is only supported when NOT using reference images and NOT having last frame
+          if (references.length === 0 && !params.config.lastFrame) {
+            params.config.durationSeconds = parseInt(config.duration);
+          }
+
+          // Validate referenceImages constraints
+          if (references.length > 0) {
+            if (!params.prompt) {
+              throw new Error("Reference images require a text prompt.");
+            }
+            if (params.image || params.video || params.config.lastFrame) {
+              throw new Error(
+                "Reference images cannot be used with Start Frame, End Frame, or Input Video. Remove conflicting inputs.",
+              );
+            }
+          }
+
+          if (!params.prompt && !params.image && !params.video && !references.length) {
+            throw new Error("At least one input (Prompt, Image, Video, or Reference) is required.");
+          }
+
+          return params;
+        }
+
+        // --- Output UI ---
+
+        addOutputCard(id, config) {
+          const div = document.createElement("div");
+          div.className = "output-card";
+          div.id = `out-${id}`;
+          div.innerHTML = `
+            <div class="status-bar">
+              <span class="config-info">${config.model} · ${config.duration}s · ${config.aspect} · ${config.resolution} · <span class="status-text">starting</span></span>
+              <div class="status-right">
+                <span class="timer">0.0s</span>
+                <button class="delete-btn output-remove-btn">Remove</button>
+              </div>
+            </div>
+            <div class="video-container"></div>
+          `;
+          div.querySelector(".output-remove-btn").onclick = () => this.removeOutput(id);
+          this.dom.outputList.prepend(div);
+        }
+
+        updateOutputStatus(id, text) {
+          document
+            .querySelector(`#out-${id} .status-text`)
+            ?.replaceWith(
+              Object.assign(document.createElement("span"), { className: "status-text", textContent: text }),
+            );
+        }
+
+        updateOutputTimer(id, text) {
+          const timer = document.querySelector(`#out-${id} .timer`);
+          if (timer) timer.textContent = text;
+        }
+
+        renderOutputVideo(id, url) {
+          const el = document.getElementById(`out-${id}`);
+          if (!el) return;
+
+          const config = el.querySelector(".config-info").textContent.replace(/ · [^·]+$/, "");
+          const time = el.querySelector(".timer").textContent;
+
+          el.querySelector(".status-bar").innerHTML = `
+            <span class="config-info">${config}</span>
+            <div class="status-right"><span class="timer">${time}</span><button class="delete-btn output-remove-btn">Remove</button></div>
+          `;
+          el.querySelector(".output-remove-btn").onclick = () => this.removeOutput(id);
+          el.querySelector(".video-container").innerHTML = `
+            <video controls autoplay loop src="${url}"></video>
+            <div style="margin-top:8px; text-align:right">
+              <a href="${url}" download="veo_video_${id}.mp4"><button>Download MP4</button></a>
+            </div>
+          `;
+        }
+
+        renderOutputError(id, msg) {
+          const el = document.getElementById(`out-${id}`);
+          if (!el) return;
+
+          const config = el.querySelector(".config-info").textContent.replace(/ · [^·]+$/, "");
+          const time = el.querySelector(".timer").textContent;
+
+          el.querySelector(".status-bar").innerHTML = `
+            <span class="config-info">${config}</span>
+            <div class="status-right"><span class="timer">${time}</span><button class="delete-btn output-remove-btn">Remove</button></div>
+          `;
+          el.querySelector(".output-remove-btn").onclick = () => this.removeOutput(id);
+          el.querySelector(".video-container").innerHTML = `<div class="error-msg">${msg}</div>`;
+        }
+
+        removeOutput(id) {
+          this.activeGenerations.get(id)?.abort();
+          this.activeGenerations.delete(id);
+          document.getElementById(`out-${id}`)?.remove();
+          this.outputs = this.outputs.filter((o) => o.id !== id);
+          this.saveOutputs();
+        }
+
+        // --- Persistence ---
+
+        async saveInputs() {
+          // Only save serializable data (no blobs)
+          const toSave = this.inputs.map(({ id, type, role, content, file }) => ({
+            id,
+            type,
+            role,
+            content,
+            file: file ? { dataUrl: file.dataUrl, mimeType: file.mimeType, name: file.name } : null,
+          }));
+          await set("inputs", toSave, this.store);
+        }
+
+        async saveConfig() {
+          await set("config", this.getConfig(), this.store);
+        }
+
+        async saveOutputs() {
+          await set("outputs", this.outputs, this.store);
+        }
+
+        async loadState() {
+          // Load API key
+          const key = await get("apiKey", this.store);
+          if (key) this.dom.apiKey.value = key;
+
+          // Load config (validate against available options)
+          const savedConfig = await get("config", this.store);
+          if (savedConfig) this.setConfig(savedConfig);
+
+          // Load inputs
+          const savedInputs = await get("inputs", this.store);
+          if (savedInputs?.length) {
+            this.inputs = savedInputs;
+            this.nextId = Math.max(...this.inputs.map((i) => parseInt(i.id))) + 1;
+            // Fix any roles that are now invalid for current model
+            this.normalizeInputRoles();
+            this.render();
+          }
+
+          // Load outputs
+          const savedOutputs = await get("outputs", this.store);
+          if (savedOutputs?.length) {
+            this.outputs = savedOutputs;
+            // Render newest first
+            for (let i = this.outputs.length - 1; i >= 0; i--) {
+              this.renderSavedOutput(this.outputs[i]);
+            }
+          }
+        }
+
+        renderSavedOutput({ id, config, videoDataUrl }) {
+          const div = document.createElement("div");
+          div.className = "output-card";
+          div.id = `out-${id}`;
+          div.innerHTML = `
+            <div class="status-bar">
+              <span class="config-info">${config.model} · ${config.duration}s · ${config.aspect} · ${config.resolution}</span>
+              <div class="status-right"><button class="delete-btn output-remove-btn">Remove</button></div>
+            </div>
+            <div class="video-container">
+              <video controls loop src="${videoDataUrl}"></video>
+              <div style="margin-top:8px; text-align:right">
+                <a href="${videoDataUrl}" download="veo_video_${id}.mp4"><button>Download MP4</button></a>
+              </div>
+            </div>
+          `;
+          div.querySelector(".output-remove-btn").onclick = () => this.removeOutput(id);
+          this.dom.outputList.prepend(div);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => new VeoApp());
+    </script>
+  </body>
+</html>

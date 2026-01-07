@@ -4,6 +4,7 @@ import { library, type ComponentType, type LibraryItem } from "./assets/library/
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
 import "./main-page.css";
 import "./material-page.css";
@@ -14,6 +15,10 @@ const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
 // Register custom elements
 GenerativeImageElement.define(() => ({
   flux: { apiKey: apiKeys$.value.together || "" },
+  gemini: { apiKey: apiKeys$.value.gemini || "" },
+}));
+
+GenerativeVideoElement.define(() => ({
   gemini: { apiKey: apiKeys$.value.gemini || "" },
 }));
 
@@ -107,6 +112,56 @@ function selectItem(componentType: ComponentType, item: LibraryItem) {
   dialog.close();
 }
 
+function createPreviewItem(element: HTMLElement) {
+  const container = document.createElement("div");
+  container.className = "preview-item";
+
+  const actions = document.createElement("div");
+  actions.className = "preview-actions";
+
+  const animateBtn = document.createElement("button");
+  animateBtn.className = "action";
+  animateBtn.textContent = "Animate";
+  animateBtn.addEventListener("click", () => {
+    const status = element.getAttribute("status");
+    if (status !== "success") {
+      alert("Please wait for the generation to complete before animating.");
+      return;
+    }
+
+    const img = element.querySelector("img");
+    if (!img || !img.src) return;
+
+    const videoPrompt = `A person dispenses content from the container.`;
+
+    const genVideo = document.createElement("generative-video");
+    genVideo.setAttribute("prompt", videoPrompt);
+    genVideo.setAttribute("start-frame", img.src);
+    genVideo.setAttribute("model", "veo-3.1-fast-generate-preview");
+    genVideo.setAttribute("aspect-ratio", "9:16");
+
+    const newItem = createPreviewItem(genVideo);
+    container.before(newItem);
+  });
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "action";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => {
+    container.remove();
+  });
+
+  if (element.tagName.toLowerCase() === "generative-image") {
+    actions.appendChild(animateBtn);
+  }
+
+  actions.appendChild(deleteBtn);
+  container.appendChild(actions);
+  container.appendChild(element);
+
+  return container;
+}
+
 // Render button logic
 renderButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -137,7 +192,7 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("aspect-ratio", "9:16");
     genImage.setAttribute("model", "gemini-2.5-flash-image");
 
-    previewsGrid.prepend(genImage);
+    previewsGrid.prepend(createPreviewItem(genImage));
   });
 });
 
