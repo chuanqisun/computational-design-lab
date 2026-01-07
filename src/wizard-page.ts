@@ -14,7 +14,7 @@ import { GenerativeVideoElement } from "./components/generative-video/generative
 import { generateAnimationPrompt } from "./components/virtual-design-system/animator";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
 import "./main-page.css";
-import "./material-page.css";
+import "./wizard-page.css";
 
 // Shared state for API keys
 const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
