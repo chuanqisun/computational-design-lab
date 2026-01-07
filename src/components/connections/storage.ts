@@ -93,6 +93,7 @@ export interface MaterialPageState {
     height?: string;
     aspectRatio?: string;
     startFrame?: string;
+    componentIds?: number[];
   }>;
 }
 

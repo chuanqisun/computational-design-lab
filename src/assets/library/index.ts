@@ -98,7 +98,7 @@ export const library: LibraryItem[] = [
       "Tall plastic cap featuring a vertically ribbed exterior and a child-resistant mechanism that requires lateral pressure on the smooth base collar to disengage internal locking tabs before it can be unscrewed.",
     url: cap04,
     interactionHint:
-      "A user can squeeze the smooth base collar inward while simultaneously rotating the ribbed cap counterclockwise to unlock and unscrew it from the container.",
+      "A user can squeeze the smooth base collar inward while simultaneously rotating the ribbed cap counterclockwise to unlock and unscrew it from the container. The cap may be the used to receive the dispensed liquid.",
   },
   {
     id: 5,
@@ -108,7 +108,7 @@ export const library: LibraryItem[] = [
       "Features a smooth-topped cylindrical lid that unscrews from a vertically ribbed base to provide wide-mouth access to internal contents.",
     url: cap05,
     interactionHint:
-      "A user can grip the smooth cylindrical cap and rotate it counterclockwise to unscrew it from the ribbed base and reveal the wide opening.",
+      "A user can grip the smooth cylindrical cap and rotate it counterclockwise to unscrew it from the ribbed base and reveal the wide opening. The cap may be used to receive the dispensed liquid.",
   },
   {
     id: 6,
@@ -228,7 +228,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a series of raised concentric circular ridges alternating with recessed valleys that radiate from a central point, creating a rhythmic ripple effect across a matte, finely granular plane.",
     url: surface01,
-    interactionHint: "The raised concentric ridges can provide a tactile grip for the fingers while handling the container.",
+    interactionHint:
+      "The raised concentric ridges can provide a tactile grip for the fingers while handling the container.",
   },
   {
     id: 20,

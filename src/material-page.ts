@@ -11,6 +11,7 @@ import {
 } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
+import { generateAnimationPrompt } from "./components/virtual-design-system/animator";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
 import "./main-page.css";
 import "./material-page.css";
@@ -73,6 +74,8 @@ if (persistedState?.capColor) {
 
 // Helper to serialize preview elements for persistence
 function serializePreview(element: HTMLElement): MaterialPageState["previews"][0] | null {
+  const componentIds = element.getAttribute("data-components")?.split(",").map(Number);
+
   if (element.tagName.toLowerCase() === "generative-image") {
     return {
       type: "image",
@@ -81,6 +84,7 @@ function serializePreview(element: HTMLElement): MaterialPageState["previews"][0
       width: element.getAttribute("width") || undefined,
       height: element.getAttribute("height") || undefined,
       aspectRatio: element.getAttribute("aspect-ratio") || undefined,
+      componentIds,
     };
   } else if (element.tagName.toLowerCase() === "generative-video") {
     return {
@@ -89,6 +93,7 @@ function serializePreview(element: HTMLElement): MaterialPageState["previews"][0
       model: element.getAttribute("model") || "",
       aspectRatio: element.getAttribute("aspect-ratio") || undefined,
       startFrame: element.getAttribute("start-frame") || undefined,
+      componentIds,
     };
   }
   return null;
@@ -244,7 +249,7 @@ function createPreviewItem(element: HTMLElement) {
   const animateBtn = document.createElement("button");
   animateBtn.className = "action";
   animateBtn.textContent = "Animate";
-  animateBtn.addEventListener("click", () => {
+  animateBtn.addEventListener("click", async () => {
     const status = element.getAttribute("status");
     if (status !== "success") {
       alert("Please wait for the generation to complete before animating.");
@@ -254,23 +259,45 @@ function createPreviewItem(element: HTMLElement) {
     const img = element.querySelector("img");
     if (!img || !img.src) return;
 
-    // Get interaction hint from first component that has one
-    const interactionHint =
-      selectedComponents.shape?.interactionHint ||
-      selectedComponents.cap?.interactionHint ||
-      selectedComponents.material?.interactionHint ||
-      selectedComponents.surface?.interactionHint;
+    try {
+      // Get the component IDs stored on the element itself
+      const rawIds = element.getAttribute("data-components");
+      if (!rawIds) {
+        alert("Could not find the original components used for this image.");
+        return;
+      }
 
-    const videoPrompt = interactionHint || `A person dispenses content from the container.`;
+      const componentIds = rawIds.split(",").map(Number);
+      const components = componentIds
+        .map((id) => library.find((item) => item.id === id))
+        .filter((c): c is LibraryItem => c !== undefined);
 
-    const genVideo = document.createElement("generative-video");
-    genVideo.setAttribute("prompt", videoPrompt);
-    genVideo.setAttribute("start-frame", img.src);
-    genVideo.setAttribute("model", "veo-3.1-fast-generate-preview");
-    genVideo.setAttribute("aspect-ratio", "9:16");
+      if (components.length < 4) {
+        alert("Failed to resolve some of the original components.");
+        return;
+      }
 
-    const newItem = createPreviewItem(genVideo);
-    container.before(newItem);
+      animateBtn.textContent = "Scripting...";
+      animateBtn.disabled = true;
+
+      const videoPrompt = await generateAnimationPrompt({ apiKey: apiKeys$.value.gemini || "" }, components);
+
+      const genVideo = document.createElement("generative-video");
+      genVideo.setAttribute("prompt", videoPrompt);
+      genVideo.setAttribute("start-frame", img.src);
+      genVideo.setAttribute("model", "veo-3.1-fast-generate-preview");
+      genVideo.setAttribute("aspect-ratio", "9:16");
+      genVideo.setAttribute("data-components", rawIds);
+
+      const newItem = createPreviewItem(genVideo);
+      container.before(newItem);
+    } catch (error) {
+      console.error("Failed to generate animation prompt:", error);
+      alert("Failed to generate animation prompt. Please check your connection and configuration.");
+    } finally {
+      animateBtn.textContent = "Animate";
+      animateBtn.disabled = false;
+    }
   });
 
   const deleteBtn = document.createElement("button");
@@ -322,6 +349,15 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("aspect-ratio", "9:16");
     genImage.setAttribute("model", "gemini-2.5-flash-image");
 
+    // Store component IDs on the element
+    const ids = [
+      selectedComponents.shape.id,
+      selectedComponents.cap.id,
+      selectedComponents.material.id,
+      selectedComponents.surface.id,
+    ];
+    genImage.setAttribute("data-components", ids.join(","));
+
     previewsGrid.prepend(createPreviewItem(genImage));
     saveState$.next();
   });
@@ -354,12 +390,14 @@ if (persistedState?.previews) {
       if (previewData.width) element.setAttribute("width", previewData.width);
       if (previewData.height) element.setAttribute("height", previewData.height);
       if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
+      if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
     } else {
       element = document.createElement("generative-video");
       element.setAttribute("prompt", previewData.prompt);
       element.setAttribute("model", previewData.model);
       if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
       if (previewData.startFrame) element.setAttribute("start-frame", previewData.startFrame);
+      if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
     }
 
     previewsGrid.appendChild(createPreviewItem(element));
