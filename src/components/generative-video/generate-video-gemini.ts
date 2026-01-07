@@ -78,7 +78,7 @@ export function generateVideo(
         let operation = await (ai as any).models.generateVideos(params);
 
         while (!operation.done && !isAborted) {
-          await new Promise((resolve) => setTimeout(resolve, 10000));
+          await new Promise((resolve) => setTimeout(resolve, 3000));
           if (isAborted) break;
           operation = await (ai as any).operations.getVideosOperation({
             operation: operation,
