@@ -13,7 +13,6 @@ import { GenerativeImageElement } from "./components/generative-image/generative
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { generateAnimationPrompt } from "./components/virtual-design-system/animator";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
-import "./main-page.css";
 import "./wizard-page.css";
 
 // Shared state for API keys
