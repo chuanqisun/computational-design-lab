@@ -21,7 +21,8 @@
   object-fit: cover;
 }
 
-.generative-video[status="loading"] {
+.generative-video[status="loading"] video,
+.generative-video[status="loading"] img {
   opacity: 0.7;
 }
 
@@ -40,6 +41,16 @@
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+.generative-video .elapsed {
+  position: absolute;
+  top: 1ch;
+  left: 1ch;
+  font-size: 11px;
+  background: #fff;
+  padding: 0 0.5ch;
+  z-index: 10;
 }
 
 @keyframes spin {

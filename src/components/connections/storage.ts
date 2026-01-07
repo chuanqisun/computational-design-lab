@@ -28,19 +28,28 @@ interface MoodboardDB extends DBSchema {
     key: string;
     value: CanvasItem;
   };
+  "material-page": {
+    key: string;
+    value: MaterialPageState;
+  };
 }
 
 const DB_NAME = "moodboard-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bump version to add store
 
 let dbPromise: Promise<IDBPDatabase<MoodboardDB>> | null = null;
 
 function getDB(): Promise<IDBPDatabase<MoodboardDB>> {
   if (!dbPromise) {
     dbPromise = openDB<MoodboardDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains("items")) {
           db.createObjectStore("items", { keyPath: "id" });
+        }
+        if (oldVersion < 2) {
+          if (!db.objectStoreNames.contains("material-page")) {
+            db.createObjectStore("material-page");
+          }
         }
       },
     });
@@ -100,10 +109,17 @@ export interface MaterialPageState {
 const MATERIAL_STATE_KEY = "material-page-state";
 
 export async function saveMaterialPageState(state: MaterialPageState): Promise<void> {
-  localStorage.setItem(MATERIAL_STATE_KEY, JSON.stringify(state));
+  const db = await getDB();
+  await db.put("material-page", state, MATERIAL_STATE_KEY);
 }
 
-export function loadMaterialPageState(): MaterialPageState | null {
-  const stored = localStorage.getItem(MATERIAL_STATE_KEY);
-  return stored ? JSON.parse(stored) : null;
+export async function loadMaterialPageState(): Promise<MaterialPageState | null> {
+  try {
+    const db = await getDB();
+    const state = await db.get("material-page", MATERIAL_STATE_KEY);
+    return state || null;
+  } catch (error) {
+    console.error("Failed to load material page state:", error);
+    return null;
+  }
 }

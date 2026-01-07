@@ -40,20 +40,6 @@ const selectedComponents: Record<ComponentType, LibraryItem | null> = {
   surface: null,
 };
 
-// Load persisted state
-const persistedState = loadMaterialPageState();
-if (persistedState) {
-  // Restore selections
-  for (const [type, itemUrl] of Object.entries(persistedState.selectedComponents)) {
-    if (itemUrl) {
-      const item = library.find((i) => i.url === itemUrl);
-      if (item) {
-        selectedComponents[type as ComponentType] = item;
-      }
-    }
-  }
-}
-
 // DOM references
 const dialog = document.getElementById("picker-dialog") as HTMLDialogElement;
 const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
@@ -67,9 +53,58 @@ const resetPreviewsButton = document.getElementById("reset-previews-button") as 
 const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
 const capColorPicker = document.getElementById("cap-color") as HTMLInputElement;
 
-// Restore cap color
-if (persistedState?.capColor) {
-  capColorPicker.value = persistedState.capColor;
+async function init() {
+  // Load persisted state
+  const persistedState = await loadMaterialPageState();
+
+  if (persistedState) {
+    // Restore selections
+    for (const [type, itemUrl] of Object.entries(persistedState.selectedComponents)) {
+      if (itemUrl) {
+        const item = library.find((i) => i.url === itemUrl);
+        if (item) {
+          selectedComponents[type as ComponentType] = item;
+        }
+      }
+    }
+
+    // Restore cap color
+    if (persistedState.capColor) {
+      capColorPicker.value = persistedState.capColor;
+    }
+
+    // Restore previews
+    if (persistedState.previews) {
+      persistedState.previews.forEach((previewData) => {
+        let element: HTMLElement;
+
+        if (previewData.type === "image") {
+          element = document.createElement("generative-image");
+          element.setAttribute("prompt", previewData.prompt);
+          element.setAttribute("model", previewData.model);
+          if (previewData.width) element.setAttribute("width", previewData.width);
+          if (previewData.height) element.setAttribute("height", previewData.height);
+          if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
+          if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
+        } else {
+          element = document.createElement("generative-video");
+          element.setAttribute("prompt", previewData.prompt);
+          element.setAttribute("model", previewData.model);
+          if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
+          if (previewData.startFrame) element.setAttribute("start-frame", previewData.startFrame);
+          if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
+        }
+
+        previewsGrid.appendChild(createPreviewItem(element));
+      });
+    }
+
+    // Update buttons appearance
+    pickerButtons.forEach((button) => {
+      const type = button.dataset.component as ComponentType;
+      updateButton(button, selectedComponents[type]?.url ?? null);
+    });
+  }
 }
 
 // Helper to serialize preview elements for persistence
@@ -291,6 +326,7 @@ function createPreviewItem(element: HTMLElement) {
 
       const newItem = createPreviewItem(genVideo);
       container.before(newItem);
+      saveState$.next();
     } catch (error) {
       console.error("Failed to generate animation prompt:", error);
       alert("Failed to generate animation prompt. Please check your connection and configuration.");
@@ -378,28 +414,4 @@ pickerButtons.forEach((button) => {
   updateButton(button, selectedComponents[componentType]?.url ?? null);
 });
 
-// Restore previews from persisted state
-if (persistedState?.previews) {
-  persistedState.previews.forEach((previewData) => {
-    let element: HTMLElement;
-
-    if (previewData.type === "image") {
-      element = document.createElement("generative-image");
-      element.setAttribute("prompt", previewData.prompt);
-      element.setAttribute("model", previewData.model);
-      if (previewData.width) element.setAttribute("width", previewData.width);
-      if (previewData.height) element.setAttribute("height", previewData.height);
-      if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
-      if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
-    } else {
-      element = document.createElement("generative-video");
-      element.setAttribute("prompt", previewData.prompt);
-      element.setAttribute("model", previewData.model);
-      if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
-      if (previewData.startFrame) element.setAttribute("start-frame", previewData.startFrame);
-      if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
-    }
-
-    previewsGrid.appendChild(createPreviewItem(element));
-  });
-}
+init();

@@ -1,7 +1,7 @@
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
-import { from, of, Subject } from "rxjs";
-import { catchError, distinctUntilChanged, map, startWith, switchMap } from "rxjs/operators";
+import { from, merge, of, Subject, timer } from "rxjs";
+import { catchError, distinctUntilChanged, map, switchMap, takeUntil } from "rxjs/operators";
 import { getCachedImage, setCachedImage } from "../../lib/persistence";
 import { generateVideo, type GeminiConnection } from "./generate-video-gemini";
 import "./generative-video.css";
@@ -13,6 +13,8 @@ interface VideoState {
   videoUrl?: string;
   placeholderUrl?: string;
   error?: string;
+  autoPlay?: boolean;
+  elapsedSeconds?: number;
 }
 
 interface VideoConnections {
@@ -85,17 +87,13 @@ export class GenerativeVideoElement extends HTMLElement {
               return of({
                 status: "success" as Status,
                 videoUrl: cachedUrl,
+                autoPlay: false,
               });
             }
 
-            const loadingState: VideoState = {
-              status: "loading",
-              placeholderUrl: attrs.startFrame || `https://placehold.co/1920x1080?text=Generating...`,
-            };
-
             const connections = GenerativeVideoElement.getConnections();
 
-            return generateVideo(connections.gemini, {
+            const result$ = generateVideo(connections.gemini, {
               prompt: attrs.prompt,
               model: attrs.model,
               aspectRatio: attrs.aspectRatio as "16:9" | "9:16",
@@ -106,9 +104,21 @@ export class GenerativeVideoElement extends HTMLElement {
                 return {
                   status: "success" as Status,
                   videoUrl: result.url,
+                  autoPlay: true,
                 };
               }),
-              startWith(loadingState),
+            );
+
+            const loading$ = timer(0, 100).pipe(
+              map((t) => ({
+                status: "loading" as Status,
+                placeholderUrl: attrs.startFrame || `https://placehold.co/1920x1080?text=Generating...`,
+                elapsedSeconds: t / 10,
+              })),
+              takeUntil(result$),
+            );
+
+            return merge(loading$, result$).pipe(
               catchError((err) => {
                 console.error("Video generation failed:", err);
                 return of({
@@ -131,12 +141,21 @@ export class GenerativeVideoElement extends HTMLElement {
 
   private render(state: VideoState) {
     const aspectRatio = this.getAttribute("aspect-ratio") ?? "16:9";
+    const prompt = this.getAttribute("prompt");
     const template = html`
-      <div class="generative-video" status="${state.status}" aspect-ratio="${aspectRatio}">
+      <div
+        class="generative-video"
+        status="${state.status}"
+        aspect-ratio="${aspectRatio}"
+        title="${ifDefined(prompt ?? undefined)}"
+      >
         ${state.status === "success" && state.videoUrl
-          ? html`<video src="${state.videoUrl}" controls autoplay loop playsinline></video>`
+          ? html`<video src="${state.videoUrl}" controls ?autoplay="${state.autoPlay}" loop playsinline></video>`
           : html`<img src="${ifDefined(state.placeholderUrl)}" alt="Video placeholder" />`}
         ${state.status === "loading" ? html`<div class="loader"></div>` : ""}
+        ${state.status === "loading" && state.elapsedSeconds !== undefined
+          ? html`<div class="elapsed">${state.elapsedSeconds.toFixed(1)}s</div>`
+          : ""}
       </div>
     `;
     render(template, this);

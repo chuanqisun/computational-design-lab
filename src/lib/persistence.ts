@@ -26,10 +26,23 @@ export async function set(key: string, val: any): Promise<void> {
 }
 
 export async function getCachedImage(key: string): Promise<string | undefined> {
-  return (await dbPromise).get(IMAGE_CACHE_STORE, key);
+  const data = await (await dbPromise).get(IMAGE_CACHE_STORE, key);
+  if (data instanceof Blob) {
+    return URL.createObjectURL(data);
+  }
+  return data;
 }
 
 export async function setCachedImage(key: string, url: string): Promise<void> {
+  if (url.startsWith("blob:") || url.startsWith("data:")) {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return void (await dbPromise).put(IMAGE_CACHE_STORE, blob, key);
+    } catch (e) {
+      console.warn("Failed to cache image/video blob, saving URL string instead:", e);
+    }
+  }
   return void (await dbPromise).put(IMAGE_CACHE_STORE, url, key);
 }
 

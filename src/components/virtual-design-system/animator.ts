@@ -34,17 +34,20 @@ Generate a concise interaction prompt for an image-to-video AI. The AI already s
 Focus on describing ONE fluid, natural interaction involving a hand and the container.
 
 Context:
+- Shape: ${shape.name} (${shape.description})
 - Cap & Interaction: ${cap.name}. ${interactionContext}
 - Material: ${material.name} (${material.description})
+- Surface: ${surface.name} (${surface.description})
 
 Task:
 Describe a single continuous motion covering:
 1. How a hand interacts with the ${material.name} container and ${cap.name}.
-2. How the content is dispensed from the ${cap.name}.
+2. Where and how the content is dispensed from the ${cap.name}.
 3. Where the content ends up (e.g., onto the palm of the other hand).
+4. Relevant sound effects (SFX) that accompany the interaction (e.g., a crisp click, a soft squish, or a liquid splash).
 
 The output should be a single, descriptive sentence suitable for a video generation prompt.
-Prefer single-hand operation if the design allows it.
+Prefer single-hand operation if the design allows it. Include sound descriptions naturally within the sentence.
 
 Output ONLY the interaction prompt text. No preamble or meta-talk.
   `.trim();

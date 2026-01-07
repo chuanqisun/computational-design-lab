@@ -125,7 +125,7 @@ export const library: LibraryItem[] = [
     type: "cap",
     name: "Cross-slit valve cap",
     description:
-      "Features a flexible, cross-slit membrane recessed within a cylindrical body that opens under internal pressure to dispense liquid and automatically reseals upon pressure release.",
+      "Features a flexible, cross-slit membrane recessed within top a cylindrical body that opens under internal pressure to dispense liquid and automatically reseals upon pressure release.",
     url: cap07,
     interactionHint:
       "A user can squeeze the container body to force liquid upward through the cross-slit membrane, which can open momentarily and then automatically reseals.",
