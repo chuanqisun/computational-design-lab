@@ -175,9 +175,9 @@ export const library: LibraryItem[] = [
   {
     id: 16,
     type: "shape",
-    name: "Tapered tube with cylindrical base",
+    name: "Tapered tube with cylindrical top",
     description:
-      "Vertical structure consisting of a short cylindrical base supporting a body that transitions from a circular cross-section to a flattened, wide rectangular seal at the top.",
+      "Vertical structure consisting of a short cylindrical top above a body that transitions from a circular cross-section to a flattened, wide rectangular seal at the bottom.",
     url: shape07,
   },
   {
