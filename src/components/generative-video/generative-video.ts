@@ -1,7 +1,7 @@
 import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import { from, merge, of, Subject, timer } from "rxjs";
-import { catchError, distinctUntilChanged, map, switchMap, takeUntil } from "rxjs/operators";
+import { catchError, distinctUntilChanged, map, share, switchMap, takeUntil } from "rxjs/operators";
 import { getCachedImage, setCachedImage } from "../../lib/persistence";
 import { generateVideo, type GeminiConnection } from "./generate-video-gemini";
 import "./generative-video.css";
@@ -107,6 +107,7 @@ export class GenerativeVideoElement extends HTMLElement {
                   autoPlay: true,
                 };
               }),
+              share(),
             );
 
             const loading$ = timer(0, 100).pipe(
