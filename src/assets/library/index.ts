@@ -56,7 +56,7 @@ export interface LibraryItem {
   name: string;
   description: string;
   url: string;
-  animationHint?: string;
+  interactionHint?: string;
 }
 
 export const library: LibraryItem[] = [
@@ -67,8 +67,8 @@ export const library: LibraryItem[] = [
     description:
       "Top-mounted circular button activates an internal manual pump to eject fluid through a prominent horizontal cylindrical spout.",
     url: cap01,
-    animationHint:
-      "A hand presses down on the circular button at the top of the dispenser, activating the pump mechanism and ejecting liquid through the horizontal spout.",
+    interactionHint:
+      "A user can press down on the circular button at the top of the dispenser to activate the pump mechanism and eject liquid through the horizontal spout.",
   },
   {
     id: 2,
@@ -77,8 +77,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a rounded compressible dome atop a cylindrical collar that utilizes air displacement to suction and dispense liquid through an internal pipette when pressed.",
     url: cap02,
-    animationHint:
-      "A hand gently squeezes and releases the rounded dome, causing the dropper to suction liquid upward and then dispense it drop by drop.",
+    interactionHint:
+      "A user can gently squeeze and release the rounded dome to suction liquid upward and then dispense it drop by drop.",
   },
   {
     id: 3,
@@ -87,8 +87,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a hinged lid with a recessed thumb tab that flips upward to expose a central dispensing aperture.",
     url: cap03,
-    animationHint:
-      "A thumb pushes the recessed tab upward, causing the hinged lid to flip open and reveal the dispensing aperture beneath.",
+    interactionHint:
+      "A user can push the recessed tab upward to flip the hinged lid open and reveal the dispensing aperture beneath.",
   },
   {
     id: 4,
@@ -97,8 +97,8 @@ export const library: LibraryItem[] = [
     description:
       "Tall plastic cap featuring a vertically ribbed exterior and a child-resistant mechanism that requires lateral pressure on the smooth base collar to disengage internal locking tabs before it can be unscrewed.",
     url: cap04,
-    animationHint:
-      "Two hands squeeze the smooth base collar inward while simultaneously rotating the ribbed cap counterclockwise to unlock and unscrew it from the container.",
+    interactionHint:
+      "A user can squeeze the smooth base collar inward while simultaneously rotating the ribbed cap counterclockwise to unlock and unscrew it from the container.",
   },
   {
     id: 5,
@@ -107,8 +107,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a smooth-topped cylindrical lid that unscrews from a vertically ribbed base to provide wide-mouth access to internal contents.",
     url: cap05,
-    animationHint:
-      "A hand grips the smooth cylindrical cap and rotates it counterclockwise, unscrewing it from the ribbed base to reveal the wide opening.",
+    interactionHint:
+      "A user can grip the smooth cylindrical cap and rotate it counterclockwise to unscrew it from the ribbed base and reveal the wide opening.",
   },
   {
     id: 6,
@@ -117,8 +117,8 @@ export const library: LibraryItem[] = [
     description:
       "Hinged circular cover with a protruding thumb tab that flips upward to reveal a wide-mouth opening for accessing the jar's contents.",
     url: cap06,
-    animationHint:
-      "A thumb presses on the protruding tab, lifting the hinged circular lid upward to fully expose the wide-mouth jar opening.",
+    interactionHint:
+      "A user can press on the protruding tab to lift the hinged circular lid upward and fully expose the wide-mouth jar opening.",
   },
   {
     id: 7,
@@ -127,8 +127,8 @@ export const library: LibraryItem[] = [
     description:
       "Features a flexible, cross-slit membrane recessed within a cylindrical body that opens under internal pressure to dispense liquid and automatically reseals upon pressure release.",
     url: cap07,
-    animationHint:
-      "A hand squeezes the container body, forcing liquid upward through the cross-slit membrane which opens momentarily and then automatically reseals.",
+    interactionHint:
+      "A user can squeeze the container body to force liquid upward through the cross-slit membrane, which can open momentarily and then automatically reseals.",
   },
   {
     id: 8,
@@ -137,8 +137,8 @@ export const library: LibraryItem[] = [
     description:
       "A circular button integrated into the flat top surface activates an internal pressure mechanism to discharge liquid through a small, horizontal side spout.",
     url: cap08,
-    animationHint:
-      "A thumb presses down firmly on the circular button embedded in the top surface, triggering the pump to dispense liquid through the side spout.",
+    interactionHint:
+      "A user can press down firmly on the circular button embedded in the top surface to trigger the pump and dispense liquid through the side spout.",
   },
   {
     id: 9,
@@ -147,8 +147,8 @@ export const library: LibraryItem[] = [
     description:
       "A cylindrical cap featuring a recessed circular pressure pump on the top surface that forces contents through a rectangular side aperture.",
     url: cap09,
-    animationHint:
-      "A thumb presses down into the recessed circular pump on top, activating the pressure mechanism to expel product through the rectangular opening on the side.",
+    interactionHint:
+      "A user can press down into the recessed circular pump on top to activate the pressure mechanism and expel product through the rectangular opening on the side.",
   },
   {
     id: 10,
@@ -202,6 +202,7 @@ export const library: LibraryItem[] = [
     description:
       "Vertical structure consisting of a short cylindrical top above a body that transitions from a circular cross-section to a flattened, wide rectangular seal at the bottom.",
     url: shape07,
+    interactionHint: "A user can squeeze the flexible tube body to dispense product through the top.",
   },
   {
     id: 17,
@@ -210,6 +211,7 @@ export const library: LibraryItem[] = [
     description:
       "Rectangular vertical volume featuring sealed side margins, a top horizontal seal with small corner notches, an internal resealable track, and a curved bottom gusset that forms a self-standing base.",
     url: shape08,
+    interactionHint: "A user can squeeze the flexible pouch to move the product towards the opening.",
   },
   {
     id: 18,
@@ -226,6 +228,7 @@ export const library: LibraryItem[] = [
     description:
       "Features a series of raised concentric circular ridges alternating with recessed valleys that radiate from a central point, creating a rhythmic ripple effect across a matte, finely granular plane.",
     url: surface01,
+    interactionHint: "The raised concentric ridges can provide a tactile grip for the fingers while handling the container.",
   },
   {
     id: 20,
@@ -234,6 +237,7 @@ export const library: LibraryItem[] = [
     description:
       "Uniform array of elevated, four-sided pyramids arranged in a repeating grid pattern with precise geometric peaks.",
     url: surface02,
+    interactionHint: "The uniform grid of sharp peaks can provide a high-friction surface for a secure grip.",
   },
   {
     id: 21,
@@ -242,6 +246,7 @@ export const library: LibraryItem[] = [
     description:
       "Clustered arrangement of shallow, irregular concave cells of varying sizes forming a recessed geometric pattern with a fine, matte granular finish.",
     url: surface03,
+    interactionHint: "The recessed cells can create a tactile surface that helps prevent slipping when gripped.",
   },
   {
     id: 22,
@@ -250,6 +255,7 @@ export const library: LibraryItem[] = [
     description:
       "Consists of a repeating three-dimensional pattern of smooth, interlocking strands that create a continuous over-and-under woven effect across the surface.",
     url: surface04,
+    interactionHint: "The interlocking relief can provide a complex texture that enhances grip and tactile feedback.",
   },
   {
     id: 23,
@@ -258,6 +264,7 @@ export const library: LibraryItem[] = [
     description:
       "An irregular arrangement of sharply angled, flat-faced geometric shards of varying heights creating a deeply textured, jagged relief.",
     url: surface05,
+    interactionHint: "The sharp geometric edges can provide a very firm, high-friction grip surface.",
   },
   {
     id: 24,
@@ -266,6 +273,7 @@ export const library: LibraryItem[] = [
     description:
       "Parallel sinusoidal ridges and grooves create an undulating, rhythmic pattern across a planar surface.",
     url: surface06,
+    interactionHint: "The rhythmic ridges can provide a comfortable and secure grip along the direction of the waves.",
   },
   {
     id: 25,
@@ -274,6 +282,7 @@ export const library: LibraryItem[] = [
     description:
       "A grid of uniformly spaced, smooth hemispherical nodules creates a repetitive raised texture across the entire flat expanse.",
     url: surface07,
+    interactionHint: "The raised nodules can provide a distinct tactile feedback and improved grip for the fingertips.",
   },
   {
     id: 26,
@@ -282,6 +291,7 @@ export const library: LibraryItem[] = [
     description:
       "Consists of multiple stepped elevations forming undulating, wavy ridges and valleys that replicate topographical contour lines.",
     url: surface08,
+    interactionHint: "The stepped ridges can provide multiple points of contact for a secure and ergonomic grip.",
   },
   {
     id: 27,
@@ -290,6 +300,7 @@ export const library: LibraryItem[] = [
     description:
       "Repeating grid of raised, diamond-shaped blocks with sloped faces formed by intersecting diagonal channels.",
     url: surface09,
+    interactionHint: "The raised diamond pattern and intersecting channels can provide a multidirectional grip.",
   },
   {
     id: 39,
@@ -298,6 +309,7 @@ export const library: LibraryItem[] = [
     description:
       "Completely flat, smooth plane with a uniform non-reflective finish that diffuses light evenly without any surface relief or pattern.",
     url: surface10,
+    interactionHint: "The smooth matte surface can provide a soft touch but minimal mechanical grip.",
   },
   {
     id: 40,
@@ -306,6 +318,7 @@ export const library: LibraryItem[] = [
     description:
       "Completely flat, smooth plane with a highly reflective mirror-like finish that produces sharp specular highlights and clear reflections.",
     url: surface11,
+    interactionHint: "The high-gloss surface can be smooth and may become slippery when wet or handled.",
   },
   {
     id: 28,
@@ -314,6 +327,7 @@ export const library: LibraryItem[] = [
     description:
       "Semi-transparent blue polymer characterized by a fine, light-scattering grain and soft, diffuse visual properties.",
     url: material01,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 29,
@@ -322,6 +336,7 @@ export const library: LibraryItem[] = [
     description:
       "Metamorphic stone featuring a bright white, crystalline ground intersected by soft, feathered veins of smoky grey.",
     url: material02,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 30,
@@ -330,6 +345,7 @@ export const library: LibraryItem[] = [
     description:
       "Sage green cementitious matrix densely embedded with small, variegated mineral aggregates in shades of terracotta, white, and dark charcoal.",
     url: material03,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 31,
@@ -338,6 +354,7 @@ export const library: LibraryItem[] = [
     description:
       "Opaque, dark grey metallic substance featuring a dense and uniform grid of minute circular apertures.",
     url: material04,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 32,
@@ -346,6 +363,8 @@ export const library: LibraryItem[] = [
     description:
       "Vibrant royal blue textile characterized by a dense, plush pile with a soft, velvety hand and light-absorbing matte quality.",
     url: material05,
+    interactionHint:
+      "This soft textile surface can compress easily under finger pressure, returning to its original pile when released.",
   },
   {
     id: 33,
@@ -354,6 +373,7 @@ export const library: LibraryItem[] = [
     description:
       "Uniform light gray mineral composite with a dense, granular matrix containing numerous small, irregular air pockets throughout its surface.",
     url: material06,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 34,
@@ -362,6 +382,7 @@ export const library: LibraryItem[] = [
     description:
       "Translucent, rigid mineral-based material with a subtle aquatic green tint and a light-refracting series of parallel linear ridges.",
     url: material07,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 35,
@@ -370,6 +391,7 @@ export const library: LibraryItem[] = [
     description:
       "Uniformly light-gray metal with a micro-granular, non-reflective appearance and a smooth, solid texture that softly diffuses light.",
     url: material08,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 36,
@@ -378,6 +400,7 @@ export const library: LibraryItem[] = [
     description:
       "Uniformly pigmented, opaque blue synthetic polymer with a dense, non-porous texture and solid color saturation.",
     url: material09,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 37,
@@ -386,6 +409,7 @@ export const library: LibraryItem[] = [
     description:
       "Features an opaque surface that reflects a shifting, prismatic spectrum of rainbow colors depending on the angle of illumination and observation.",
     url: material10,
+    interactionHint: "This material is rigid and can maintain its shape under pressure.",
   },
   {
     id: 38,
@@ -394,6 +418,8 @@ export const library: LibraryItem[] = [
     description:
       "Transparent, rigid thermoplastic polymer with high optical clarity and a smooth, glossy surface that allows unobstructed visibility of contents.",
     url: material11,
+    interactionHint:
+      "This semi-rigid plastic can be squeezed inward to dispense contents and then pops back into its original shape.",
   },
   {
     id: 41,
@@ -402,5 +428,7 @@ export const library: LibraryItem[] = [
     description:
       "Opaque, semi-rigid high-density polyethylene with a uniform matte finish and subtle waxy surface texture that provides excellent chemical resistance.",
     url: material12,
+    interactionHint:
+      "This semi-rigid plastic can be squeezed inward to dispense contents and then pops back into its original shape.",
   },
 ];

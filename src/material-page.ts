@@ -254,14 +254,14 @@ function createPreviewItem(element: HTMLElement) {
     const img = element.querySelector("img");
     if (!img || !img.src) return;
 
-    // Get animation hint from first component that has one
-    const animationHint =
-      selectedComponents.shape?.animationHint ||
-      selectedComponents.cap?.animationHint ||
-      selectedComponents.material?.animationHint ||
-      selectedComponents.surface?.animationHint;
+    // Get interaction hint from first component that has one
+    const interactionHint =
+      selectedComponents.shape?.interactionHint ||
+      selectedComponents.cap?.interactionHint ||
+      selectedComponents.material?.interactionHint ||
+      selectedComponents.surface?.interactionHint;
 
-    const videoPrompt = animationHint || `A person dispenses content from the container.`;
+    const videoPrompt = interactionHint || `A person dispenses content from the container.`;
 
     const genVideo = document.createElement("generative-video");
     genVideo.setAttribute("prompt", videoPrompt);
