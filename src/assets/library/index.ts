@@ -32,6 +32,8 @@ import material07 from "./material-07.png?url";
 import material08 from "./material-08.png?url";
 import material09 from "./material-09.png?url";
 import material10 from "./material-10.png?url";
+import material11 from "./material-11.png?url";
+import material12 from "./material-12.png?url";
 
 // Surface finish
 import surface01 from "./surface-01.png?url";
@@ -43,6 +45,8 @@ import surface06 from "./surface-06.png?url";
 import surface07 from "./surface-07.png?url";
 import surface08 from "./surface-08.png?url";
 import surface09 from "./surface-09.png?url";
+import surface10 from "./surface-10.png?url";
+import surface11 from "./surface-11.png?url";
 
 export type ComponentType = "shape" | "cap" | "material" | "surface";
 
@@ -288,6 +292,22 @@ export const library: LibraryItem[] = [
     url: surface09,
   },
   {
+    id: 39,
+    type: "surface",
+    name: "Untextured matte surface",
+    description:
+      "Completely flat, smooth plane with a uniform non-reflective finish that diffuses light evenly without any surface relief or pattern.",
+    url: surface10,
+  },
+  {
+    id: 40,
+    type: "surface",
+    name: "Untextured high gloss surface",
+    description:
+      "Completely flat, smooth plane with a highly reflective mirror-like finish that produces sharp specular highlights and clear reflections.",
+    url: surface11,
+  },
+  {
     id: 28,
     type: "material",
     name: "Frosted blue translucent acrylic",
@@ -366,5 +386,21 @@ export const library: LibraryItem[] = [
     description:
       "Features an opaque surface that reflects a shifting, prismatic spectrum of rainbow colors depending on the angle of illumination and observation.",
     url: material10,
+  },
+  {
+    id: 38,
+    type: "material",
+    name: "Clear PETE plastic",
+    description:
+      "Transparent, rigid thermoplastic polymer with high optical clarity and a smooth, glossy surface that allows unobstructed visibility of contents.",
+    url: material11,
+  },
+  {
+    id: 41,
+    type: "material",
+    name: "Opaque HDPE",
+    description:
+      "Opaque, semi-rigid high-density polyethylene with a uniform matte finish and subtle waxy surface texture that provides excellent chemical resistance.",
+    url: material12,
   },
 ];
