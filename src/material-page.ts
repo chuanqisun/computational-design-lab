@@ -61,6 +61,8 @@ const setupDialogContent = setupDialog.querySelector(".dialog-content") as HTMLE
 const pickerButtons = document.querySelectorAll(".image-picker") as NodeListOf<HTMLButtonElement>;
 const renderButtons = document.querySelectorAll(".render-perspective") as NodeListOf<HTMLButtonElement>;
 const setupButton = document.getElementById("setup-button") as HTMLButtonElement;
+const resetComponentsButton = document.getElementById("reset-components-button") as HTMLButtonElement;
+const resetPreviewsButton = document.getElementById("reset-previews-button") as HTMLButtonElement;
 const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
 const capColorPicker = document.getElementById("cap-color") as HTMLInputElement;
 
@@ -144,6 +146,34 @@ function renderSetup() {
 }
 
 setupButton.addEventListener("click", renderSetup);
+
+// Reset components handler
+resetComponentsButton.addEventListener("click", () => {
+  // Clear all selections
+  for (const type of Object.keys(selectedComponents) as ComponentType[]) {
+    selectedComponents[type] = null;
+  }
+
+  // Reset all picker buttons
+  pickerButtons.forEach((button) => {
+    updateButton(button, null);
+  });
+
+  // Reset cap color to default
+  capColorPicker.value = "#ffffff";
+
+  // Trigger save
+  saveState$.next();
+});
+
+// Reset previews handler
+resetPreviewsButton.addEventListener("click", () => {
+  // Clear all preview items
+  previewsGrid.innerHTML = "";
+
+  // Trigger save
+  saveState$.next();
+});
 
 // Update button appearance based on selection
 function updateButton(button: HTMLButtonElement, imageUrl: string | null) {

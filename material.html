@@ -8,14 +8,13 @@
   </head>
   <body>
     <div id="app" class="material-page">
-      <header class="header">
-        <h1>Material Lab</h1>
-        <button id="setup-button">Setup</button>
-      </header>
-
       <section class="section">
         <header class="section-header">
-          <h2>Components</h2>
+          <h2>Design system demo</h2>
+          <div class="header-actions">
+            <button id="setup-button">Setup</button>
+            <button id="reset-components-button">Reset</button>
+          </div>
         </header>
         <div class="slots-grid">
           <div class="slot">
@@ -45,10 +44,13 @@
       <section class="section">
         <header class="section-header">
           <h2>Previews</h2>
-          <div class="render-actions">
-            <button class="render-perspective" data-view="front">Front</button>
-            <button class="render-perspective" data-view="three-quarters">3/4</button>
-            <button class="render-perspective" data-view="in-use">In use</button>
+          <div class="preview-header-actions">
+            <button id="reset-previews-button">Reset</button>
+            <div class="render-actions">
+              <button class="render-perspective" data-view="front">Front</button>
+              <button class="render-perspective" data-view="three-quarters">3/4</button>
+              <button class="render-perspective" data-view="in-use">In use</button>
+            </div>
           </div>
         </header>
         <div class="previews-grid"></div>

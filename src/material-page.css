@@ -5,6 +5,18 @@
     align-items: center;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  .preview-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2ch;
+  }
+
   .previews-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(24ch, 1fr));
@@ -87,6 +99,21 @@
 
   button.render-perspective:hover {
     background: #333;
+  }
+
+  button#reset-components-button,
+  button#reset-previews-button {
+    background: none;
+    border: 1px solid #ccc;
+    padding: 0.5ch 2ch;
+    cursor: pointer;
+    font-weight: normal;
+  }
+
+  button#reset-components-button:hover,
+  button#reset-previews-button:hover {
+    background: #f0f0f0;
+    border-color: #000;
   }
 
   button#setup-button {
