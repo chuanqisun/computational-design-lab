@@ -75,3 +75,34 @@ export async function clearCanvasItems(): Promise<void> {
   const db = await getDB();
   await db.clear("items");
 }
+
+// Material page persistence
+export interface MaterialPageState {
+  selectedComponents: {
+    shape: string | null;
+    cap: string | null;
+    material: string | null;
+    surface: string | null;
+  };
+  capColor: string;
+  previews: Array<{
+    type: "image" | "video";
+    prompt: string;
+    model: string;
+    width?: string;
+    height?: string;
+    aspectRatio?: string;
+    startFrame?: string;
+  }>;
+}
+
+const MATERIAL_STATE_KEY = "material-page-state";
+
+export async function saveMaterialPageState(state: MaterialPageState): Promise<void> {
+  localStorage.setItem(MATERIAL_STATE_KEY, JSON.stringify(state));
+}
+
+export function loadMaterialPageState(): MaterialPageState | null {
+  const stored = localStorage.getItem(MATERIAL_STATE_KEY);
+  return stored ? JSON.parse(stored) : null;
+}

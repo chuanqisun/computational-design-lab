@@ -1,8 +1,14 @@
 import { html, render } from "lit-html";
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, debounceTime, skip } from "rxjs";
 import { library, type ComponentType, type LibraryItem } from "./assets/library/index";
 import { ConnectionsComponent } from "./components/connections/connections.component";
-import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
+import {
+  loadApiKeys,
+  loadMaterialPageState,
+  saveMaterialPageState,
+  type ApiKeys,
+  type MaterialPageState,
+} from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
@@ -11,6 +17,9 @@ import "./material-page.css";
 
 // Shared state for API keys
 const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
+
+// Observable for triggering persistence
+const saveState$ = new BehaviorSubject<void>(undefined);
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
@@ -30,6 +39,20 @@ const selectedComponents: Record<ComponentType, LibraryItem | null> = {
   surface: null,
 };
 
+// Load persisted state
+const persistedState = loadMaterialPageState();
+if (persistedState) {
+  // Restore selections
+  for (const [type, itemUrl] of Object.entries(persistedState.selectedComponents)) {
+    if (itemUrl) {
+      const item = library.find((i) => i.url === itemUrl);
+      if (item) {
+        selectedComponents[type as ComponentType] = item;
+      }
+    }
+  }
+}
+
 // DOM references
 const dialog = document.getElementById("picker-dialog") as HTMLDialogElement;
 const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
@@ -40,6 +63,72 @@ const renderButtons = document.querySelectorAll(".render-perspective") as NodeLi
 const setupButton = document.getElementById("setup-button") as HTMLButtonElement;
 const previewsGrid = document.querySelector(".previews-grid") as HTMLElement;
 const capColorPicker = document.getElementById("cap-color") as HTMLInputElement;
+
+// Restore cap color
+if (persistedState?.capColor) {
+  capColorPicker.value = persistedState.capColor;
+}
+
+// Helper to serialize preview elements for persistence
+function serializePreview(element: HTMLElement): MaterialPageState["previews"][0] | null {
+  if (element.tagName.toLowerCase() === "generative-image") {
+    return {
+      type: "image",
+      prompt: element.getAttribute("prompt") || "",
+      model: element.getAttribute("model") || "",
+      width: element.getAttribute("width") || undefined,
+      height: element.getAttribute("height") || undefined,
+      aspectRatio: element.getAttribute("aspect-ratio") || undefined,
+    };
+  } else if (element.tagName.toLowerCase() === "generative-video") {
+    return {
+      type: "video",
+      prompt: element.getAttribute("prompt") || "",
+      model: element.getAttribute("model") || "",
+      aspectRatio: element.getAttribute("aspect-ratio") || undefined,
+      startFrame: element.getAttribute("start-frame") || undefined,
+    };
+  }
+  return null;
+}
+
+// Helper to collect current state
+function getCurrentState(): MaterialPageState {
+  const previews: MaterialPageState["previews"] = [];
+  const previewItems = previewsGrid.querySelectorAll(".preview-item");
+
+  previewItems.forEach((item) => {
+    const element = item.querySelector("generative-image, generative-video") as HTMLElement;
+    if (element) {
+      const serialized = serializePreview(element);
+      if (serialized) {
+        previews.push(serialized);
+      }
+    }
+  });
+
+  return {
+    selectedComponents: {
+      shape: selectedComponents.shape?.url || null,
+      cap: selectedComponents.cap?.url || null,
+      material: selectedComponents.material?.url || null,
+      surface: selectedComponents.surface?.url || null,
+    },
+    capColor: capColorPicker.value,
+    previews,
+  };
+}
+
+// Auto-save with debouncing
+saveState$.pipe(skip(1), debounceTime(250)).subscribe(() => {
+  const state = getCurrentState();
+  saveMaterialPageState(state).catch((error) => {
+    console.error("Failed to save material page state:", error);
+  });
+});
+
+// Trigger save on cap color change
+capColorPicker.addEventListener("input", () => saveState$.next());
 
 // Render Setup Dialog
 function renderSetup() {
@@ -110,6 +199,9 @@ function selectItem(componentType: ComponentType, item: LibraryItem) {
 
   // Close dialog
   dialog.close();
+
+  // Trigger save
+  saveState$.next();
 }
 
 function createPreviewItem(element: HTMLElement) {
@@ -149,6 +241,7 @@ function createPreviewItem(element: HTMLElement) {
   deleteBtn.textContent = "Delete";
   deleteBtn.addEventListener("click", () => {
     container.remove();
+    saveState$.next();
   });
 
   if (element.tagName.toLowerCase() === "generative-image") {
@@ -193,6 +286,7 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("model", "gemini-2.5-flash-image");
 
     previewsGrid.prepend(createPreviewItem(genImage));
+    saveState$.next();
   });
 });
 
@@ -210,3 +304,27 @@ pickerButtons.forEach((button) => {
   // Initialize button appearance
   updateButton(button, selectedComponents[componentType]?.url ?? null);
 });
+
+// Restore previews from persisted state
+if (persistedState?.previews) {
+  persistedState.previews.forEach((previewData) => {
+    let element: HTMLElement;
+
+    if (previewData.type === "image") {
+      element = document.createElement("generative-image");
+      element.setAttribute("prompt", previewData.prompt);
+      element.setAttribute("model", previewData.model);
+      if (previewData.width) element.setAttribute("width", previewData.width);
+      if (previewData.height) element.setAttribute("height", previewData.height);
+      if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
+    } else {
+      element = document.createElement("generative-video");
+      element.setAttribute("prompt", previewData.prompt);
+      element.setAttribute("model", previewData.model);
+      if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
+      if (previewData.startFrame) element.setAttribute("start-frame", previewData.startFrame);
+    }
+
+    previewsGrid.appendChild(createPreviewItem(element));
+  });
+}
