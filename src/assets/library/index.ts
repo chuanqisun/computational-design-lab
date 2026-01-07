@@ -160,7 +160,7 @@ export const library: LibraryItem[] = [
   {
     id: 11,
     type: "shape",
-    name: "Rounded rectangular prism",
+    name: "Rectangular prism",
     description: "Tall vertical cuboid featuring uniformly rounded edges and corners on all its faces.",
     url: shape02,
   },
@@ -176,8 +176,7 @@ export const library: LibraryItem[] = [
     id: 13,
     type: "shape",
     name: "Elongated ovoid vessel",
-    description:
-      "Elongated ovoid body with a flat base, tapering into a short cylindrical neck that terminates in a shallow, flat-topped disc.",
+    description: "Elongated ovoid body with a flat base and flat top.",
     url: shape04,
   },
   {
