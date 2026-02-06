@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Computational Design Lab</title>
+  </head>
+  <body>
+    <div id="app" class="material-page">
+      <section class="section">
+        <header class="section-header">
+          <h2>Design system demo</h2>
+          <div class="header-actions">
+            <button id="setup-button" commandfor="setup-dialog" command="show-modal">Setup</button>
+            <button id="reset-components-button">Reset</button>
+          </div>
+        </header>
+      </section>
+    </div>
+
+    <dialog id="setup-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <script type="module" src="/src/studio-page.ts"></script>
+  </body>
+</html>
