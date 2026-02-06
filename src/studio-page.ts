@@ -14,6 +14,16 @@ const pickedMaterials$ = new BehaviorSubject<string[]>([]);
 const pickedMechanisms$ = new BehaviorSubject<string[]>([]);
 const pickedShapes$ = new BehaviorSubject<string[]>([]);
 
+// Helper function to toggle item in array
+const toggleItem = (items: string[], item: string): string[] => {
+  return items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
+};
+
+// Create lookup maps for efficient access
+const materialsById = new Map(materials.map((m) => [m.id, m]));
+const mechanismsById = new Map(mechanisms.map((m) => [m.id, m]));
+const shapesById = new Map(shapes.map((s) => [s.id, s]));
+
 // Combine all picked IDs for output
 const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
   map(([colors, materials, mechanisms, shapes]) => ({
@@ -26,16 +36,12 @@ const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms
 
 // Color picker component
 const ColorPicker = createComponent(() => {
+  const toggleColor = (name: string) => {
+    pickedColors$.next(toggleItem(pickedColors$.value, name));
+  };
+
   const template$ = pickedColors$.pipe(
     map((picked) => {
-      const toggleColor = (name: string) => {
-        const current = pickedColors$.value;
-        if (current.includes(name)) {
-          pickedColors$.next(current.filter((c) => c !== name));
-        } else {
-          pickedColors$.next([...current, name]);
-        }
-      };
 
       return html`
         <div class="picker-section">
@@ -78,16 +84,12 @@ const ColorPicker = createComponent(() => {
 
 // Materials picker component
 const MaterialsPicker = createComponent(() => {
+  const toggleMaterial = (id: string) => {
+    pickedMaterials$.next(toggleItem(pickedMaterials$.value, id));
+  };
+
   const template$ = pickedMaterials$.pipe(
     map((picked) => {
-      const toggleMaterial = (id: string) => {
-        const current = pickedMaterials$.value;
-        if (current.includes(id)) {
-          pickedMaterials$.next(current.filter((m) => m !== id));
-        } else {
-          pickedMaterials$.next([...current, id]);
-        }
-      };
 
       return html`
         <div class="picker-section">
@@ -96,7 +98,7 @@ const MaterialsPicker = createComponent(() => {
             ? html`
                 <div class="pills">
                   ${picked.map((id) => {
-                    const material = materials.find((m) => m.id === id);
+                    const material = materialsById.get(id);
                     return html`
                       <button class="pill" @click=${() => toggleMaterial(id)}>
                         ${material?.name || id}
@@ -127,16 +129,12 @@ const MaterialsPicker = createComponent(() => {
 
 // Mechanisms picker component
 const MechanismsPicker = createComponent(() => {
+  const toggleMechanism = (id: string) => {
+    pickedMechanisms$.next(toggleItem(pickedMechanisms$.value, id));
+  };
+
   const template$ = pickedMechanisms$.pipe(
     map((picked) => {
-      const toggleMechanism = (id: string) => {
-        const current = pickedMechanisms$.value;
-        if (current.includes(id)) {
-          pickedMechanisms$.next(current.filter((m) => m !== id));
-        } else {
-          pickedMechanisms$.next([...current, id]);
-        }
-      };
 
       return html`
         <div class="picker-section">
@@ -145,7 +143,7 @@ const MechanismsPicker = createComponent(() => {
             ? html`
                 <div class="pills">
                   ${picked.map((id) => {
-                    const mechanism = mechanisms.find((m) => m.id === id);
+                    const mechanism = mechanismsById.get(id);
                     return html`
                       <button class="pill" @click=${() => toggleMechanism(id)}>
                         ${mechanism?.name || id}
@@ -176,16 +174,12 @@ const MechanismsPicker = createComponent(() => {
 
 // Shapes picker component
 const ShapesPicker = createComponent(() => {
+  const toggleShape = (id: string) => {
+    pickedShapes$.next(toggleItem(pickedShapes$.value, id));
+  };
+
   const template$ = pickedShapes$.pipe(
     map((picked) => {
-      const toggleShape = (id: string) => {
-        const current = pickedShapes$.value;
-        if (current.includes(id)) {
-          pickedShapes$.next(current.filter((s) => s !== id));
-        } else {
-          pickedShapes$.next([...current, id]);
-        }
-      };
 
       return html`
         <div class="picker-section">
@@ -194,7 +188,7 @@ const ShapesPicker = createComponent(() => {
             ? html`
                 <div class="pills">
                   ${picked.map((id) => {
-                    const shape = shapes.find((s) => s.id === id);
+                    const shape = shapesById.get(id);
                     return html`
                       <button class="pill" @click=${() => toggleShape(id)}>
                         ${shape?.name || id}
