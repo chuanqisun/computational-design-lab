@@ -42,7 +42,6 @@ const ColorPicker = createComponent(() => {
 
   const template$ = pickedColors$.pipe(
     map((picked) => {
-
       return html`
         <div class="picker-section">
           <h3>Colors</h3>
@@ -90,7 +89,6 @@ const MaterialsPicker = createComponent(() => {
 
   const template$ = pickedMaterials$.pipe(
     map((picked) => {
-
       return html`
         <div class="picker-section">
           <h3>Materials</h3>
@@ -135,7 +133,6 @@ const MechanismsPicker = createComponent(() => {
 
   const template$ = pickedMechanisms$.pipe(
     map((picked) => {
-
       return html`
         <div class="picker-section">
           <h3>Mechanisms</h3>
@@ -180,7 +177,6 @@ const ShapesPicker = createComponent(() => {
 
   const template$ = pickedShapes$.pipe(
     map((picked) => {
-
       return html`
         <div class="picker-section">
           <h3>Shapes</h3>
