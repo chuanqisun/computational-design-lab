@@ -15,30 +15,6 @@ Modeled on how a film or photograph is actually produced, where different depart
 
 **Trade-off:** Six slots is expressive but verbose. Camera and lighting can interact (e.g., lens flare implies a light source).
 
-# Bottle design
-
-- Surface
-  - Matte
-  - High gloss
-  - Soft-touch
-  - Easy-grip textured
-- Material
-  - Clear PET
-  - Translucent colored PET
-  - Colored HDPE
-  - Aluminum
-  - Glass
-- Shape
-  - Teardrop
-  - Boston round
-  - Cosmo round
-  - Cosmo oval
-  - Cylinder round
-  - Oblong
-  - Square
-  - Tottle
-    ...
-
 # Appendix
 
 ## Shapes
