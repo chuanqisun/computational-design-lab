@@ -1,79 +1,233 @@
+import { GoogleGenAI, type Content } from "@google/genai";
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
+import { loadApiKeys } from "./components/connections/storage";
 import { colors } from "./components/material-library/colors";
 import { materials } from "./components/material-library/materials";
 import { mechanisms } from "./components/material-library/mechanisms";
 import { shapes } from "./components/material-library/shapes";
 import { createComponent } from "./sdk/create-component";
-import { observe } from "./sdk/observe-directive";
 import "./studio-page.css";
 
-// Shared state for picked items
+// Shared state
 const pickedColors$ = new BehaviorSubject<string[]>([]);
 const pickedMaterials$ = new BehaviorSubject<string[]>([]);
 const pickedMechanisms$ = new BehaviorSubject<string[]>([]);
 const pickedShapes$ = new BehaviorSubject<string[]>([]);
+const filterText$ = new BehaviorSubject<string>("");
+const customInstructions$ = new BehaviorSubject<string>("");
+const synthesisOutput$ = new BehaviorSubject<string>("");
+const isSynthesizing$ = new BehaviorSubject<boolean>(false);
+const editInstructions$ = new BehaviorSubject<string>("");
+const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 
-// Helper function to toggle item in array
-const toggleItem = (items: string[], item: string): string[] => {
-  return items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
-};
+const toggleItem = (items: string[], item: string): string[] =>
+  items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
 
-// Create lookup maps for efficient access
 const materialsById = new Map(materials.map((m) => [m.id, m]));
 const mechanismsById = new Map(mechanisms.map((m) => [m.id, m]));
 const shapesById = new Map(shapes.map((s) => [s.id, s]));
 
-// Combine all picked IDs for output
 const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
-  map(([colors, materials, mechanisms, shapes]) => ({
-    colors,
-    materials,
-    mechanisms,
-    shapes,
-  })),
+  map(([colors, materials, mechanisms, shapes]) => ({ colors, materials, mechanisms, shapes })),
 );
 
-// Color picker component
-const ColorPicker = createComponent(() => {
-  const toggleColor = (name: string) => {
-    pickedColors$.next(toggleItem(pickedColors$.value, name));
+const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
+  map(([colorIds, materialIds, mechanismIds, shapeIds]) => [
+    ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name })),
+    ...materialIds.map((id) => ({ label: materialsById.get(id)?.name || id, type: "material" as const, id })),
+    ...mechanismIds.map((id) => ({ label: mechanismsById.get(id)?.name || id, type: "mechanism" as const, id })),
+    ...shapeIds.map((id) => ({ label: shapesById.get(id)?.name || id, type: "shape" as const, id })),
+  ]),
+);
+
+const removePill = (type: string, id: string) => {
+  if (type === "color") pickedColors$.next(pickedColors$.value.filter((i) => i !== id));
+  if (type === "material") pickedMaterials$.next(pickedMaterials$.value.filter((i) => i !== id));
+  if (type === "mechanism") pickedMechanisms$.next(pickedMechanisms$.value.filter((i) => i !== id));
+  if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
+};
+
+const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary. The XML should describe a detailed product visualization scene with elements for lighting, camera, materials, and the product itself.`;
+
+async function synthesize() {
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) {
+    synthesisOutput$.next("Error: Gemini API key not configured. Use Setup to add it.");
+    return;
+  }
+
+  const data = {
+    colors: pickedColors$.value,
+    materials: pickedMaterials$.value,
+    mechanisms: pickedMechanisms$.value,
+    shapes: pickedShapes$.value,
   };
 
-  const template$ = pickedColors$.pipe(
-    map((picked) => {
+  const hasSelection = data.colors.length + data.materials.length + data.mechanisms.length + data.shapes.length > 0;
+  if (!hasSelection) {
+    synthesisOutput$.next("Please select at least one item before synthesizing.");
+    return;
+  }
+
+  const inputJson = JSON.stringify(data, null, 2);
+  const custom = customInstructions$.value.trim();
+  const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
+
+  const userMessage: Content = { role: "user", parts: [{ text: userText }] };
+
+  isSynthesizing$.next(true);
+  synthesisOutput$.next("");
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContentStream({
+      model: "gemini-3-flash-preview",
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: systemPrompt,
+      },
+      contents: [userMessage],
+    });
+
+    let accumulated = "";
+    for await (const chunk of response) {
+      accumulated += chunk.text ?? "";
+      synthesisOutput$.next(accumulated);
+    }
+
+    conversationHistory$.next([
+      userMessage,
+      { role: "model", parts: [{ text: accumulated }] },
+    ]);
+  } catch (e) {
+    synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isSynthesizing$.next(false);
+  }
+}
+
+async function revise() {
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) {
+    synthesisOutput$.next("Error: Gemini API key not configured. Use Setup to add it.");
+    return;
+  }
+
+  const editText = editInstructions$.value.trim();
+  if (!editText) return;
+
+  const history = conversationHistory$.value;
+  if (history.length === 0) return;
+
+  const reviseMessage: Content = { role: "user", parts: [{ text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}` }] };
+  const contents = [...history, reviseMessage];
+
+  isSynthesizing$.next(true);
+  synthesisOutput$.next("");
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContentStream({
+      model: "gemini-3-flash-preview",
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: systemPrompt,
+      },
+      contents,
+    });
+
+    let accumulated = "";
+    for await (const chunk of response) {
+      accumulated += chunk.text ?? "";
+      synthesisOutput$.next(accumulated);
+    }
+
+    conversationHistory$.next([
+      ...contents,
+      { role: "model", parts: [{ text: accumulated }] },
+    ]);
+    editInstructions$.next("");
+  } catch (e) {
+    synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isSynthesizing$.next(false);
+  }
+}
+
+const renderOptionList = (
+  items: { id: string; name: string; description: string }[],
+  pickedIds: string[],
+  picked$: BehaviorSubject<string[]>,
+) =>
+  items.map(
+    (item) => html`
+      <button
+        class="option-item ${pickedIds.includes(item.id) ? "picked" : ""}"
+        @click=${() => picked$.next(toggleItem(pickedIds, item.id))}
+        title=${item.description}
+      >
+        <span class="option-name">${item.name}</span>
+        <span class="option-description line-clamp-2">${item.description}</span>
+      </button>
+    `,
+  );
+
+// Left panel: filter + accordion categories
+const LeftPanel = createComponent(() => {
+  const template$ = combineLatest([filterText$, pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
+    map(([filter, pickedColorIds, pickedMaterialIds, pickedMechanismIds, pickedShapeIds]) => {
+      const lowerFilter = filter.toLowerCase();
+      const filteredShapes = shapes.filter((s) => s.name.toLowerCase().includes(lowerFilter));
+      const filteredMaterials = materials.map((m) => ({ id: m.id, name: m.name, description: m.visual })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredMechanisms = mechanisms.map((m) => ({ id: m.id, name: m.name, description: m.interaction })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
+
       return html`
-        <div class="picker-section">
-          <h3>Colors</h3>
-          ${picked.length > 0
-            ? html`
-                <div class="pills">
-                  ${picked.map(
-                    (name) => html`
-                      <button class="pill" @click=${() => toggleColor(name)}>
-                        ${name}
-                        <span class="pill-remove">×</span>
-                      </button>
-                    `,
-                  )}
-                </div>
-              `
-            : html`<p class="empty-state">No colors selected</p>`}
-          <div class="color-grid">
-            ${colors.map((color) => {
-              const isPicked = picked.includes(color.name);
-              return html`
-                <button
-                  class="color-swatch ${isPicked ? "picked" : ""}"
-                  @click=${() => toggleColor(color.name)}
-                  title=${color.description}
-                >
-                  <span class="swatch-color" style="background-color: ${color.hex}"></span>
-                  <span class="swatch-name">${color.name}</span>
-                </button>
-              `;
-            })}
-          </div>
+        <div class="filter-box">
+          <input
+            type="search"
+            placeholder="Filter..."
+            .value=${filter}
+            @input=${(e: Event) => filterText$.next((e.target as HTMLInputElement).value)}
+          />
+        </div>
+        <div class="accordion">
+          <section class="accordion-section">
+            <h2>Shapes</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredShapes, pickedShapeIds, pickedShapes$)}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Materials</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredMaterials, pickedMaterialIds, pickedMaterials$)}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Mechanisms</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredMechanisms, pickedMechanismIds, pickedMechanisms$)}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Colors</h2>
+            <div class="accordion-body color-grid">
+              ${filteredColors.map(
+                (color) => html`
+                  <button
+                    class="color-swatch ${pickedColorIds.includes(color.name) ? "picked" : ""}"
+                    @click=${() => pickedColors$.next(toggleItem(pickedColorIds, color.name))}
+                    title=${color.description}
+                  >
+                    <span class="swatch-color" style="background-color: ${color.hex}"></span>
+                    <span class="swatch-name">${color.name}</span>
+                  </button>
+                `,
+              )}
+            </div>
+          </section>
         </div>
       `;
     }),
@@ -81,162 +235,92 @@ const ColorPicker = createComponent(() => {
   return template$;
 });
 
-// Materials picker component
-const MaterialsPicker = createComponent(() => {
-  const toggleMaterial = (id: string) => {
-    pickedMaterials$.next(toggleItem(pickedMaterials$.value, id));
-  };
-
-  const template$ = pickedMaterials$.pipe(
-    map((picked) => {
-      return html`
-        <div class="picker-section">
-          <h3>Materials</h3>
-          ${picked.length > 0
-            ? html`
-                <div class="pills">
-                  ${picked.map((id) => {
-                    const material = materialsById.get(id);
-                    return html`
-                      <button class="pill" @click=${() => toggleMaterial(id)}>
-                        ${material?.name || id}
-                        <span class="pill-remove">×</span>
-                      </button>
-                    `;
-                  })}
-                </div>
-              `
-            : html`<p class="empty-state">No materials selected</p>`}
-          <div class="option-list">
-            ${materials.map((material) => {
-              const isPicked = picked.includes(material.id);
-              return html`
-                <button class="option-item ${isPicked ? "picked" : ""}" @click=${() => toggleMaterial(material.id)}>
-                  <div class="option-name">${material.name}</div>
-                  <div class="option-description">${material.visual}</div>
-                </button>
-              `;
-            })}
-          </div>
-        </div>
-      `;
-    }),
+// Center panel: pills + JSON + synthesize + revise
+const CenterPanel = createComponent(() => {
+  const template$ = combineLatest([output$, allPills$, synthesisOutput$, isSynthesizing$, customInstructions$, editInstructions$, conversationHistory$]).pipe(
+    map(
+      ([data, pills, synthesis, isSynthesizing, customInstr, editInstr, history]) => html`
+        ${pills.length > 0
+          ? html`<div class="pills">
+              ${pills.map(
+                (p) => html`<button class="pill" @click=${() => removePill(p.type, p.id)}>
+                  ${p.label}<span class="pill-remove">×</span>
+                </button>`,
+              )}
+            </div>`
+          : null}
+        <section>
+          <h2>Selection</h2>
+          <pre class="output">${JSON.stringify(data, null, 2)}</pre>
+        </section>
+        <section>
+          <textarea
+            placeholder="Custom instructions (optional)..."
+            .value=${customInstr}
+            @input=${(e: Event) => customInstructions$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
+          <menu>
+            <button @click=${synthesize} ?disabled=${isSynthesizing}>
+              ${isSynthesizing ? "Synthesizing..." : "Synthesize"}
+            </button>
+          </menu>
+        </section>
+        ${synthesis
+          ? html`
+              <section>
+                <pre class="output">${synthesis}</pre>
+              </section>
+              <section>
+                <textarea
+                  placeholder="Edit instructions..."
+                  .value=${editInstr}
+                  @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
+                ></textarea>
+                <menu>
+                  <button @click=${revise} ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}>
+                    ${isSynthesizing ? "Revising..." : "Revise"}
+                  </button>
+                </menu>
+              </section>
+            `
+          : null}
+      `,
+    ),
   );
   return template$;
 });
 
-// Mechanisms picker component
-const MechanismsPicker = createComponent(() => {
-  const toggleMechanism = (id: string) => {
-    pickedMechanisms$.next(toggleItem(pickedMechanisms$.value, id));
-  };
-
-  const template$ = pickedMechanisms$.pipe(
-    map((picked) => {
-      return html`
-        <div class="picker-section">
-          <h3>Mechanisms</h3>
-          ${picked.length > 0
-            ? html`
-                <div class="pills">
-                  ${picked.map((id) => {
-                    const mechanism = mechanismsById.get(id);
-                    return html`
-                      <button class="pill" @click=${() => toggleMechanism(id)}>
-                        ${mechanism?.name || id}
-                        <span class="pill-remove">×</span>
-                      </button>
-                    `;
-                  })}
-                </div>
-              `
-            : html`<p class="empty-state">No mechanisms selected</p>`}
-          <div class="option-list">
-            ${mechanisms.map((mechanism) => {
-              const isPicked = picked.includes(mechanism.id);
-              return html`
-                <button class="option-item ${isPicked ? "picked" : ""}" @click=${() => toggleMechanism(mechanism.id)}>
-                  <div class="option-name">${mechanism.name}</div>
-                  <div class="option-description">${mechanism.interaction}</div>
-                </button>
-              `;
-            })}
-          </div>
-        </div>
-      `;
-    }),
-  );
-  return template$;
+// Right panel: placeholder
+const RightPanel = createComponent(() => {
+  return html`
+    <h2>Saved</h2>
+    <p>No saved items yet</p>
+  `;
 });
 
-// Shapes picker component
-const ShapesPicker = createComponent(() => {
-  const toggleShape = (id: string) => {
-    pickedShapes$.next(toggleItem(pickedShapes$.value, id));
-  };
-
-  const template$ = pickedShapes$.pipe(
-    map((picked) => {
-      return html`
-        <div class="picker-section">
-          <h3>Shapes</h3>
-          ${picked.length > 0
-            ? html`
-                <div class="pills">
-                  ${picked.map((id) => {
-                    const shape = shapesById.get(id);
-                    return html`
-                      <button class="pill" @click=${() => toggleShape(id)}>
-                        ${shape?.name || id}
-                        <span class="pill-remove">×</span>
-                      </button>
-                    `;
-                  })}
-                </div>
-              `
-            : html`<p class="empty-state">No shapes selected</p>`}
-          <div class="option-list">
-            ${shapes.map((shape) => {
-              const isPicked = picked.includes(shape.id);
-              return html`
-                <button class="option-item ${isPicked ? "picked" : ""}" @click=${() => toggleShape(shape.id)}>
-                  <div class="option-name">${shape.name}</div>
-                  <div class="option-description">${shape.description}</div>
-                </button>
-              `;
-            })}
-          </div>
-        </div>
-      `;
-    }),
-  );
-  return template$;
-});
-
-// Main component
+// Main
 const Main = createComponent(() => {
   return html`
-    <section class="section">${ColorPicker()}</section>
-    <section class="section">${MaterialsPicker()}</section>
-    <section class="section">${MechanismsPicker()}</section>
-    <section class="section">${ShapesPicker()}</section>
-    <section class="section">
-      <h3>Output</h3>
-      <pre class="output">${observe(output$.pipe(map((data) => JSON.stringify(data, null, 2))))}</pre>
-    </section>
+    <aside class="panel-left">${LeftPanel()}</aside>
+    <main class="panel-center">${CenterPanel()}</main>
+    <aside class="panel-right">${RightPanel()}</aside>
   `;
 });
 
 // Wire up reset button
-const resetButton = document.getElementById("reset-components-button");
+const resetButton = document.getElementById("reset-button");
 if (resetButton) {
   resetButton.addEventListener("click", () => {
     pickedColors$.next([]);
     pickedMaterials$.next([]);
     pickedMechanisms$.next([]);
     pickedShapes$.next([]);
+    filterText$.next("");
+    customInstructions$.next("");
+    synthesisOutput$.next("");
+    editInstructions$.next("");
+    conversationHistory$.next([]);
   });
 }
 
-// Render the app
 render(Main(), document.getElementById("app")!);
