@@ -4,6 +4,8 @@
   --color-text: #222;
   --color-text-secondary: #666;
   --color-text-active: #000;
+  --section-header-background: #000;
+  --section-header-text-color: white;
   --page-background: white;
   --spacing-unit: 1ch;
   --header-height: 5ch;
@@ -149,6 +151,8 @@ menu {
   border-top: 1px solid #ccc;
 
   h2 {
+    background: var(--section-header-background);
+    color: var(--section-header-text-color);
     flex-shrink: 0;
     padding-block: 0.5ch;
   }
