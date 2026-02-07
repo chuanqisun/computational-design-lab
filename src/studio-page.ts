@@ -2,6 +2,7 @@ import { GoogleGenAI, type Content } from "@google/genai";
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { loadApiKeys } from "./components/connections/storage";
+import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { colors } from "./components/material-library/colors";
 import { materials } from "./components/material-library/materials";
 import { mechanisms } from "./components/material-library/mechanisms";
@@ -20,6 +21,15 @@ const synthesisOutput$ = new BehaviorSubject<string>("");
 const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
+const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
+const isGeneratingPhoto$ = new BehaviorSubject<boolean>(false);
+const photoGallery$ = new BehaviorSubject<Array<{ imageUrl: string; scene: string; prompt: string }>>([]);
+
+// Register GenerativeImageElement
+GenerativeImageElement.define(() => ({
+  flux: { apiKey: loadApiKeys().together || "" },
+  gemini: { apiKey: loadApiKeys().gemini || "" },
+}));
 
 const toggleItem = (items: string[], item: string): string[] =>
   items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
@@ -68,6 +78,7 @@ XML format rules:
 - Use concise natural language where description is needed.
 - Spatial relationships must be explicitly described.
 - Include human-readable descriptions throughout.
+- Use Studio keyshot on white Infinity cove for rendering style.
 
 For picked materials: infer the most appropriate surface options and color options based on the other picked items (colors, shapes, mechanisms). When there are multiple colors and multiple surface materials, pick the most straightforward assignment.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
@@ -194,6 +205,68 @@ async function revise() {
   }
 }
 
+async function takePhoto() {
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) {
+    alert("Error: Gemini API key not configured. Use Setup to add it.");
+    return;
+  }
+
+  const currentXml = synthesisOutput$.value.trim();
+  if (!currentXml) {
+    alert("Please synthesize XML first before taking a photo.");
+    return;
+  }
+
+  const scene = photoScene$.value.trim();
+  if (!scene) {
+    alert("Please specify a photo scene.");
+    return;
+  }
+
+  isGeneratingPhoto$.next(true);
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const promptText = `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. Output only the updated XML, nothing else.
+
+Current XML:
+${currentXml}
+
+Photo scene: ${scene}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+      contents: [{ role: "user", parts: [{ text: promptText }] }],
+    });
+
+    const sceneXml = response.text?.trim() || "";
+    
+    // Create a unique key for this generation
+    const timestamp = Date.now();
+    const genImage = document.createElement("generative-image");
+    genImage.setAttribute("prompt", sceneXml);
+    genImage.setAttribute("width", "720");
+    genImage.setAttribute("height", "1280");
+    genImage.setAttribute("aspect-ratio", "9:16");
+    genImage.setAttribute("model", "gemini-2.5-flash-image");
+    genImage.setAttribute("data-scene", scene);
+    genImage.setAttribute("data-timestamp", timestamp.toString());
+    
+    // Add to gallery (prepend to show newest first)
+    const currentGallery = photoGallery$.value;
+    photoGallery$.next([{ imageUrl: "", scene, prompt: sceneXml }, ...currentGallery]);
+    
+  } catch (e) {
+    alert(`Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isGeneratingPhoto$.next(false);
+  }
+}
+
 const renderOptionList = (
   items: { id: string; name: string; description: string }[],
   pickedIds: string[],
@@ -274,11 +347,49 @@ const LeftPanel = createComponent(() => {
   return template$;
 });
 
-// Center panel: pills + JSON + synthesize + revise
+// Center panel: pills + JSON + synthesize + revise + photo booth
 const CenterPanel = createComponent(() => {
-  const template$ = combineLatest([output$, allPills$, synthesisOutput$, isSynthesizing$, customInstructions$, editInstructions$, conversationHistory$]).pipe(
+  // Get suggested scenes from picked mechanisms
+  const suggestedScenes$ = pickedMechanisms$.pipe(
+    map((mechanismIds) => {
+      const scenes: string[] = [];
+      mechanismIds.forEach((id) => {
+        const mechanism = mechanismsById.get(id);
+        if (mechanism?.interactionOptions) {
+          scenes.push(...mechanism.interactionOptions);
+        }
+      });
+      return Array.from(new Set(scenes)); // Remove duplicates
+    }),
+  );
+
+  const template$ = combineLatest([
+    output$,
+    allPills$,
+    synthesisOutput$,
+    isSynthesizing$,
+    customInstructions$,
+    editInstructions$,
+    conversationHistory$,
+    photoScene$,
+    isGeneratingPhoto$,
+    suggestedScenes$,
+    photoGallery$,
+  ]).pipe(
     map(
-      ([data, pills, synthesis, isSynthesizing, customInstr, editInstr, history]) => html`
+      ([
+        data,
+        pills,
+        synthesis,
+        isSynthesizing,
+        customInstr,
+        editInstr,
+        history,
+        photoScene,
+        isGeneratingPhoto,
+        suggestedScenes,
+        gallery,
+      ]) => html`
         ${pills.length > 0
           ? html`<div class="pills">
               ${pills.map(
@@ -321,6 +432,55 @@ const CenterPanel = createComponent(() => {
                   </button>
                 </menu>
               </section>
+              <section>
+                <h2>Photo booth</h2>
+                <textarea
+                  placeholder="Specify photo shoot scene..."
+                  .value=${photoScene}
+                  @input=${(e: Event) => photoScene$.next((e.target as HTMLTextAreaElement).value)}
+                ></textarea>
+                ${suggestedScenes.length > 0
+                  ? html`
+                      <div class="suggested-scenes">
+                        <p>Suggested scenes:</p>
+                        <div class="scene-buttons">
+                          ${suggestedScenes.map(
+                            (scene) =>
+                              html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
+                          )}
+                        </div>
+                      </div>
+                    `
+                  : null}
+                <menu>
+                  <button @click=${takePhoto} ?disabled=${isGeneratingPhoto}>
+                    ${isGeneratingPhoto ? "Taking photo..." : "Take photo"}
+                  </button>
+                </menu>
+              </section>
+              ${gallery.length > 0
+                ? html`
+                    <section>
+                      <h2>Photo gallery</h2>
+                      <div class="photo-gallery">
+                        ${gallery.map(
+                          (photo, index) => html`
+                            <div class="photo-item">
+                              <generative-image
+                                prompt=${photo.prompt}
+                                width="720"
+                                height="1280"
+                                aspect-ratio="9:16"
+                                model="gemini-2.5-flash-image"
+                              ></generative-image>
+                              <div class="photo-caption">${photo.scene}</div>
+                            </div>
+                          `,
+                        )}
+                      </div>
+                    </section>
+                  `
+                : null}
             `
           : null}
       `,
@@ -329,20 +489,11 @@ const CenterPanel = createComponent(() => {
   return template$;
 });
 
-// Right panel: placeholder
-const RightPanel = createComponent(() => {
-  return html`
-    <h2>Saved</h2>
-    <p>No saved items yet</p>
-  `;
-});
-
 // Main
 const Main = createComponent(() => {
   return html`
     <aside class="panel-left">${LeftPanel()}</aside>
     <main class="panel-center">${CenterPanel()}</main>
-    <aside class="panel-right">${RightPanel()}</aside>
   `;
 });
 
@@ -359,6 +510,8 @@ if (resetButton) {
     synthesisOutput$.next("");
     editInstructions$.next("");
     conversationHistory$.next([]);
+    photoScene$.next("Product stand by itself");
+    photoGallery$.next([]);
   });
 }
 
