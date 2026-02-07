@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Content } from "@google/genai";
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { loadApiKeys } from "./components/connections/storage";
@@ -15,8 +15,11 @@ const pickedMaterials$ = new BehaviorSubject<string[]>([]);
 const pickedMechanisms$ = new BehaviorSubject<string[]>([]);
 const pickedShapes$ = new BehaviorSubject<string[]>([]);
 const filterText$ = new BehaviorSubject<string>("");
+const customInstructions$ = new BehaviorSubject<string>("");
 const synthesisOutput$ = new BehaviorSubject<string>("");
 const isSynthesizing$ = new BehaviorSubject<boolean>(false);
+const editInstructions$ = new BehaviorSubject<string>("");
+const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 
 const toggleItem = (items: string[], item: string): string[] =>
   items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
@@ -45,6 +48,8 @@ const removePill = (type: string, id: string) => {
   if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
 };
 
+const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary. The XML should describe a detailed product visualization scene with elements for lighting, camera, materials, and the product itself.`;
+
 async function synthesize() {
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) {
@@ -66,6 +71,10 @@ async function synthesize() {
   }
 
   const inputJson = JSON.stringify(data, null, 2);
+  const custom = customInstructions$.value.trim();
+  const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
+
+  const userMessage: Content = { role: "user", parts: [{ text: userText }] };
 
   isSynthesizing$.next(true);
   synthesisOutput$.next("");
@@ -74,17 +83,11 @@ async function synthesize() {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
-      config: { thinkingConfig: { thinkingBudget: 0 } },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `Given the following design selections, generate a detailed scene description in XML format that describes a product visualization scene. Include elements for lighting, camera, materials, and the product itself.\n\n${inputJson}`,
-            },
-          ],
-        },
-      ],
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: systemPrompt,
+      },
+      contents: [userMessage],
     });
 
     let accumulated = "";
@@ -92,6 +95,59 @@ async function synthesize() {
       accumulated += chunk.text ?? "";
       synthesisOutput$.next(accumulated);
     }
+
+    conversationHistory$.next([
+      userMessage,
+      { role: "model", parts: [{ text: accumulated }] },
+    ]);
+  } catch (e) {
+    synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isSynthesizing$.next(false);
+  }
+}
+
+async function revise() {
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) {
+    synthesisOutput$.next("Error: Gemini API key not configured. Use Setup to add it.");
+    return;
+  }
+
+  const editText = editInstructions$.value.trim();
+  if (!editText) return;
+
+  const history = conversationHistory$.value;
+  if (history.length === 0) return;
+
+  const reviseMessage: Content = { role: "user", parts: [{ text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}` }] };
+  const contents = [...history, reviseMessage];
+
+  isSynthesizing$.next(true);
+  synthesisOutput$.next("");
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContentStream({
+      model: "gemini-3-flash-preview",
+      config: {
+        thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: systemPrompt,
+      },
+      contents,
+    });
+
+    let accumulated = "";
+    for await (const chunk of response) {
+      accumulated += chunk.text ?? "";
+      synthesisOutput$.next(accumulated);
+    }
+
+    conversationHistory$.next([
+      ...contents,
+      { role: "model", parts: [{ text: accumulated }] },
+    ]);
+    editInstructions$.next("");
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
   } finally {
@@ -147,11 +203,12 @@ const LeftPanel = createComponent(() => {
             <h2>Materials</h2>
             <div class="accordion-body">
               ${renderOptionList(filteredMaterials, pickedMaterialIds, pickedMaterials$)}
-              ${renderOptionList(
-                filteredMechanisms,
-                pickedMechanismIds,
-                pickedMechanisms$,
-              )}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Mechanisms</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredMechanisms, pickedMechanismIds, pickedMechanisms$)}
             </div>
           </section>
           <section class="accordion-section">
@@ -178,11 +235,11 @@ const LeftPanel = createComponent(() => {
   return template$;
 });
 
-// Center panel: pills + JSON + synthesize
+// Center panel: pills + JSON + synthesize + revise
 const CenterPanel = createComponent(() => {
-  const template$ = combineLatest([output$, allPills$, synthesisOutput$, isSynthesizing$]).pipe(
+  const template$ = combineLatest([output$, allPills$, synthesisOutput$, isSynthesizing$, customInstructions$, editInstructions$, conversationHistory$]).pipe(
     map(
-      ([data, pills, synthesis, isSynthesizing]) => html`
+      ([data, pills, synthesis, isSynthesizing, customInstr, editInstr, history]) => html`
         ${pills.length > 0
           ? html`<div class="pills">
               ${pills.map(
@@ -197,13 +254,36 @@ const CenterPanel = createComponent(() => {
           <pre class="output">${JSON.stringify(data, null, 2)}</pre>
         </section>
         <section>
+          <textarea
+            placeholder="Custom instructions (optional)..."
+            .value=${customInstr}
+            @input=${(e: Event) => customInstructions$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
           <menu>
             <button @click=${synthesize} ?disabled=${isSynthesizing}>
               ${isSynthesizing ? "Synthesizing..." : "Synthesize"}
             </button>
           </menu>
-          ${synthesis ? html`<pre class="output">${synthesis}</pre>` : null}
         </section>
+        ${synthesis
+          ? html`
+              <section>
+                <pre class="output">${synthesis}</pre>
+              </section>
+              <section>
+                <textarea
+                  placeholder="Edit instructions..."
+                  .value=${editInstr}
+                  @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
+                ></textarea>
+                <menu>
+                  <button @click=${revise} ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}>
+                    ${isSynthesizing ? "Revising..." : "Revise"}
+                  </button>
+                </menu>
+              </section>
+            `
+          : null}
       `,
     ),
   );
@@ -236,7 +316,10 @@ if (resetButton) {
     pickedMechanisms$.next([]);
     pickedShapes$.next([]);
     filterText$.next("");
+    customInstructions$.next("");
     synthesisOutput$.next("");
+    editInstructions$.next("");
+    conversationHistory$.next([]);
   });
 }
 

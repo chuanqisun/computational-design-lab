@@ -115,6 +115,16 @@ input {
   width: 100%;
 }
 
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  padding: var(--spacing-unit);
+  border: 1px solid #ccc;
+  width: 100%;
+  resize: none;
+  field-sizing: content;
+}
+
 menu {
   display: flex;
   gap: 1ch;
@@ -127,7 +137,7 @@ menu {
 
 .accordion {
   display: grid;
-  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr;
   min-height: 0;
   flex: 1;
 }
@@ -136,11 +146,11 @@ menu {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  border-top: 1px solid #ccc;
 
   h2 {
     flex-shrink: 0;
     padding-block: 0.5ch;
-    border-bottom: 1px solid #eee;
   }
 }
 
