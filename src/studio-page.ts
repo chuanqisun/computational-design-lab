@@ -29,7 +29,6 @@ const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms
   map(([colors, materials, mechanisms, shapes]) => ({ colors, materials, mechanisms, shapes })),
 );
 
-// All picked pills combined
 const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
   map(([colorIds, materialIds, mechanismIds, shapeIds]) => [
     ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name })),
@@ -46,7 +45,6 @@ const removePill = (type: string, id: string) => {
   if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
 };
 
-// Synthesize using Gemini
 async function synthesize() {
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) {
@@ -75,7 +73,7 @@ async function synthesize() {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash-preview",
+      model: "gemini-3-flash-preview",
       config: { thinkingConfig: { thinkingBudget: 0 } },
       contents: [
         {
@@ -101,81 +99,78 @@ async function synthesize() {
   }
 }
 
-// Left panel component
+const renderOptionList = (
+  items: { id: string; name: string; description: string }[],
+  pickedIds: string[],
+  picked$: BehaviorSubject<string[]>,
+) =>
+  items.map(
+    (item) => html`
+      <button
+        class="option-item ${pickedIds.includes(item.id) ? "picked" : ""}"
+        @click=${() => picked$.next(toggleItem(pickedIds, item.id))}
+        title=${item.description}
+      >
+        <span class="option-name">${item.name}</span>
+        <span class="option-description line-clamp-2">${item.description}</span>
+      </button>
+    `,
+  );
+
+// Left panel: filter + accordion categories
 const LeftPanel = createComponent(() => {
-  const template$ = combineLatest([filterText$, pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$, allPills$]).pipe(
-    map(([filter, pickedColorIds, pickedMaterialIds, pickedMechanismIds, pickedShapeIds, pills]) => {
+  const template$ = combineLatest([filterText$, pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
+    map(([filter, pickedColorIds, pickedMaterialIds, pickedMechanismIds, pickedShapeIds]) => {
       const lowerFilter = filter.toLowerCase();
-      const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
-      const filteredMaterials = materials.filter((m) => m.name.toLowerCase().includes(lowerFilter));
-      const filteredMechanisms = mechanisms.filter((m) => m.name.toLowerCase().includes(lowerFilter));
       const filteredShapes = shapes.filter((s) => s.name.toLowerCase().includes(lowerFilter));
+      const filteredMaterials = materials.map((m) => ({ id: m.id, name: m.name, description: m.visual })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredMechanisms = mechanisms.map((m) => ({ id: m.id, name: m.name, description: m.interaction })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
 
       return html`
-        <div class="left-panel">
-          <div class="filter-box">
-            <input type="text" placeholder="Filter items..." .value=${filter} @input=${(e: Event) => filterText$.next((e.target as HTMLInputElement).value)} />
-          </div>
-
-          ${pills.length > 0
-            ? html`<div class="pills">${pills.map((p) => html`<button class="pill" @click=${() => removePill(p.type, p.id)}>${p.label}<span class="pill-remove">×</span></button>`)}</div>`
-            : null}
-
-          ${filteredColors.length > 0
-            ? html`
-                <div class="picker-section">
-                  <h2>Colors</h2>
-                  <div class="color-grid">
-                    ${filteredColors.map((color) => {
-                      const isPicked = pickedColorIds.includes(color.name);
-                      return html`<button class="color-swatch ${isPicked ? "picked" : ""}" @click=${() => pickedColors$.next(toggleItem(pickedColorIds, color.name))} title=${color.description}><span class="swatch-color" style="background-color: ${color.hex}"></span><span class="swatch-name">${color.name}</span></button>`;
-                    })}
-                  </div>
-                </div>
-              `
-            : null}
-
-          ${filteredMaterials.length > 0
-            ? html`
-                <div class="picker-section">
-                  <h2>Materials</h2>
-                  <div class="option-list">
-                    ${filteredMaterials.map((material) => {
-                      const isPicked = pickedMaterialIds.includes(material.id);
-                      return html`<button class="option-item ${isPicked ? "picked" : ""}" @click=${() => pickedMaterials$.next(toggleItem(pickedMaterialIds, material.id))}><div class="option-name">${material.name}</div><div class="option-description">${material.visual}</div></button>`;
-                    })}
-                  </div>
-                </div>
-              `
-            : null}
-
-          ${filteredMechanisms.length > 0
-            ? html`
-                <div class="picker-section">
-                  <h2>Mechanisms</h2>
-                  <div class="option-list">
-                    ${filteredMechanisms.map((mechanism) => {
-                      const isPicked = pickedMechanismIds.includes(mechanism.id);
-                      return html`<button class="option-item ${isPicked ? "picked" : ""}" @click=${() => pickedMechanisms$.next(toggleItem(pickedMechanismIds, mechanism.id))}><div class="option-name">${mechanism.name}</div><div class="option-description">${mechanism.interaction}</div></button>`;
-                    })}
-                  </div>
-                </div>
-              `
-            : null}
-
-          ${filteredShapes.length > 0
-            ? html`
-                <div class="picker-section">
-                  <h2>Shapes</h2>
-                  <div class="option-list">
-                    ${filteredShapes.map((shape) => {
-                      const isPicked = pickedShapeIds.includes(shape.id);
-                      return html`<button class="option-item ${isPicked ? "picked" : ""}" @click=${() => pickedShapes$.next(toggleItem(pickedShapeIds, shape.id))}><div class="option-name">${shape.name}</div><div class="option-description">${shape.description}</div></button>`;
-                    })}
-                  </div>
-                </div>
-              `
-            : null}
+        <div class="filter-box">
+          <input
+            type="search"
+            placeholder="Filter..."
+            .value=${filter}
+            @input=${(e: Event) => filterText$.next((e.target as HTMLInputElement).value)}
+          />
+        </div>
+        <div class="accordion">
+          <section class="accordion-section">
+            <h2>Shapes</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredShapes, pickedShapeIds, pickedShapes$)}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Materials</h2>
+            <div class="accordion-body">
+              ${renderOptionList(filteredMaterials, pickedMaterialIds, pickedMaterials$)}
+              ${renderOptionList(
+                filteredMechanisms,
+                pickedMechanismIds,
+                pickedMechanisms$,
+              )}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Colors</h2>
+            <div class="accordion-body color-grid">
+              ${filteredColors.map(
+                (color) => html`
+                  <button
+                    class="color-swatch ${pickedColorIds.includes(color.name) ? "picked" : ""}"
+                    @click=${() => pickedColors$.next(toggleItem(pickedColorIds, color.name))}
+                    title=${color.description}
+                  >
+                    <span class="swatch-color" style="background-color: ${color.hex}"></span>
+                    <span class="swatch-name">${color.name}</span>
+                  </button>
+                `,
+              )}
+            </div>
+          </section>
         </div>
       `;
     }),
@@ -183,45 +178,52 @@ const LeftPanel = createComponent(() => {
   return template$;
 });
 
-// Center panel component
+// Center panel: pills + JSON + synthesize
 const CenterPanel = createComponent(() => {
-  const template$ = combineLatest([output$, synthesisOutput$, isSynthesizing$]).pipe(
-    map(([data, synthesis, isSynthesizing]) => html`
-      <div class="center-panel">
-        <div class="center-section">
+  const template$ = combineLatest([output$, allPills$, synthesisOutput$, isSynthesizing$]).pipe(
+    map(
+      ([data, pills, synthesis, isSynthesizing]) => html`
+        ${pills.length > 0
+          ? html`<div class="pills">
+              ${pills.map(
+                (p) => html`<button class="pill" @click=${() => removePill(p.type, p.id)}>
+                  ${p.label}<span class="pill-remove">×</span>
+                </button>`,
+              )}
+            </div>`
+          : null}
+        <section>
           <h2>Selection</h2>
           <pre class="output">${JSON.stringify(data, null, 2)}</pre>
-        </div>
-        <div class="center-section">
+        </section>
+        <section>
           <menu>
             <button @click=${synthesize} ?disabled=${isSynthesizing}>
               ${isSynthesizing ? "Synthesizing..." : "Synthesize"}
             </button>
           </menu>
-          ${synthesis ? html`<pre class="output synthesis-output">${synthesis}</pre>` : null}
-        </div>
-      </div>
-    `),
+          ${synthesis ? html`<pre class="output">${synthesis}</pre>` : null}
+        </section>
+      `,
+    ),
   );
   return template$;
 });
 
-// Right panel component
+// Right panel: placeholder
 const RightPanel = createComponent(() => {
   return html`
-    <div class="right-panel">
-      <h2>Saved</h2>
-      <p class="empty-state">No saved items yet</p>
-    </div>
+    <h2>Saved</h2>
+    <p>No saved items yet</p>
   `;
 });
 
-// Main component
+// Main
 const Main = createComponent(() => {
   return html`
-    <div class="panel panel-left">${LeftPanel()}</div>
-    <div class="panel panel-center">${CenterPanel()}</div>
-    <div class="panel panel-right">${RightPanel()}</div>
+    <aside class="panel-left">${LeftPanel()}</aside>
+    <main class="panel-center">${CenterPanel()}</main>
+    <aside class="panel-right">${RightPanel()}</aside>
   `;
 });
 
