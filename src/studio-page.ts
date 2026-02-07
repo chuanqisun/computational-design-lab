@@ -23,7 +23,7 @@ const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
 const isGeneratingPhoto$ = new BehaviorSubject<boolean>(false);
-const photoGallery$ = new BehaviorSubject<Array<{ imageUrl: string; scene: string; prompt: string }>>([]);
+const photoGallery$ = new BehaviorSubject<Array<{ scene: string; prompt: string }>>([]);
 
 // Register GenerativeImageElement
 GenerativeImageElement.define(() => ({
@@ -245,20 +245,9 @@ Photo scene: ${scene}`;
 
     const sceneXml = response.text?.trim() || "";
     
-    // Create a unique key for this generation
-    const timestamp = Date.now();
-    const genImage = document.createElement("generative-image");
-    genImage.setAttribute("prompt", sceneXml);
-    genImage.setAttribute("width", "720");
-    genImage.setAttribute("height", "1280");
-    genImage.setAttribute("aspect-ratio", "9:16");
-    genImage.setAttribute("model", "gemini-2.5-flash-image");
-    genImage.setAttribute("data-scene", scene);
-    genImage.setAttribute("data-timestamp", timestamp.toString());
-    
     // Add to gallery (prepend to show newest first)
     const currentGallery = photoGallery$.value;
-    photoGallery$.next([{ imageUrl: "", scene, prompt: sceneXml }, ...currentGallery]);
+    photoGallery$.next([{ scene, prompt: sceneXml }, ...currentGallery]);
     
   } catch (e) {
     alert(`Error: ${e instanceof Error ? e.message : String(e)}`);
