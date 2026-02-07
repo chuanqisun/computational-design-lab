@@ -453,7 +453,7 @@ const CenterPanel = createComponent(() => {
                       <h2>Photo gallery</h2>
                       <div class="photo-gallery">
                         ${gallery.map(
-                          (photo, index) => html`
+                          (photo) => html`
                             <div class="photo-item">
                               <generative-image
                                 prompt=${photo.prompt}
