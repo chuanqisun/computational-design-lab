@@ -24,6 +24,7 @@ const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const toggleItem = (items: string[], item: string): string[] =>
   items.includes(item) ? items.filter((i) => i !== item) : [...items, item];
 
+const colorsByName = new Map(colors.map((c) => [c.name, c]));
 const materialsById = new Map(materials.map((m) => [m.id, m]));
 const mechanismsById = new Map(mechanisms.map((m) => [m.id, m]));
 const shapesById = new Map(shapes.map((s) => [s.id, s]));
@@ -48,7 +49,28 @@ const removePill = (type: string, id: string) => {
   if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
 };
 
-const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary. The XML should describe a detailed product visualization scene with elements for lighting, camera, materials, and the product itself.`;
+const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
+
+The XML must cover these scene slots:
+- Subject: identity, object class, pose, expression
+- Setting: environment, geography, era, background
+- Camera: lens, angle, distance, depth-of-field, aspect ratio
+- Lighting: source, direction, color temperature, contrast
+- Style / Medium: art form, rendering method
+- Color / Grade: palette, saturation, tonal curve
+
+XML format rules:
+- Be hierarchical and efficient. Add details when asked by user.
+- Avoid nesting too much. Prefer simple, obvious tag names.
+- Use arbitrary xml tags and attributes. Prefer tags over attributes.
+  - Use tags to describe subjects, objects, environments, and entities.
+  - Use attributes to describe un-materialized properties such as style, material, lighting.
+- Use concise natural language where description is needed.
+- Spatial relationships must be explicitly described.
+- Include human-readable descriptions throughout.
+
+For picked materials: infer the most appropriate surface options and color options based on the other picked items (colors, shapes, mechanisms). When there are multiple colors and multiple surface materials, pick the most straightforward assignment.
+For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
 
 async function synthesize() {
   const apiKey = loadApiKeys().gemini;
@@ -57,14 +79,31 @@ async function synthesize() {
     return;
   }
 
+  const pickedColorData = pickedColors$.value.map((name) => {
+    const c = colorsByName.get(name);
+    return c ? { name: c.name, hex: c.hex } : { name, hex: "unknown" };
+  });
+  const pickedMaterialData = pickedMaterials$.value.map((id) => {
+    const m = materialsById.get(id);
+    return m ? { name: m.name, visual: m.visual, surfaceOptions: m.surfaceOptions, colorOptions: m.colorOptions } : { name: id };
+  });
+  const pickedMechanismData = pickedMechanisms$.value.map((id) => {
+    const m = mechanismsById.get(id);
+    return m ? { name: m.name, interaction: m.interaction } : { name: id };
+  });
+  const pickedShapeData = pickedShapes$.value.map((id) => {
+    const s = shapesById.get(id);
+    return s ? { name: s.name, description: s.description } : { name: id };
+  });
+
   const data = {
-    colors: pickedColors$.value,
-    materials: pickedMaterials$.value,
-    mechanisms: pickedMechanisms$.value,
-    shapes: pickedShapes$.value,
+    colors: pickedColorData,
+    materials: pickedMaterialData,
+    mechanisms: pickedMechanismData,
+    shapes: pickedShapeData,
   };
 
-  const hasSelection = data.colors.length + data.materials.length + data.mechanisms.length + data.shapes.length > 0;
+  const hasSelection = pickedColorData.length + pickedMaterialData.length + pickedMechanismData.length + pickedShapeData.length > 0;
   if (!hasSelection) {
     synthesisOutput$.next("Please select at least one item before synthesizing.");
     return;
