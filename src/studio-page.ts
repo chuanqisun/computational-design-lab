@@ -239,7 +239,7 @@ async function takePhoto() {
   const interactionText = pickedMechanismData.filter(Boolean).join("\n\n");
 
   // Create output card immediately with placeholder
-  const outputId = `photo-${Date.now()}`;
+  const outputId = `photo-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
   photoGallery$.next([
     {
@@ -343,7 +343,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   }
 
   // Create animation output card immediately
-  const animationId = `animation-${Date.now()}`;
+  const animationId = `animation-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
   
@@ -445,7 +445,7 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
   dialog.close();
 
   // Create edit output card immediately
-  const editId = `edit-${Date.now()}`;
+  const editId = `edit-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
   
