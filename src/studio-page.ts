@@ -28,6 +28,7 @@ interface PhotoCard {
 // Shared state
 const pickedColors$ = new BehaviorSubject<string[]>([]);
 const pickedMaterials$ = new BehaviorSubject<string[]>([]);
+const pickedSurfaceOptions$ = new BehaviorSubject<string[]>([]);
 const pickedMechanisms$ = new BehaviorSubject<string[]>([]);
 const pickedShapes$ = new BehaviorSubject<string[]>([]);
 const filterText$ = new BehaviorSubject<string>("");
@@ -42,6 +43,7 @@ const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
 // Persist state
 persistSubject(pickedColors$, "studio:pickedColors");
 persistSubject(pickedMaterials$, "studio:pickedMaterials");
+persistSubject(pickedSurfaceOptions$, "studio:pickedSurfaceOptions");
 persistSubject(pickedMechanisms$, "studio:pickedMechanisms");
 persistSubject(pickedShapes$, "studio:pickedShapes");
 persistSubject(customInstructions$, "studio:customInstructions");
@@ -68,15 +70,35 @@ const colorsByName = new Map(colors.map((c) => [c.name, c]));
 const materialsById = new Map(materials.map((m) => [m.id, m]));
 const mechanismsById = new Map(mechanisms.map((m) => [m.id, m]));
 const shapesById = new Map(shapes.map((s) => [s.id, s]));
+const allSurfaceOptions = Array.from(new Set(materials.flatMap((m) => m.surfaceOptions))).sort();
 
-const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
-  map(([colors, materials, mechanisms, shapes]) => ({ colors, materials, mechanisms, shapes })),
+const output$ = combineLatest([
+  pickedColors$,
+  pickedMaterials$,
+  pickedSurfaceOptions$,
+  pickedMechanisms$,
+  pickedShapes$,
+]).pipe(
+  map(([colors, materials, surfaceOptions, mechanisms, shapes]) => ({
+    colors,
+    materials,
+    surfaceOptions,
+    mechanisms,
+    shapes,
+  })),
 );
 
-const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
-  map(([colorIds, materialIds, mechanismIds, shapeIds]) => [
+const allPills$ = combineLatest([
+  pickedColors$,
+  pickedMaterials$,
+  pickedSurfaceOptions$,
+  pickedMechanisms$,
+  pickedShapes$,
+]).pipe(
+  map(([colorIds, materialIds, surfaceOptionIds, mechanismIds, shapeIds]) => [
     ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name })),
     ...materialIds.map((id) => ({ label: materialsById.get(id)?.name || id, type: "material" as const, id })),
+    ...surfaceOptionIds.map((name) => ({ label: name, type: "surfaceOption" as const, id: name })),
     ...mechanismIds.map((id) => ({ label: mechanismsById.get(id)?.name || id, type: "mechanism" as const, id })),
     ...shapeIds.map((id) => ({ label: shapesById.get(id)?.name || id, type: "shape" as const, id })),
   ]),
@@ -85,6 +107,7 @@ const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanis
 const removePill = (type: string, id: string) => {
   if (type === "color") pickedColors$.next(pickedColors$.value.filter((i) => i !== id));
   if (type === "material") pickedMaterials$.next(pickedMaterials$.value.filter((i) => i !== id));
+  if (type === "surfaceOption") pickedSurfaceOptions$.next(pickedSurfaceOptions$.value.filter((i) => i !== id));
   if (type === "mechanism") pickedMechanisms$.next(pickedMechanisms$.value.filter((i) => i !== id));
   if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
 };
@@ -111,6 +134,7 @@ XML format rules:
 - Use Studio keyshot on white Infinity cove for rendering style.
 
 For picked materials: infer the most appropriate surface options and color options based on the other picked items (colors, shapes, mechanisms). When there are multiple colors and multiple surface materials, pick the most straightforward assignment.
+For picked surface options: use the specified surface finishes in the scene. If surface options conflict with chosen materials, prefer the user-specified surface options.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
 
 async function synthesize() {
@@ -138,16 +162,23 @@ async function synthesize() {
     const s = shapesById.get(id);
     return s ? { name: s.name, description: s.description } : { name: id };
   });
+  const pickedSurfaceOptionData = pickedSurfaceOptions$.value;
 
   const data = {
     colors: pickedColorData,
     materials: pickedMaterialData,
+    surfaceOptions: pickedSurfaceOptionData,
     mechanisms: pickedMechanismData,
     shapes: pickedShapeData,
   };
 
   const hasSelection =
-    pickedColorData.length + pickedMaterialData.length + pickedMechanismData.length + pickedShapeData.length > 0;
+    pickedColorData.length +
+      pickedMaterialData.length +
+      pickedSurfaceOptionData.length +
+      pickedMechanismData.length +
+      pickedShapeData.length >
+    0;
   if (!hasSelection) {
     synthesisOutput$.next("Please select at least one item before synthesizing.");
     return;
@@ -534,10 +565,11 @@ const LeftPanel = createComponent(() => {
     filterText$,
     pickedColors$,
     pickedMaterials$,
+    pickedSurfaceOptions$,
     pickedMechanisms$,
     pickedShapes$,
   ]).pipe(
-    map(([filter, pickedColorIds, pickedMaterialIds, pickedMechanismIds, pickedShapeIds]) => {
+    map(([filter, pickedColorIds, pickedMaterialIds, pickedSurfaceOptionIds, pickedMechanismIds, pickedShapeIds]) => {
       const lowerFilter = filter.toLowerCase();
       const filteredShapes = shapes.filter((s) => s.name.toLowerCase().includes(lowerFilter));
       const filteredMaterials = materials
@@ -547,6 +579,12 @@ const LeftPanel = createComponent(() => {
         .map((m) => ({ id: m.id, name: m.name, description: m.interaction }))
         .filter((m) => m.name.toLowerCase().includes(lowerFilter));
       const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
+      const filteredSurfaceOptions = allSurfaceOptions.filter((s) => s.toLowerCase().includes(lowerFilter));
+
+      const compatibleSurfaces =
+        pickedMaterialIds.length > 0
+          ? new Set(pickedMaterialIds.flatMap((id) => materialsById.get(id)?.surfaceOptions ?? []))
+          : null;
 
       return html`
         <div class="filter-box">
@@ -566,6 +604,24 @@ const LeftPanel = createComponent(() => {
             <h2>Materials</h2>
             <div class="accordion-body">
               ${renderOptionList(filteredMaterials, pickedMaterialIds, pickedMaterials$)}
+            </div>
+          </section>
+          <section class="accordion-section">
+            <h2>Surface Options</h2>
+            <div class="accordion-body">
+              ${filteredSurfaceOptions.map(
+                (name) => html`
+                  <button
+                    class="option-item ${pickedSurfaceOptionIds.includes(name) ? "picked" : ""} ${compatibleSurfaces &&
+                    !compatibleSurfaces.has(name)
+                      ? "dimmed"
+                      : ""}"
+                    @click=${() => pickedSurfaceOptions$.next(toggleItem(pickedSurfaceOptionIds, name))}
+                  >
+                    <span class="option-name">${name}</span>
+                  </button>
+                `,
+              )}
             </div>
           </section>
           <section class="accordion-section">
@@ -694,6 +750,9 @@ const CenterPanel = createComponent(() => {
                       <div class="suggested-scenes">
                         <p>Suggested scenes:</p>
                         <div class="scene-buttons">
+                          <button class="scene-button" @click=${() => photoScene$.next("Product stand by itself")}>
+                            Product stand by itself
+                          </button>
                           ${suggestedScenes.map(
                             (scene) =>
                               html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
