@@ -19,6 +19,7 @@ interface PhotoCard {
   animationPrompt: string;
   sourceXml: string;
   isGenerating: boolean;
+  imageReady?: boolean;
   isVideo?: boolean;
   startFrameUrl?: string;
 }
@@ -252,11 +253,8 @@ async function takePhoto() {
     return;
   }
 
-  // Get first interactionOption from selected mechanisms as animation prompt
-  const animationPrompt = pickedMechanisms$.value
-    .map((id) => mechanismsById.get(id)?.interactionOptions?.[0])
-    .filter(Boolean)
-    .join("; ") || "Animate the product with smooth motion";
+  // Use photo booth scene instruction as the animation prompt
+  const animationPrompt = scene;
 
   // Create output card immediately with placeholder
   const outputId = `photo-${crypto.randomUUID()}`;
@@ -697,7 +695,7 @@ const CenterPanel = createComponent(() => {
                                   >
                                     Delete
                                   </button>
-                                  ${!photo.isGenerating && photo.prompt && !photo.isVideo
+                                  ${!photo.isGenerating && photo.prompt && !photo.isVideo && photo.imageReady
                                     ? html`
                                         <button
                                           class="action-btn"
@@ -747,5 +745,28 @@ if (resetButton) {
     window.location.reload();
   });
 }
+
+// Observe generative-image status changes to update imageReady
+const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    if (mutation.type === "attributes" && mutation.attributeName === "status") {
+      const el = mutation.target as HTMLElement;
+      if (el.tagName.toLowerCase() !== "generative-image") continue;
+      const card = el.closest("[data-photo-id]") as HTMLElement;
+      if (!card) continue;
+      const photoId = card.dataset.photoId;
+      if (!photoId) continue;
+      const status = el.getAttribute("status");
+      if (status === "success") {
+        const gallery = photoGallery$.value;
+        const item = gallery.find((p) => p.id === photoId);
+        if (item && !item.imageReady) {
+          photoGallery$.next(gallery.map((p) => (p.id === photoId ? { ...p, imageReady: true } : p)));
+        }
+      }
+    }
+  }
+});
+observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["status"] });
 
 render(Main(), document.getElementById("app")!);
