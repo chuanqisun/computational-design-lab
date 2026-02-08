@@ -56,7 +56,7 @@ async function main() {
   const config = {
     responseModalities: ["IMAGE", "TEXT"],
   };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const contents = [
     {
       role: "user",
@@ -198,7 +198,7 @@ async function main() {
   const config = {
     responseModalities: ["IMAGE"],
   };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const contents = [
     {
       role: "user",
@@ -242,7 +242,7 @@ async function main() {
   const config = {
     responseModalities: ["IMAGE", "TEXT"],
   };
-  const model = "gemini-2.5-flash-image-preview";
+  const model = "gemini-2.5-flash-image";
   const contents = [
     {
       role: "user",
