@@ -72,11 +72,29 @@ const mechanismsById = new Map(mechanisms.map((m) => [m.id, m]));
 const shapesById = new Map(shapes.map((s) => [s.id, s]));
 const allSurfaceOptions = Array.from(new Set(materials.flatMap((m) => m.surfaceOptions))).sort();
 
-const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$]).pipe(
-  map(([colors, materials, surfaceOptions, mechanisms, shapes]) => ({ colors, materials, surfaceOptions, mechanisms, shapes })),
+const output$ = combineLatest([
+  pickedColors$,
+  pickedMaterials$,
+  pickedSurfaceOptions$,
+  pickedMechanisms$,
+  pickedShapes$,
+]).pipe(
+  map(([colors, materials, surfaceOptions, mechanisms, shapes]) => ({
+    colors,
+    materials,
+    surfaceOptions,
+    mechanisms,
+    shapes,
+  })),
 );
 
-const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$]).pipe(
+const allPills$ = combineLatest([
+  pickedColors$,
+  pickedMaterials$,
+  pickedSurfaceOptions$,
+  pickedMechanisms$,
+  pickedShapes$,
+]).pipe(
   map(([colorIds, materialIds, surfaceOptionIds, mechanismIds, shapeIds]) => [
     ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name })),
     ...materialIds.map((id) => ({ label: materialsById.get(id)?.name || id, type: "material" as const, id })),
@@ -155,7 +173,12 @@ async function synthesize() {
   };
 
   const hasSelection =
-    pickedColorData.length + pickedMaterialData.length + pickedSurfaceOptionData.length + pickedMechanismData.length + pickedShapeData.length > 0;
+    pickedColorData.length +
+      pickedMaterialData.length +
+      pickedSurfaceOptionData.length +
+      pickedMechanismData.length +
+      pickedShapeData.length >
+    0;
   if (!hasSelection) {
     synthesisOutput$.next("Please select at least one item before synthesizing.");
     return;
@@ -558,9 +581,10 @@ const LeftPanel = createComponent(() => {
       const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
       const filteredSurfaceOptions = allSurfaceOptions.filter((s) => s.toLowerCase().includes(lowerFilter));
 
-      const compatibleSurfaces = pickedMaterialIds.length > 0
-        ? new Set(pickedMaterialIds.flatMap((id) => materialsById.get(id)?.surfaceOptions ?? []))
-        : null;
+      const compatibleSurfaces =
+        pickedMaterialIds.length > 0
+          ? new Set(pickedMaterialIds.flatMap((id) => materialsById.get(id)?.surfaceOptions ?? []))
+          : null;
 
       return html`
         <div class="filter-box">
@@ -588,7 +612,10 @@ const LeftPanel = createComponent(() => {
               ${filteredSurfaceOptions.map(
                 (name) => html`
                   <button
-                    class="option-item ${pickedSurfaceOptionIds.includes(name) ? "picked" : ""} ${compatibleSurfaces && !compatibleSurfaces.has(name) ? "dimmed" : ""}"
+                    class="option-item ${pickedSurfaceOptionIds.includes(name) ? "picked" : ""} ${compatibleSurfaces &&
+                    !compatibleSurfaces.has(name)
+                      ? "dimmed"
+                      : ""}"
                     @click=${() => pickedSurfaceOptions$.next(toggleItem(pickedSurfaceOptionIds, name))}
                   >
                     <span class="option-name">${name}</span>
@@ -723,6 +750,9 @@ const CenterPanel = createComponent(() => {
                       <div class="suggested-scenes">
                         <p>Suggested scenes:</p>
                         <div class="scene-buttons">
+                          <button class="scene-button" @click=${() => photoScene$.next("Product stand by itself")}>
+                            Product stand by itself
+                          </button>
                           ${suggestedScenes.map(
                             (scene) =>
                               html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
