@@ -131,7 +131,7 @@ menu {
 
 .accordion {
   display: grid;
-  grid-template-rows: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
   min-height: 0;
   flex: 1;
 }
@@ -176,6 +176,10 @@ menu {
   &.picked {
     border-color: var(--color-text-active);
     background: #f5f5f5;
+  }
+
+  &.dimmed {
+    opacity: 0.35;
   }
 }
 
