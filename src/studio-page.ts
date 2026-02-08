@@ -143,7 +143,7 @@ async function captureWebcamPhoto(): Promise<{ thumbnailUrl: string; fullDataUrl
     const size = Math.min(video.videoWidth, video.videoHeight);
     const sx = (video.videoWidth - size) / 2;
     const sy = (video.videoHeight - size) / 2;
-    ctx.drawImage(canvas, sx, sy, size, size, 0, 0, 32, 32);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 32, 32);
     const thumbnailUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
 
     stream.getTracks().forEach((t) => t.stop());
