@@ -125,7 +125,9 @@ async function synthesize() {
   });
   const pickedMaterialData = pickedMaterials$.value.map((id) => {
     const m = materialsById.get(id);
-    return m ? { name: m.name, visual: m.visual, surfaceOptions: m.surfaceOptions, colorOptions: m.colorOptions } : { name: id };
+    return m
+      ? { name: m.name, visual: m.visual, surfaceOptions: m.surfaceOptions, colorOptions: m.colorOptions }
+      : { name: id };
   });
   const pickedMechanismData = pickedMechanisms$.value.map((id) => {
     const m = mechanismsById.get(id);
@@ -143,7 +145,8 @@ async function synthesize() {
     shapes: pickedShapeData,
   };
 
-  const hasSelection = pickedColorData.length + pickedMaterialData.length + pickedMechanismData.length + pickedShapeData.length > 0;
+  const hasSelection =
+    pickedColorData.length + pickedMaterialData.length + pickedMechanismData.length + pickedShapeData.length > 0;
   if (!hasSelection) {
     synthesisOutput$.next("Please select at least one item before synthesizing.");
     return;
@@ -175,10 +178,7 @@ async function synthesize() {
       synthesisOutput$.next(accumulated);
     }
 
-    conversationHistory$.next([
-      userMessage,
-      { role: "model", parts: [{ text: accumulated }] },
-    ]);
+    conversationHistory$.next([userMessage, { role: "model", parts: [{ text: accumulated }] }]);
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
   } finally {
@@ -199,7 +199,12 @@ async function revise() {
   const history = conversationHistory$.value;
   if (history.length === 0) return;
 
-  const reviseMessage: Content = { role: "user", parts: [{ text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}` }] };
+  const reviseMessage: Content = {
+    role: "user",
+    parts: [
+      { text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}` },
+    ],
+  };
   const contents = [...history, reviseMessage];
 
   isSynthesizing$.next(true);
@@ -222,10 +227,7 @@ async function revise() {
       synthesisOutput$.next(accumulated);
     }
 
-    conversationHistory$.next([
-      ...contents,
-      { role: "model", parts: [{ text: accumulated }] },
-    ]);
+    conversationHistory$.next([...contents, { role: "model", parts: [{ text: accumulated }] }]);
     editInstructions$.next("");
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
@@ -274,7 +276,7 @@ async function takePhoto() {
   // Generate prompt asynchronously
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const promptText = `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. Output only the updated XML, nothing else.
+    const promptText = `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. In the <subject>, make sure <product> and <hand> and their relationship is clearly specified. Output only the updated XML, nothing else.
 
 Current XML:
 ${currentXml}
@@ -290,15 +292,12 @@ Photo scene: ${scene}`;
     });
 
     const sceneXml = response.text?.trim() || "";
-    
+
     // Update the output card with the generated prompt
     const updatedGallery = photoGallery$.value.map((item) =>
-      item.id === outputId
-        ? { ...item, prompt: sceneXml, isGenerating: false }
-        : item
+      item.id === outputId ? { ...item, prompt: sceneXml, isGenerating: false } : item,
     );
     photoGallery$.next(updatedGallery);
-    
   } catch (e) {
     // Remove the failed item from gallery
     const updatedGallery = photoGallery$.value.filter((item) => item.id !== outputId);
@@ -318,7 +317,7 @@ function openAnimationDialog(photoId: string) {
 
   const dialog = document.getElementById("animation-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
-  
+
   const template = html`
     <div class="dialog-header">
       <h2>Animation Instructions</h2>
@@ -333,7 +332,7 @@ function openAnimationDialog(photoId: string) {
       <button @click=${() => generateAnimation(photoId, dialog)}>Generate Animation</button>
     </menu>
   `;
-  
+
   render(template, dialogContent);
   dialog.showModal();
 }
@@ -344,7 +343,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
 
   const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
   const instructions = textarea?.value.trim() || photo.animationPrompt;
-  
+
   if (!instructions) {
     alert("Please provide animation instructions.");
     return;
@@ -354,9 +353,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
 
   // Save edited animation prompt back to the source image
   photoGallery$.next(
-    photoGallery$.value.map((item) =>
-      item.id === photoId ? { ...item, animationPrompt: instructions } : item
-    )
+    photoGallery$.value.map((item) => (item.id === photoId ? { ...item, animationPrompt: instructions } : item)),
   );
 
   const apiKey = loadApiKeys().gemini;
@@ -368,7 +365,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   // Get the generated image element to extract its src for the start frame
   const photoElement = document.querySelector(`[data-photo-id="${photoId}"] generative-image`);
   let startFrameUrl = "";
-  
+
   if (photoElement) {
     const imgElement = photoElement.querySelector("img");
     if (imgElement?.src) {
@@ -377,7 +374,9 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   }
 
   if (!startFrameUrl) {
-    alert("Could not retrieve the source image for animation. Please ensure the image has been generated successfully.");
+    alert(
+      "Could not retrieve the source image for animation. Please ensure the image has been generated successfully.",
+    );
     return;
   }
 
@@ -385,7 +384,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   const animationId = `animation-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
-  
+
   const animationCard: PhotoCard = {
     id: animationId,
     scene: `Animation: ${photo.scene}`,
@@ -396,13 +395,9 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
     isVideo: true,
     startFrameUrl,
   };
-  
+
   // Insert animation card right before the source photo
-  const updatedGallery = [
-    ...currentGallery.slice(0, photoIndex),
-    animationCard,
-    ...currentGallery.slice(photoIndex),
-  ];
+  const updatedGallery = [...currentGallery.slice(0, photoIndex), animationCard, ...currentGallery.slice(photoIndex)];
   photoGallery$.next(updatedGallery);
 }
 
@@ -412,7 +407,7 @@ function openEditDialog(photoId: string) {
 
   const dialog = document.getElementById("edit-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
-  
+
   const template = html`
     <div class="dialog-header">
       <h2>Edit XML</h2>
@@ -427,7 +422,7 @@ function openEditDialog(photoId: string) {
       <button @click=${() => generateEdit(photoId, dialog)}>Apply Edit</button>
     </menu>
   `;
-  
+
   render(template, dialogContent);
   dialog.showModal();
 }
@@ -438,7 +433,7 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
 
   const xmlTextarea = dialog.querySelector("#edit-xml-code") as HTMLTextAreaElement;
   const editedXml = xmlTextarea?.value.trim() || "";
-  
+
   if (!editedXml) {
     alert("Please provide XML code.");
     return;
@@ -450,7 +445,7 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
   const editId = `edit-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
-  
+
   const editCard: PhotoCard = {
     id: editId,
     scene: `Edit: ${photo.scene}`,
@@ -459,13 +454,9 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
     sourceXml: editedXml,
     isGenerating: false,
   };
-  
+
   // Insert edit card right before the source photo
-  const updatedGallery = [
-    ...currentGallery.slice(0, photoIndex),
-    editCard,
-    ...currentGallery.slice(photoIndex),
-  ];
+  const updatedGallery = [...currentGallery.slice(0, photoIndex), editCard, ...currentGallery.slice(photoIndex)];
   photoGallery$.next(updatedGallery);
 }
 
@@ -489,12 +480,22 @@ const renderOptionList = (
 
 // Left panel: filter + accordion categories
 const LeftPanel = createComponent(() => {
-  const template$ = combineLatest([filterText$, pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
+  const template$ = combineLatest([
+    filterText$,
+    pickedColors$,
+    pickedMaterials$,
+    pickedMechanisms$,
+    pickedShapes$,
+  ]).pipe(
     map(([filter, pickedColorIds, pickedMaterialIds, pickedMechanismIds, pickedShapeIds]) => {
       const lowerFilter = filter.toLowerCase();
       const filteredShapes = shapes.filter((s) => s.name.toLowerCase().includes(lowerFilter));
-      const filteredMaterials = materials.map((m) => ({ id: m.id, name: m.name, description: m.visual })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
-      const filteredMechanisms = mechanisms.map((m) => ({ id: m.id, name: m.name, description: m.interaction })).filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredMaterials = materials
+        .map((m) => ({ id: m.id, name: m.name, description: m.visual }))
+        .filter((m) => m.name.toLowerCase().includes(lowerFilter));
+      const filteredMechanisms = mechanisms
+        .map((m) => ({ id: m.id, name: m.name, description: m.interaction }))
+        .filter((m) => m.name.toLowerCase().includes(lowerFilter));
       const filteredColors = colors.filter((c) => c.name.toLowerCase().includes(lowerFilter));
 
       return html`
@@ -509,9 +510,7 @@ const LeftPanel = createComponent(() => {
         <div class="accordion">
           <section class="accordion-section">
             <h2>Shapes</h2>
-            <div class="accordion-body">
-              ${renderOptionList(filteredShapes, pickedShapeIds, pickedShapes$)}
-            </div>
+            <div class="accordion-body">${renderOptionList(filteredShapes, pickedShapeIds, pickedShapes$)}</div>
           </section>
           <section class="accordion-section">
             <h2>Materials</h2>
@@ -593,9 +592,10 @@ const CenterPanel = createComponent(() => {
         ${pills.length > 0
           ? html`<div class="pills">
               ${pills.map(
-                (p) => html`<button class="pill" @click=${() => removePill(p.type, p.id)}>
-                  ${p.label}<span class="pill-remove">×</span>
-                </button>`,
+                (p) =>
+                  html`<button class="pill" @click=${() => removePill(p.type, p.id)}>
+                    ${p.label}<span class="pill-remove">×</span>
+                  </button>`,
               )}
             </div>`
           : null}
@@ -646,7 +646,9 @@ const CenterPanel = createComponent(() => {
                         <div class="scene-buttons">
                           ${suggestedScenes.map(
                             (scene) =>
-                              html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
+                              html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
+                                ${scene}
+                              </button>`,
                           )}
                         </div>
                       </div>
@@ -689,24 +691,13 @@ const CenterPanel = createComponent(() => {
                               <div class="output-card-meta">
                                 <div class="output-card-caption">${photo.scene}</div>
                                 <div class="output-card-actions">
-                                  <button
-                                    class="action-btn"
-                                    @click=${() => deletePhoto(photo.id)}
-                                  >
-                                    Delete
-                                  </button>
+                                  <button class="action-btn" @click=${() => deletePhoto(photo.id)}>Delete</button>
                                   ${!photo.isGenerating && photo.prompt && !photo.isVideo && photo.imageReady
                                     ? html`
-                                        <button
-                                          class="action-btn"
-                                          @click=${() => openAnimationDialog(photo.id)}
-                                        >
+                                        <button class="action-btn" @click=${() => openAnimationDialog(photo.id)}>
                                           Animate
                                         </button>
-                                        <button
-                                          class="action-btn"
-                                          @click=${() => openEditDialog(photo.id)}
-                                        >
+                                        <button class="action-btn" @click=${() => openEditDialog(photo.id)}>
                                           Edit
                                         </button>
                                       `
