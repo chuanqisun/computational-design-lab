@@ -47,7 +47,7 @@ scanTrigger$
   .pipe(
     mergeMap((photo) =>
       from(
-        runScanAI(photo).then((result) => {
+        runScanAI(photo, scannedPhotos$).then((result) => {
           scannedPhotos$.next(
             scannedPhotos$.value.map((p) => (p.id === photo.id ? { ...p, label: "photo", isScanning: false } : p)),
           );

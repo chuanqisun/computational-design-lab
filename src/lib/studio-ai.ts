@@ -34,7 +34,10 @@ For picked materials: infer the most appropriate surface options and color optio
 For picked surface options: use the specified surface finishes in the scene. If surface options conflict with chosen materials, prefer the user-specified surface options.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
 
-export async function runScanAI(photo: ScannedPhoto): Promise<ScanResult | null> {
+export async function runScanAI(
+  photo: ScannedPhoto,
+  scannedPhotos$: BehaviorSubject<ScannedPhoto[]>,
+): Promise<ScanResult | null> {
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) return null;
 
@@ -160,6 +163,11 @@ Pick only items that are visibly present on the product in the photo. Return emp
 
     return result;
   } catch (e) {
+    scannedPhotos$.next(
+      scannedPhotos$.value.map((p) =>
+        p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p,
+      ),
+    );
     console.error("Scan failed:", e);
     return null;
   }
