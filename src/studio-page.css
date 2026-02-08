@@ -326,32 +326,44 @@ dialog {
 /* Output cards */
 .output-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(270px, 270px));
   gap: 2ch;
+  justify-content: start;
 }
 
 .output-card {
   display: flex;
   flex-direction: column;
   gap: 1ch;
+  width: 270px;
 }
 
 .output-card-image {
   position: relative;
-  min-height: 150px;
+  width: 270px;
+  height: 480px;
+  overflow: hidden;
+}
+
+.output-card-image generative-image {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .output-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 150px;
+  width: 270px;
+  height: 480px;
   background: #f5f5f5;
   border: 1px solid #ddd;
   color: var(--color-text-secondary);
   font-size: 0.9em;
   padding: 2ch;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .output-card-meta {
