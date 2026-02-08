@@ -350,7 +350,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   }
 
   // Get the generated image element to extract its src for the start frame
-  const photoElement = document.querySelector(`[data-photo-id="${photoId}"] generative-image`) as any;
+  const photoElement = document.querySelector(`[data-photo-id="${photoId}"] generative-image`);
   let startFrameUrl = "";
   
   if (photoElement) {
@@ -361,7 +361,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   }
 
   if (!startFrameUrl) {
-    alert("Error: Could not find the source image for animation. Please wait for the image to load first.");
+    alert("Could not retrieve the source image for animation. Please ensure the image has been generated successfully.");
     return;
   }
 
