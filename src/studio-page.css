@@ -323,21 +323,55 @@ dialog {
   }
 }
 
-.photo-gallery {
+/* Output cards */
+.output-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 2ch;
 }
 
-.photo-item {
+.output-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+.output-card-image {
+  position: relative;
+  min-height: 150px;
+}
+
+.output-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  color: var(--color-text-secondary);
+  font-size: 0.9em;
+  padding: 2ch;
+  text-align: center;
+}
+
+.output-card-meta {
   display: flex;
   flex-direction: column;
   gap: 0.5ch;
 }
 
-.photo-caption {
+.output-card-caption {
   font-size: 0.9em;
   color: var(--color-text-secondary);
-  text-align: center;
-  padding: 0.5ch;
+}
+
+.output-card-actions {
+  display: flex;
+  gap: 0.5ch;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 0.5ch 1ch;
+  font-size: 0.9em;
 }
