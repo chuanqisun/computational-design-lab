@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type, type Content } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { html, render } from "lit-html";
-import { BehaviorSubject, combineLatest, map } from "rxjs";
+import { BehaviorSubject, Subject, combineLatest, map, mergeMap, scan, from, EMPTY } from "rxjs";
 import { loadApiKeys } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
@@ -62,6 +62,51 @@ persistSubject(editInstructions$, "studio:editInstructions");
 persistSubject(photoScene$, "studio:photoScene");
 persistSubject(photoGallery$, "studio:photoGallery");
 
+// Merge-conflict-free scan pipeline: parallel scans are additive-only with auto-dedup
+interface ScanResult {
+  photoId: string;
+  shapes: string[];
+  materials: string[];
+  mechanisms: string[];
+  colors: string[];
+}
+
+const scanTrigger$ = new Subject<ScannedPhoto>();
+
+scanTrigger$
+  .pipe(
+    mergeMap((photo) =>
+      from(
+        runScanAI(photo).then((result) => {
+          scannedPhotos$.next(
+            scannedPhotos$.value.map((p) => (p.id === photo.id ? { ...p, label: "photo", isScanning: false } : p)),
+          );
+          return result;
+        }),
+      ).pipe(
+        mergeMap((result) => (result ? from([result]) : EMPTY)),
+      ),
+    ),
+    scan(
+      (acc, result) => ({
+        shapes: [...new Set([...acc.shapes, ...result.shapes])],
+        materials: [...new Set([...acc.materials, ...result.materials])],
+        mechanisms: [...new Set([...acc.mechanisms, ...result.mechanisms])],
+        colors: [...new Set([...acc.colors, ...result.colors])],
+      }),
+      { shapes: [] as string[], materials: [] as string[], mechanisms: [] as string[], colors: [] as string[] },
+    ),
+  )
+  .subscribe((accumulated) => {
+    const mergeUnique = (current: string[], additions: string[]) => [
+      ...new Set([...current, ...additions]),
+    ];
+    pickedShapes$.next(mergeUnique(pickedShapes$.value, accumulated.shapes));
+    pickedMaterials$.next(mergeUnique(pickedMaterials$.value, accumulated.materials));
+    pickedMechanisms$.next(mergeUnique(pickedMechanisms$.value, accumulated.mechanisms));
+    pickedColors$.next(mergeUnique(pickedColors$.value, accumulated.colors));
+  });
+
 // Register GenerativeImageElement
 GenerativeImageElement.define(() => ({
   flux: { apiKey: loadApiKeys().together || "" },
@@ -108,7 +153,7 @@ const allPills$ = combineLatest([
 ]).pipe(
   map(([colorIds, materialIds, surfaceOptionIds, mechanismIds, shapeIds, photos]) => [
     ...photos.map((p) => ({
-      label: p.isScanning ? "(scanning...)" : p.label,
+      label: p.isScanning ? "scanning..." : p.label,
       type: "scan" as const,
       id: p.id,
       thumbnailUrl: p.thumbnailUrl,
@@ -145,61 +190,96 @@ const removePill = (type: string, id: string) => {
   if (type === "scan") scannedPhotos$.next(scannedPhotos$.value.filter((p) => p.id !== id));
 };
 
+interface PendingPhoto {
+  id: string;
+  thumbnailUrl: string;
+  fullDataUrl: string;
+}
+
 function openScanDialog() {
   const dialog = document.getElementById("scan-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
 
   let stream: MediaStream | null = null;
+  let pendingPhotos: PendingPhoto[] = [];
 
   const cleanup = () => {
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
   };
 
+  const renderDialog = () => {
+    const template = html`
+      <div class="dialog-header">
+        <h2>Scan Product</h2>
+        <button @click=${() => { cleanup(); dialog.close(); }}>Close</button>
+      </div>
+      <video id="scan-video" autoplay playsinline class="scan-video"></video>
+      ${pendingPhotos.length > 0
+        ? html`<div class="scan-previews">
+            ${pendingPhotos.map(
+              (p) => html`
+                <div class="scan-preview">
+                  <img src=${p.thumbnailUrl} alt="" />
+                  <button class="scan-preview-delete" @click=${() => {
+                    pendingPhotos = pendingPhotos.filter((pp) => pp.id !== p.id);
+                    renderDialog();
+                  }}>×</button>
+                </div>
+              `,
+            )}
+          </div>`
+        : null}
+      <menu>
+        <button @click=${() => {
+          const video = dialog.querySelector("#scan-video") as HTMLVideoElement;
+          if (!video?.videoWidth) return;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d")!.drawImage(video, 0, 0);
+          const fullDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+          const thumbCanvas = document.createElement("canvas");
+          thumbCanvas.width = 32;
+          thumbCanvas.height = 32;
+          const ctx = thumbCanvas.getContext("2d")!;
+          const size = Math.min(video.videoWidth, video.videoHeight);
+          const sx = (video.videoWidth - size) / 2;
+          const sy = (video.videoHeight - size) / 2;
+          ctx.drawImage(video, sx, sy, size, size, 0, 0, 32, 32);
+          const thumbnailUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
+
+          pendingPhotos = [...pendingPhotos, {
+            id: `scan-${crypto.randomUUID()}`,
+            thumbnailUrl,
+            fullDataUrl,
+          }];
+          renderDialog();
+        }}>Capture</button>
+        <button ?disabled=${pendingPhotos.length === 0} @click=${() => {
+          for (const p of pendingPhotos) {
+            const photo: ScannedPhoto = {
+              id: p.id,
+              thumbnailUrl: p.thumbnailUrl,
+              fullDataUrl: p.fullDataUrl,
+              label: "scanning...",
+              isScanning: true,
+            };
+            scannedPhotos$.next([...scannedPhotos$.value, photo]);
+            scanTrigger$.next(photo);
+          }
+          cleanup();
+          dialog.close();
+        }}>Submit</button>
+      </menu>
+    `;
+    render(template, dialogContent);
+  };
+
   dialog.addEventListener("close", cleanup, { once: true });
-
-  const template = html`
-    <div class="dialog-header">
-      <h2>Scan Product</h2>
-      <button @click=${() => { cleanup(); dialog.close(); }}>Close</button>
-    </div>
-    <video id="scan-video" autoplay playsinline class="scan-video"></video>
-    <menu>
-      <button id="scan-capture-btn" @click=${async () => {
-        const video = dialog.querySelector("#scan-video") as HTMLVideoElement;
-        if (!video.videoWidth) return;
-
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext("2d")!.drawImage(video, 0, 0);
-        const fullDataUrl = canvas.toDataURL("image/jpeg", 0.8);
-
-        const thumbCanvas = document.createElement("canvas");
-        thumbCanvas.width = 32;
-        thumbCanvas.height = 32;
-        const ctx = thumbCanvas.getContext("2d")!;
-        const size = Math.min(video.videoWidth, video.videoHeight);
-        const sx = (video.videoWidth - size) / 2;
-        const sy = (video.videoHeight - size) / 2;
-        ctx.drawImage(video, sx, sy, size, size, 0, 0, 32, 32);
-        const thumbnailUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
-
-        const photo: ScannedPhoto = {
-          id: `scan-${crypto.randomUUID()}`,
-          thumbnailUrl,
-          fullDataUrl,
-          label: "(scanning...)",
-          isScanning: true,
-        };
-
-        scannedPhotos$.next([...scannedPhotos$.value, photo]);
-        scanPhotoWithAI(photo);
-      }}>Capture</button>
-    </menu>
-  `;
-
-  render(template, dialogContent);
+  renderDialog();
   dialog.showModal();
 
   (async () => {
@@ -216,9 +296,9 @@ function openScanDialog() {
   })();
 }
 
-function scanPhotoWithAI(photo: ScannedPhoto) {
+async function runScanAI(photo: ScannedPhoto): Promise<ScanResult | null> {
   const apiKey = loadApiKeys().gemini;
-  if (!apiKey) return;
+  if (!apiKey) return null;
 
   const shapeIds = shapes.map((s) => s.id);
   const materialIds = materials.map((m) => m.id);
@@ -284,7 +364,7 @@ function scanPhotoWithAI(photo: ScannedPhoto) {
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const promptText = `Analyze this photo of a bottle/container product. Identify the following features from the provided library options ONLY. Pick the closest matches.
+  const promptText = `Analyze this photo of a product. Ignore any text labels, background elements, hands, and other non-product objects. Focus only on the product itself. Identify the following features from the provided library options ONLY. Pick the closest matches.
 
 Available shapes: ${shapes.map((s) => `${s.id} (${s.name})`).join(", ")}
 Available materials: ${materials.map((m) => `${m.id} (${m.name})`).join(", ")}
@@ -297,74 +377,59 @@ For each identified feature, return:
 - Mechanism: id, name, and interaction from library
 - Color: name and hex from library
 
-Pick only items that are visibly present in the photo. Return empty arrays for categories not found.`;
+Pick only items that are visibly present on the product in the photo. Return empty arrays for categories not found.`;
 
-  (async () => {
-    try {
-      const response = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          thinkingConfig: { thinkingBudget: 1024 },
+  try {
+    const response = await ai.models.generateContentStream({
+      model: "gemini-2.5-flash",
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+        thinkingConfig: { thinkingBudget: 1024 },
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { inlineData: { data: base64Data, mimeType } },
+            { text: promptText },
+          ],
         },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { inlineData: { data: base64Data, mimeType } },
-              { text: promptText },
-            ],
-          },
-        ],
-      });
+      ],
+    });
 
-      const parser = new JSONParser();
-      let currentCategory = "";
+    const parser = new JSONParser();
+    let currentCategory = "";
+    const result: ScanResult = { photoId: photo.id, shapes: [], materials: [], mechanisms: [], colors: [] };
 
-      parser.onValue = ({ value, key, stack }) => {
-        if (stack.length === 1 && typeof key === "string") {
-          currentCategory = key;
-        }
-        if (stack.length === 2 && typeof key === "number" && value && typeof value === "object") {
-          const item = value as Record<string, string>;
-          if (currentCategory === "shapes" && item.id) {
-            if (!pickedShapes$.value.includes(item.id)) {
-              pickedShapes$.next([...pickedShapes$.value, item.id]);
-            }
-          } else if (currentCategory === "materials" && item.id) {
-            if (!pickedMaterials$.value.includes(item.id)) {
-              pickedMaterials$.next([...pickedMaterials$.value, item.id]);
-            }
-          } else if (currentCategory === "mechanisms" && item.id) {
-            if (!pickedMechanisms$.value.includes(item.id)) {
-              pickedMechanisms$.next([...pickedMechanisms$.value, item.id]);
-            }
-          } else if (currentCategory === "colors" && item.name) {
-            if (!pickedColors$.value.includes(item.name)) {
-              pickedColors$.next([...pickedColors$.value, item.name]);
-            }
-          }
-        }
-      };
-
-      for await (const chunk of response) {
-        const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textPart) parser.write(textPart);
+    parser.onValue = ({ value, key, stack }) => {
+      if (stack.length === 1 && typeof key === "string") {
+        currentCategory = key;
       }
+      if (stack.length === 2 && typeof key === "number" && value && typeof value === "object") {
+        const item = value as Record<string, string>;
+        if (currentCategory === "shapes" && item.id) result.shapes.push(item.id);
+        else if (currentCategory === "materials" && item.id) result.materials.push(item.id);
+        else if (currentCategory === "mechanisms" && item.id) result.mechanisms.push(item.id);
+        else if (currentCategory === "colors" && item.name) result.colors.push(item.name);
+      }
+    };
 
-      scannedPhotos$.next(
-        scannedPhotos$.value.map((p) => (p.id === photo.id ? { ...p, label: "Photo", isScanning: false } : p)),
-      );
-    } catch (e) {
-      scannedPhotos$.next(
-        scannedPhotos$.value.map((p) =>
-          p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p,
-        ),
-      );
-      console.error("Scan failed:", e);
+    for await (const chunk of response) {
+      const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (textPart) parser.write(textPart);
     }
-  })();
+
+    return result;
+  } catch (e) {
+    scannedPhotos$.next(
+      scannedPhotos$.value.map((p) =>
+        p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p,
+      ),
+    );
+    console.error("Scan failed:", e);
+    return null;
+  }
 }
 
 const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
