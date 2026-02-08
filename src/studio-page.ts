@@ -8,8 +8,20 @@ import { colors } from "./components/material-library/colors";
 import { materials } from "./components/material-library/materials";
 import { mechanisms } from "./components/material-library/mechanisms";
 import { shapes } from "./components/material-library/shapes";
+import { clearAllPersistence, persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import "./studio-page.css";
+
+interface PhotoCard {
+  id: string;
+  scene: string;
+  prompt: string;
+  animationPrompt: string;
+  sourceXml: string;
+  isGenerating: boolean;
+  isVideo?: boolean;
+  startFrameUrl?: string;
+}
 
 // Shared state
 const pickedColors$ = new BehaviorSubject<string[]>([]);
@@ -23,16 +35,18 @@ const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
-const photoGallery$ = new BehaviorSubject<Array<{ 
-  id: string;
-  scene: string; 
-  prompt: string;
-  interactionText: string;
-  sourceXml: string;
-  isGenerating: boolean;
-  isVideo?: boolean;
-  startFrameUrl?: string;
-}>>([]);
+const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
+
+// Persist state
+persistSubject(pickedColors$, "studio:pickedColors");
+persistSubject(pickedMaterials$, "studio:pickedMaterials");
+persistSubject(pickedMechanisms$, "studio:pickedMechanisms");
+persistSubject(pickedShapes$, "studio:pickedShapes");
+persistSubject(customInstructions$, "studio:customInstructions");
+persistSubject(synthesisOutput$, "studio:synthesisOutput");
+persistSubject(editInstructions$, "studio:editInstructions");
+persistSubject(photoScene$, "studio:photoScene");
+persistSubject(photoGallery$, "studio:photoGallery");
 
 // Register GenerativeImageElement
 GenerativeImageElement.define(() => ({
@@ -238,12 +252,11 @@ async function takePhoto() {
     return;
   }
 
-  // Get interaction text from selected mechanisms
-  const pickedMechanismData = pickedMechanisms$.value.map((id) => {
-    const m = mechanismsById.get(id);
-    return m ? m.interaction : "";
-  });
-  const interactionText = pickedMechanismData.filter(Boolean).join("\n\n");
+  // Get first interactionOption from selected mechanisms as animation prompt
+  const animationPrompt = pickedMechanisms$.value
+    .map((id) => mechanismsById.get(id)?.interactionOptions?.[0])
+    .filter(Boolean)
+    .join("; ") || "Animate the product with smooth motion";
 
   // Create output card immediately with placeholder
   const outputId = `photo-${crypto.randomUUID()}`;
@@ -253,7 +266,7 @@ async function takePhoto() {
       id: outputId,
       scene,
       prompt: "", // Will be filled in after generation
-      interactionText,
+      animationPrompt,
       sourceXml: currentXml,
       isGenerating: true,
     },
@@ -308,8 +321,6 @@ function openAnimationDialog(photoId: string) {
   const dialog = document.getElementById("animation-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
   
-  const defaultInstructions = photo.interactionText || "Animate the product with smooth motion";
-  
   const template = html`
     <div class="dialog-header">
       <h2>Animation Instructions</h2>
@@ -318,7 +329,7 @@ function openAnimationDialog(photoId: string) {
     <textarea
       id="animation-instructions"
       placeholder="Enter animation instructions..."
-      .value=${defaultInstructions}
+      .value=${photo.animationPrompt}
     ></textarea>
     <menu>
       <button @click=${() => generateAnimation(photoId, dialog)}>Generate Animation</button>
@@ -334,7 +345,7 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   if (!photo) return;
 
   const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
-  const instructions = textarea?.value.trim() || photo.interactionText;
+  const instructions = textarea?.value.trim() || photo.animationPrompt;
   
   if (!instructions) {
     alert("Please provide animation instructions.");
@@ -342,6 +353,13 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   }
 
   dialog.close();
+
+  // Save edited animation prompt back to the source image
+  photoGallery$.next(
+    photoGallery$.value.map((item) =>
+      item.id === photoId ? { ...item, animationPrompt: instructions } : item
+    )
+  );
 
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) {
@@ -370,15 +388,15 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
   
-  const animationCard = {
+  const animationCard: PhotoCard = {
     id: animationId,
     scene: `Animation: ${photo.scene}`,
     prompt: instructions,
-    interactionText: instructions,
+    animationPrompt: instructions,
     sourceXml: photo.sourceXml,
-    isGenerating: false, // Video element handles its own loading state
+    isGenerating: false,
     isVideo: true,
-    startFrameUrl: startFrameUrl,
+    startFrameUrl,
   };
   
   // Insert animation card right before the source photo
@@ -407,11 +425,6 @@ function openEditDialog(photoId: string) {
       placeholder="Edit the XML code..."
       .value=${photo.prompt || photo.sourceXml}
     ></textarea>
-    <textarea
-      id="edit-instructions"
-      placeholder="Additional edit instructions (optional)..."
-      .value=${photo.interactionText}
-    ></textarea>
     <menu>
       <button @click=${() => generateEdit(photoId, dialog)}>Apply Edit</button>
     </menu>
@@ -426,10 +439,7 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
   if (!photo) return;
 
   const xmlTextarea = dialog.querySelector("#edit-xml-code") as HTMLTextAreaElement;
-  const instructionsTextarea = dialog.querySelector("#edit-instructions") as HTMLTextAreaElement;
-  
   const editedXml = xmlTextarea?.value.trim() || "";
-  const editInstructions = instructionsTextarea?.value.trim() || "";
   
   if (!editedXml) {
     alert("Please provide XML code.");
@@ -443,13 +453,13 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
   const currentGallery = photoGallery$.value;
   const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
   
-  const editCard = {
+  const editCard: PhotoCard = {
     id: editId,
     scene: `Edit: ${photo.scene}`,
     prompt: editedXml,
-    interactionText: editInstructions,
+    animationPrompt: photo.animationPrompt,
     sourceXml: editedXml,
-    isGenerating: false, // Edited XML is immediately available
+    isGenerating: false,
   };
   
   // Insert edit card right before the source photo
@@ -731,18 +741,10 @@ const Main = createComponent(() => {
 // Wire up reset button
 const resetButton = document.getElementById("reset-button");
 if (resetButton) {
-  resetButton.addEventListener("click", () => {
-    pickedColors$.next([]);
-    pickedMaterials$.next([]);
-    pickedMechanisms$.next([]);
-    pickedShapes$.next([]);
-    filterText$.next("");
-    customInstructions$.next("");
-    synthesisOutput$.next("");
-    editInstructions$.next("");
-    conversationHistory$.next([]);
-    photoScene$.next("Product stand by itself");
-    photoGallery$.next([]);
+  resetButton.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to reset? All data will be lost.")) return;
+    await clearAllPersistence();
+    window.location.reload();
   });
 }
 
