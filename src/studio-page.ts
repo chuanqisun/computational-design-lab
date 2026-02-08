@@ -3,6 +3,7 @@ import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { loadApiKeys } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
+import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { colors } from "./components/material-library/colors";
 import { materials } from "./components/material-library/materials";
 import { mechanisms } from "./components/material-library/mechanisms";
@@ -22,12 +23,25 @@ const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
-const isGeneratingPhoto$ = new BehaviorSubject<boolean>(false);
-const photoGallery$ = new BehaviorSubject<Array<{ scene: string; prompt: string }>>([]);
+const photoGallery$ = new BehaviorSubject<Array<{ 
+  id: string;
+  scene: string; 
+  prompt: string;
+  interactionText: string;
+  sourceXml: string;
+  isGenerating: boolean;
+  isVideo?: boolean;
+  startFrameUrl?: string;
+}>>([]);
 
 // Register GenerativeImageElement
 GenerativeImageElement.define(() => ({
   flux: { apiKey: loadApiKeys().together || "" },
+  gemini: { apiKey: loadApiKeys().gemini || "" },
+}));
+
+// Register GenerativeVideoElement
+GenerativeVideoElement.define(() => ({
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 
@@ -224,8 +238,29 @@ async function takePhoto() {
     return;
   }
 
-  isGeneratingPhoto$.next(true);
+  // Get interaction text from selected mechanisms
+  const pickedMechanismData = pickedMechanisms$.value.map((id) => {
+    const m = mechanismsById.get(id);
+    return m ? m.interaction : "";
+  });
+  const interactionText = pickedMechanismData.filter(Boolean).join("\n\n");
 
+  // Create output card immediately with placeholder
+  const outputId = `photo-${crypto.randomUUID()}`;
+  const currentGallery = photoGallery$.value;
+  photoGallery$.next([
+    {
+      id: outputId,
+      scene,
+      prompt: "", // Will be filled in after generation
+      interactionText,
+      sourceXml: currentXml,
+      isGenerating: true,
+    },
+    ...currentGallery,
+  ]);
+
+  // Generate prompt asynchronously
   try {
     const ai = new GoogleGenAI({ apiKey });
     const promptText = `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. Output only the updated XML, nothing else.
@@ -245,15 +280,185 @@ Photo scene: ${scene}`;
 
     const sceneXml = response.text?.trim() || "";
     
-    // Add to gallery (prepend to show newest first)
-    const currentGallery = photoGallery$.value;
-    photoGallery$.next([{ scene, prompt: sceneXml }, ...currentGallery]);
+    // Update the output card with the generated prompt
+    const updatedGallery = photoGallery$.value.map((item) =>
+      item.id === outputId
+        ? { ...item, prompt: sceneXml, isGenerating: false }
+        : item
+    );
+    photoGallery$.next(updatedGallery);
     
   } catch (e) {
+    // Remove the failed item from gallery
+    const updatedGallery = photoGallery$.value.filter((item) => item.id !== outputId);
+    photoGallery$.next(updatedGallery);
     alert(`Error: ${e instanceof Error ? e.message : String(e)}`);
-  } finally {
-    isGeneratingPhoto$.next(false);
   }
+}
+
+function deletePhoto(id: string) {
+  const updatedGallery = photoGallery$.value.filter((item) => item.id !== id);
+  photoGallery$.next(updatedGallery);
+}
+
+function openAnimationDialog(photoId: string) {
+  const photo = photoGallery$.value.find((p) => p.id === photoId);
+  if (!photo) return;
+
+  const dialog = document.getElementById("animation-dialog") as HTMLDialogElement;
+  const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
+  
+  const defaultInstructions = photo.interactionText || "Animate the product with smooth motion";
+  
+  const template = html`
+    <div class="dialog-header">
+      <h2>Animation Instructions</h2>
+      <button commandfor="animation-dialog" command="close">Close</button>
+    </div>
+    <textarea
+      id="animation-instructions"
+      placeholder="Enter animation instructions..."
+      .value=${defaultInstructions}
+    ></textarea>
+    <menu>
+      <button @click=${() => generateAnimation(photoId, dialog)}>Generate Animation</button>
+    </menu>
+  `;
+  
+  render(template, dialogContent);
+  dialog.showModal();
+}
+
+async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
+  const photo = photoGallery$.value.find((p) => p.id === photoId);
+  if (!photo) return;
+
+  const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
+  const instructions = textarea?.value.trim() || photo.interactionText;
+  
+  if (!instructions) {
+    alert("Please provide animation instructions.");
+    return;
+  }
+
+  dialog.close();
+
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) {
+    alert("Error: Gemini API key not configured.");
+    return;
+  }
+
+  // Get the generated image element to extract its src for the start frame
+  const photoElement = document.querySelector(`[data-photo-id="${photoId}"] generative-image`);
+  let startFrameUrl = "";
+  
+  if (photoElement) {
+    const imgElement = photoElement.querySelector("img");
+    if (imgElement?.src) {
+      startFrameUrl = imgElement.src;
+    }
+  }
+
+  if (!startFrameUrl) {
+    alert("Could not retrieve the source image for animation. Please ensure the image has been generated successfully.");
+    return;
+  }
+
+  // Create animation video card immediately
+  const animationId = `animation-${crypto.randomUUID()}`;
+  const currentGallery = photoGallery$.value;
+  const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
+  
+  const animationCard = {
+    id: animationId,
+    scene: `Animation: ${photo.scene}`,
+    prompt: instructions,
+    interactionText: instructions,
+    sourceXml: photo.sourceXml,
+    isGenerating: false, // Video element handles its own loading state
+    isVideo: true,
+    startFrameUrl: startFrameUrl,
+  };
+  
+  // Insert animation card right before the source photo
+  const updatedGallery = [
+    ...currentGallery.slice(0, photoIndex),
+    animationCard,
+    ...currentGallery.slice(photoIndex),
+  ];
+  photoGallery$.next(updatedGallery);
+}
+
+function openEditDialog(photoId: string) {
+  const photo = photoGallery$.value.find((p) => p.id === photoId);
+  if (!photo) return;
+
+  const dialog = document.getElementById("edit-dialog") as HTMLDialogElement;
+  const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
+  
+  const template = html`
+    <div class="dialog-header">
+      <h2>Edit XML</h2>
+      <button commandfor="edit-dialog" command="close">Close</button>
+    </div>
+    <textarea
+      id="edit-xml-code"
+      placeholder="Edit the XML code..."
+      .value=${photo.prompt || photo.sourceXml}
+    ></textarea>
+    <textarea
+      id="edit-instructions"
+      placeholder="Additional edit instructions (optional)..."
+      .value=${photo.interactionText}
+    ></textarea>
+    <menu>
+      <button @click=${() => generateEdit(photoId, dialog)}>Apply Edit</button>
+    </menu>
+  `;
+  
+  render(template, dialogContent);
+  dialog.showModal();
+}
+
+async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
+  const photo = photoGallery$.value.find((p) => p.id === photoId);
+  if (!photo) return;
+
+  const xmlTextarea = dialog.querySelector("#edit-xml-code") as HTMLTextAreaElement;
+  const instructionsTextarea = dialog.querySelector("#edit-instructions") as HTMLTextAreaElement;
+  
+  const editedXml = xmlTextarea?.value.trim() || "";
+  const editInstructions = instructionsTextarea?.value.trim() || "";
+  
+  if (!editedXml) {
+    alert("Please provide XML code.");
+    return;
+  }
+
+  dialog.close();
+
+  // Create edit output card immediately
+  const editId = `edit-${crypto.randomUUID()}`;
+  const currentGallery = photoGallery$.value;
+  const photoIndex = currentGallery.findIndex((p) => p.id === photoId);
+  
+  const editCard = {
+    id: editId,
+    scene: `Edit: ${photo.scene}`,
+    prompt: editedXml,
+    interactionText: editInstructions,
+    sourceXml: editedXml,
+    isGenerating: false, // Edited XML is immediately available
+  };
+  
+  // Insert edit card right before the source photo
+  const updatedGallery = [
+    ...currentGallery.slice(0, photoIndex),
+    editCard,
+    ...currentGallery.slice(photoIndex),
+  ];
+  photoGallery$.next(updatedGallery);
 }
 
 const renderOptionList = (
@@ -361,7 +566,6 @@ const CenterPanel = createComponent(() => {
     editInstructions$,
     conversationHistory$,
     photoScene$,
-    isGeneratingPhoto$,
     suggestedScenes$,
     photoGallery$,
   ]).pipe(
@@ -375,7 +579,6 @@ const CenterPanel = createComponent(() => {
         editInstr,
         history,
         photoScene,
-        isGeneratingPhoto,
         suggestedScenes,
         gallery,
       ]) => html`
@@ -442,27 +645,66 @@ const CenterPanel = createComponent(() => {
                     `
                   : null}
                 <menu>
-                  <button @click=${takePhoto} ?disabled=${isGeneratingPhoto}>
-                    ${isGeneratingPhoto ? "Taking photo..." : "Take photo"}
-                  </button>
+                  <button @click=${takePhoto}>Take photo</button>
                 </menu>
               </section>
               ${gallery.length > 0
                 ? html`
                     <section>
                       <h2>Photo gallery</h2>
-                      <div class="photo-gallery">
+                      <div class="output-cards">
                         ${gallery.map(
                           (photo) => html`
-                            <div class="photo-item">
-                              <generative-image
-                                prompt=${photo.prompt}
-                                width="720"
-                                height="1280"
-                                aspect-ratio="9:16"
-                                model="gemini-2.5-flash-image"
-                              ></generative-image>
-                              <div class="photo-caption">${photo.scene}</div>
+                            <div class="output-card" data-photo-id="${photo.id}">
+                              <div class="output-card-image">
+                                ${photo.isGenerating || !photo.prompt
+                                  ? html`<div class="output-placeholder">Generating prompt...</div>`
+                                  : photo.isVideo
+                                    ? html`
+                                        <generative-video
+                                          prompt=${photo.prompt}
+                                          aspect-ratio="9:16"
+                                          model="veo-3.1-generate-preview"
+                                          start-frame=${photo.startFrameUrl || ""}
+                                        ></generative-video>
+                                      `
+                                    : html`
+                                        <generative-image
+                                          prompt=${photo.prompt}
+                                          width="540"
+                                          height="960"
+                                          aspect-ratio="9:16"
+                                          model="gemini-2.5-flash-image"
+                                        ></generative-image>
+                                      `}
+                              </div>
+                              <div class="output-card-meta">
+                                <div class="output-card-caption">${photo.scene}</div>
+                                <div class="output-card-actions">
+                                  <button
+                                    class="action-btn"
+                                    @click=${() => deletePhoto(photo.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                  ${!photo.isGenerating && photo.prompt && !photo.isVideo
+                                    ? html`
+                                        <button
+                                          class="action-btn"
+                                          @click=${() => openAnimationDialog(photo.id)}
+                                        >
+                                          Animate
+                                        </button>
+                                        <button
+                                          class="action-btn"
+                                          @click=${() => openEditDialog(photo.id)}
+                                        >
+                                          Edit
+                                        </button>
+                                      `
+                                    : null}
+                                </div>
+                              </div>
                             </div>
                           `,
                         )}
