@@ -321,14 +321,18 @@ function simplifyToSingleAction(interactionText: string): string {
   if (sentences.length === 0) return interactionText;
   
   // Get the first sentence that describes an action
-  const firstAction = sentences[0].trim();
+  let firstAction = sentences[0].trim();
   
-  // If it's too long (more than 100 chars), try to extract just the core action
-  if (firstAction.length > 100) {
-    // Try to find the main verb phrase
-    const simpleMatch = firstAction.match(/(?:user\s+)?(\w+s?\s+[^,]+)/i);
-    if (simpleMatch) {
-      return simpleMatch[1].trim();
+  // Remove "The user" prefix if present to make it more direct
+  firstAction = firstAction.replace(/^The user\s+/i, "");
+  
+  // If it's still too long (more than 120 chars), try to simplify further
+  // but keep at least the main action phrase
+  if (firstAction.length > 120) {
+    // Look for natural break points: "and", "with", "until", "to"
+    const breakMatch = firstAction.match(/^(.{20,}?)(?:\s+and\s+|\s+until\s+|\s+to\s+|$)/i);
+    if (breakMatch && breakMatch[1].length > 20) {
+      firstAction = breakMatch[1].trim();
     }
   }
   
