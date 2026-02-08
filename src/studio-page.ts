@@ -667,8 +667,8 @@ const CenterPanel = createComponent(() => {
                                   : html`
                                       <generative-image
                                         prompt=${photo.prompt}
-                                        width="270"
-                                        height="480"
+                                        width="540"
+                                        height="960"
                                         aspect-ratio="9:16"
                                         model="gemini-2.5-flash-image"
                                       ></generative-image>
