@@ -8,6 +8,7 @@ import { colors } from "./components/material-library/colors";
 import { materials } from "./components/material-library/materials";
 import { mechanisms } from "./components/material-library/mechanisms";
 import { shapes } from "./components/material-library/shapes";
+import { persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import "./studio-page.css";
 
@@ -32,7 +33,18 @@ const photoGallery$ = new BehaviorSubject<Array<{
   isGenerating: boolean;
   isVideo?: boolean;
   startFrameUrl?: string;
+  customAnimationPrompt?: string;
 }>>([]);
+
+persistSubject(pickedColors$, "studio-pickedColors");
+persistSubject(pickedMaterials$, "studio-pickedMaterials");
+persistSubject(pickedMechanisms$, "studio-pickedMechanisms");
+persistSubject(pickedShapes$, "studio-pickedShapes");
+persistSubject(customInstructions$, "studio-customInstructions");
+persistSubject(synthesisOutput$, "studio-synthesisOutput");
+persistSubject(conversationHistory$, "studio-conversationHistory");
+persistSubject(photoScene$, "studio-photoScene");
+persistSubject(photoGallery$, "studio-photoGallery");
 
 // Register GenerativeImageElement
 GenerativeImageElement.define(() => ({
@@ -301,6 +313,32 @@ function deletePhoto(id: string) {
   photoGallery$.next(updatedGallery);
 }
 
+function simplifyToSingleAction(interactionText: string): string {
+  if (!interactionText) return "Animate the product with smooth motion";
+  
+  // Split by common delimiters and take the first meaningful action
+  const sentences = interactionText.split(/[.!?]\s+/);
+  if (sentences.length === 0) return interactionText;
+  
+  // Get the first sentence that describes an action
+  let firstAction = sentences[0].trim();
+  
+  // Remove "The user" prefix if present to make it more direct
+  firstAction = firstAction.replace(/^The user\s+/i, "");
+  
+  // If it's still too long (more than 120 chars), try to simplify further
+  // but keep at least the main action phrase
+  if (firstAction.length > 120) {
+    // Look for natural break points: "and", "with", "until", "to"
+    const breakMatch = firstAction.match(/^(.{20,}?)(?:\s+and\s+|\s+until\s+|\s+to\s+|$)/i);
+    if (breakMatch && breakMatch[1].length > 20) {
+      firstAction = breakMatch[1].trim();
+    }
+  }
+  
+  return firstAction || "Animate the product with smooth motion";
+}
+
 function openAnimationDialog(photoId: string) {
   const photo = photoGallery$.value.find((p) => p.id === photoId);
   if (!photo) return;
@@ -308,7 +346,8 @@ function openAnimationDialog(photoId: string) {
   const dialog = document.getElementById("animation-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
   
-  const defaultInstructions = photo.interactionText || "Animate the product with smooth motion";
+  // Use custom prompt if exists, otherwise simplify the interaction text
+  const defaultInstructions = photo.customAnimationPrompt || simplifyToSingleAction(photo.interactionText);
   
   const template = html`
     <div class="dialog-header">
@@ -334,11 +373,24 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   if (!photo) return;
 
   const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
-  const instructions = textarea?.value.trim() || photo.interactionText;
+  const instructions = textarea?.value.trim();
   
   if (!instructions) {
     alert("Please provide animation instructions.");
     return;
+  }
+
+  // Save the custom prompt if it's different from the original simplified interaction text
+  const simplifiedDefault = simplifyToSingleAction(photo.interactionText);
+  const shouldSaveCustomPrompt = instructions !== simplifiedDefault;
+  
+  if (shouldSaveCustomPrompt) {
+    // Update the photo with the custom animation prompt
+    const currentGallery = photoGallery$.value;
+    const updatedGallery = currentGallery.map((p) =>
+      p.id === photoId ? { ...p, customAnimationPrompt: instructions } : p
+    );
+    photoGallery$.next(updatedGallery);
   }
 
   dialog.close();
