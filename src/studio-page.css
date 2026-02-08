@@ -127,6 +127,18 @@ menu {
 /* Accordion (left panel) */
 .filter-box {
   flex-shrink: 0;
+  display: flex;
+  gap: 0;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .scan-btn {
+    flex-shrink: 0;
+    border-left: 0;
+  }
 }
 
 .accordion {
@@ -244,7 +256,8 @@ menu {
   display: inline-flex;
   align-items: center;
   gap: 0.5ch;
-  padding: 0.25ch 0.5ch;
+  height: 32px;
+  padding: 0 0.5ch;
   background: #f0f0f0;
   border: 1px solid #ccc;
   cursor: pointer;
@@ -252,6 +265,13 @@ menu {
   &:hover {
     border-color: var(--color-text-active);
   }
+}
+
+.pill-thumbnail {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 2px;
 }
 
 .pill-remove {

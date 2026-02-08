@@ -1,4 +1,5 @@
-import { GoogleGenAI, type Content } from "@google/genai";
+import { GoogleGenAI, Type, type Content } from "@google/genai";
+import { JSONParser } from "@streamparser/json";
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { loadApiKeys } from "./components/connections/storage";
@@ -25,6 +26,14 @@ interface PhotoCard {
   startFrameUrl?: string;
 }
 
+interface ScannedPhoto {
+  id: string;
+  thumbnailUrl: string;
+  fullDataUrl: string;
+  label: string;
+  isScanning: boolean;
+}
+
 // Shared state
 const pickedColors$ = new BehaviorSubject<string[]>([]);
 const pickedMaterials$ = new BehaviorSubject<string[]>([]);
@@ -38,6 +47,7 @@ const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
 const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
+const scannedPhotos$ = new BehaviorSubject<ScannedPhoto[]>([]);
 
 // Persist state
 persistSubject(pickedColors$, "studio:pickedColors");
@@ -73,12 +83,33 @@ const output$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms
   map(([colors, materials, mechanisms, shapes]) => ({ colors, materials, mechanisms, shapes })),
 );
 
-const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$]).pipe(
-  map(([colorIds, materialIds, mechanismIds, shapeIds]) => [
-    ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name })),
-    ...materialIds.map((id) => ({ label: materialsById.get(id)?.name || id, type: "material" as const, id })),
-    ...mechanismIds.map((id) => ({ label: mechanismsById.get(id)?.name || id, type: "mechanism" as const, id })),
-    ...shapeIds.map((id) => ({ label: shapesById.get(id)?.name || id, type: "shape" as const, id })),
+const allPills$ = combineLatest([pickedColors$, pickedMaterials$, pickedMechanisms$, pickedShapes$, scannedPhotos$]).pipe(
+  map(([colorIds, materialIds, mechanismIds, shapeIds, photos]) => [
+    ...photos.map((p) => ({
+      label: p.isScanning ? "(scanning...)" : p.label,
+      type: "scan" as const,
+      id: p.id,
+      thumbnailUrl: p.thumbnailUrl,
+    })),
+    ...colorIds.map((name) => ({ label: name, type: "color" as const, id: name, thumbnailUrl: undefined })),
+    ...materialIds.map((id) => ({
+      label: materialsById.get(id)?.name || id,
+      type: "material" as const,
+      id,
+      thumbnailUrl: undefined,
+    })),
+    ...mechanismIds.map((id) => ({
+      label: mechanismsById.get(id)?.name || id,
+      type: "mechanism" as const,
+      id,
+      thumbnailUrl: undefined,
+    })),
+    ...shapeIds.map((id) => ({
+      label: shapesById.get(id)?.name || id,
+      type: "shape" as const,
+      id,
+      thumbnailUrl: undefined,
+    })),
   ]),
 );
 
@@ -87,7 +118,211 @@ const removePill = (type: string, id: string) => {
   if (type === "material") pickedMaterials$.next(pickedMaterials$.value.filter((i) => i !== id));
   if (type === "mechanism") pickedMechanisms$.next(pickedMechanisms$.value.filter((i) => i !== id));
   if (type === "shape") pickedShapes$.next(pickedShapes$.value.filter((i) => i !== id));
+  if (type === "scan") scannedPhotos$.next(scannedPhotos$.value.filter((p) => p.id !== id));
 };
+
+async function captureWebcamPhoto(): Promise<{ thumbnailUrl: string; fullDataUrl: string } | null> {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.setAttribute("playsinline", "");
+    await video.play();
+    await new Promise((r) => setTimeout(r, 500));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")!.drawImage(video, 0, 0);
+    const fullDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+    const thumbCanvas = document.createElement("canvas");
+    thumbCanvas.width = 32;
+    thumbCanvas.height = 32;
+    const ctx = thumbCanvas.getContext("2d")!;
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
+    ctx.drawImage(canvas, sx, sy, size, size, 0, 0, 32, 32);
+    const thumbnailUrl = thumbCanvas.toDataURL("image/jpeg", 0.6);
+
+    stream.getTracks().forEach((t) => t.stop());
+    return { thumbnailUrl, fullDataUrl };
+  } catch {
+    alert("Could not access webcam.");
+    return null;
+  }
+}
+
+function scanPhotoWithAI(photo: ScannedPhoto) {
+  const apiKey = loadApiKeys().gemini;
+  if (!apiKey) return;
+
+  const shapeIds = shapes.map((s) => s.id);
+  const materialIds = materials.map((m) => m.id);
+  const mechanismIds = mechanisms.map((m) => m.id);
+  const colorNames = colors.map((c) => c.name);
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      shapes: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING, enum: shapeIds },
+            name: { type: Type.STRING },
+            description: { type: Type.STRING },
+          },
+          required: ["id", "name", "description"],
+        },
+      },
+      materials: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING, enum: materialIds },
+            name: { type: Type.STRING },
+            visual: { type: Type.STRING },
+          },
+          required: ["id", "name", "visual"],
+        },
+      },
+      mechanisms: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING, enum: mechanismIds },
+            name: { type: Type.STRING },
+            interaction: { type: Type.STRING },
+          },
+          required: ["id", "name", "interaction"],
+        },
+      },
+      colors: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING, enum: colorNames },
+            hex: { type: Type.STRING },
+          },
+          required: ["name", "hex"],
+        },
+      },
+    },
+    required: ["shapes", "materials", "mechanisms", "colors"],
+  };
+
+  const base64Data = photo.fullDataUrl.replace(/^data:image\/\w+;base64,/, "");
+  const mimeType = photo.fullDataUrl.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  const promptText = `Analyze this photo of a bottle/container product. Identify the following features from the provided library options ONLY. Pick the closest matches.
+
+Available shapes: ${shapes.map((s) => `${s.id} (${s.name})`).join(", ")}
+Available materials: ${materials.map((m) => `${m.id} (${m.name})`).join(", ")}
+Available mechanisms: ${mechanisms.map((m) => `${m.id} (${m.name})`).join(", ")}
+Available colors: ${colors.map((c) => `${c.name}`).join(", ")}
+
+For each identified feature, return:
+- Shape: id, name, and description from library
+- Material: id, name, and visual from library
+- Mechanism: id, name, and interaction from library
+- Color: name and hex from library
+
+Pick only items that are visibly present in the photo. Return empty arrays for categories not found.`;
+
+  (async () => {
+    try {
+      const response = await ai.models.generateContentStream({
+        model: "gemini-2.5-flash",
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          thinkingConfig: { thinkingBudget: 1024 },
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { inlineData: { data: base64Data, mimeType } },
+              { text: promptText },
+            ],
+          },
+        ],
+      });
+
+      const parser = new JSONParser();
+      let currentCategory = "";
+
+      parser.onValue = ({ value, key, stack }) => {
+        // Track which top-level array we're in
+        if (stack.length === 1 && typeof key === "string") {
+          currentCategory = key;
+        }
+        // Items inside top-level arrays
+        if (stack.length === 2 && typeof key === "number" && value && typeof value === "object") {
+          const item = value as Record<string, string>;
+          if (currentCategory === "shapes" && item.id) {
+            if (!pickedShapes$.value.includes(item.id)) {
+              pickedShapes$.next([...pickedShapes$.value, item.id]);
+            }
+          } else if (currentCategory === "materials" && item.id) {
+            if (!pickedMaterials$.value.includes(item.id)) {
+              pickedMaterials$.next([...pickedMaterials$.value, item.id]);
+            }
+          } else if (currentCategory === "mechanisms" && item.id) {
+            if (!pickedMechanisms$.value.includes(item.id)) {
+              pickedMechanisms$.next([...pickedMechanisms$.value, item.id]);
+            }
+          } else if (currentCategory === "colors" && item.name) {
+            if (!pickedColors$.value.includes(item.name)) {
+              pickedColors$.next([...pickedColors$.value, item.name]);
+            }
+          }
+        }
+      };
+
+      for await (const chunk of response) {
+        const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textPart) parser.write(textPart);
+      }
+
+      // Mark scan complete
+      scannedPhotos$.next(
+        scannedPhotos$.value.map((p) => (p.id === photo.id ? { ...p, label: "Photo", isScanning: false } : p)),
+      );
+    } catch (e) {
+      scannedPhotos$.next(
+        scannedPhotos$.value.map((p) =>
+          p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p,
+        ),
+      );
+      console.error("Scan failed:", e);
+    }
+  })();
+}
+
+async function scanFromWebcam() {
+  const result = await captureWebcamPhoto();
+  if (!result) return;
+
+  const photo: ScannedPhoto = {
+    id: `scan-${crypto.randomUUID()}`,
+    thumbnailUrl: result.thumbnailUrl,
+    fullDataUrl: result.fullDataUrl,
+    label: "(scanning...)",
+    isScanning: true,
+  };
+
+  scannedPhotos$.next([...scannedPhotos$.value, photo]);
+  scanPhotoWithAI(photo);
+}
 
 const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
 
@@ -155,9 +390,21 @@ async function synthesize() {
 
   const inputJson = JSON.stringify(data, null, 2);
   const custom = customInstructions$.value.trim();
-  const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
+  const photos = scannedPhotos$.value.filter((p) => !p.isScanning);
+  const photoNote = photos.length > 0
+    ? `\n\nNote: The user has scanned ${photos.length} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.`
+    : "";
+  const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${photoNote}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
 
-  const userMessage: Content = { role: "user", parts: [{ text: userText }] };
+  const userParts: Content["parts"] = [];
+  for (const photo of photos) {
+    const base64Data = photo.fullDataUrl.replace(/^data:image\/\w+;base64,/, "");
+    const mimeType = photo.fullDataUrl.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+    userParts.push({ inlineData: { data: base64Data, mimeType } });
+  }
+  userParts.push({ text: userText });
+
+  const userMessage: Content = { role: "user", parts: userParts };
 
   isSynthesizing$.next(true);
   synthesisOutput$.next("");
@@ -556,6 +803,7 @@ const LeftPanel = createComponent(() => {
             .value=${filter}
             @input=${(e: Event) => filterText$.next((e.target as HTMLInputElement).value)}
           />
+          <button class="scan-btn" @click=${scanFromWebcam}>Scan</button>
         </div>
         <div class="accordion">
           <section class="accordion-section">
@@ -644,7 +892,9 @@ const CenterPanel = createComponent(() => {
               ${pills.map(
                 (p) =>
                   html`<button class="pill" @click=${() => removePill(p.type, p.id)}>
-                    ${p.label}<span class="pill-remove">×</span>
+                    ${p.thumbnailUrl
+                      ? html`<img class="pill-thumbnail" src=${p.thumbnailUrl} alt="" />`
+                      : null}${p.label}<span class="pill-remove">×</span>
                   </button>`,
               )}
             </div>`
