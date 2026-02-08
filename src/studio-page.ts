@@ -17,6 +17,7 @@ interface PhotoCard {
   scene: string;
   prompt: string;
   animationPrompt: string;
+  soundDescription: string;
   sourceXml: string;
   isGenerating: boolean;
   imageReady?: boolean;
@@ -267,6 +268,7 @@ async function takePhoto() {
       scene,
       prompt: "", // Will be filled in after generation
       animationPrompt,
+      soundDescription: "",
       sourceXml: currentXml,
       isGenerating: true,
     },
@@ -298,6 +300,9 @@ Photo scene: ${scene}`;
       item.id === outputId ? { ...item, prompt: sceneXml, isGenerating: false } : item,
     );
     photoGallery$.next(updatedGallery);
+
+    // Generate sound description from photo XML + animation prompt
+    generateSoundDescription(ai, sceneXml, animationPrompt, outputId);
   } catch (e) {
     // Remove the failed item from gallery
     const updatedGallery = photoGallery$.value.filter((item) => item.id !== outputId);
@@ -309,6 +314,36 @@ Photo scene: ${scene}`;
 function deletePhoto(id: string) {
   const updatedGallery = photoGallery$.value.filter((item) => item.id !== id);
   photoGallery$.next(updatedGallery);
+}
+
+async function generateSoundDescription(ai: GoogleGenAI, photoXml: string, animationPrompt: string, photoId: string) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      config: { thinkingConfig: { thinkingBudget: 0 } },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
+
+Scene XML:
+${photoXml}
+
+Animation prompt: ${animationPrompt}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const soundDescription = response.text?.trim() || "";
+    const gallery = photoGallery$.value;
+    photoGallery$.next(gallery.map((p) => (p.id === photoId ? { ...p, soundDescription } : p)));
+  } catch (e) {
+    console.error("Failed to generate sound description:", e);
+  }
 }
 
 function openAnimationDialog(photoId: string) {
@@ -328,6 +363,11 @@ function openAnimationDialog(photoId: string) {
       placeholder="Enter animation instructions..."
       .value=${photo.animationPrompt}
     ></textarea>
+    <textarea
+      id="sound-description"
+      placeholder="Sound description (generating...)"
+      .value=${photo.soundDescription}
+    ></textarea>
     <menu>
       <button @click=${() => generateAnimation(photoId, dialog)}>Generate Animation</button>
     </menu>
@@ -344,6 +384,9 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
   const instructions = textarea?.value.trim() || photo.animationPrompt;
 
+  const soundTextarea = dialog.querySelector("#sound-description") as HTMLTextAreaElement;
+  const soundDescription = soundTextarea?.value.trim() || photo.soundDescription;
+
   if (!instructions) {
     alert("Please provide animation instructions.");
     return;
@@ -351,9 +394,11 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
 
   dialog.close();
 
-  // Save edited animation prompt back to the source image
+  // Save edited animation prompt and sound description back to the source image
   photoGallery$.next(
-    photoGallery$.value.map((item) => (item.id === photoId ? { ...item, animationPrompt: instructions } : item)),
+    photoGallery$.value.map((item) =>
+      item.id === photoId ? { ...item, animationPrompt: instructions, soundDescription } : item,
+    ),
   );
 
   const apiKey = loadApiKeys().gemini;
@@ -380,6 +425,9 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
     return;
   }
 
+  // Combine animation instructions with sound description for the video prompt
+  const videoPrompt = soundDescription ? `${instructions} Sound: ${soundDescription}` : instructions;
+
   // Create animation video card immediately
   const animationId = `animation-${crypto.randomUUID()}`;
   const currentGallery = photoGallery$.value;
@@ -388,8 +436,9 @@ async function generateAnimation(photoId: string, dialog: HTMLDialogElement) {
   const animationCard: PhotoCard = {
     id: animationId,
     scene: `Animation: ${photo.scene}`,
-    prompt: instructions,
+    prompt: videoPrompt,
     animationPrompt: instructions,
+    soundDescription,
     sourceXml: photo.sourceXml,
     isGenerating: false,
     isVideo: true,
@@ -451,6 +500,7 @@ async function generateEdit(photoId: string, dialog: HTMLDialogElement) {
     scene: `Edit: ${photo.scene}`,
     prompt: editedXml,
     animationPrompt: photo.animationPrompt,
+    soundDescription: photo.soundDescription,
     sourceXml: editedXml,
     isGenerating: false,
   };
