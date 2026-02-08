@@ -22,7 +22,6 @@ const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
-const isGeneratingPhoto$ = new BehaviorSubject<boolean>(false);
 const photoGallery$ = new BehaviorSubject<Array<{ 
   id: string;
   scene: string; 
