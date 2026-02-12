@@ -6,6 +6,7 @@ import { synthesize, revise, takePhoto } from "../../lib/studio-ai";
 import type { PhotoCard, ScannedPhoto } from "../../lib/studio-types";
 import { materialsById, mechanismsById, shapesById } from "../../lib/studio-utils";
 import { createComponent } from "../../sdk/create-component";
+import { xmlEditor } from "../../sdk/xml-editor";
 import { renderPhotoGallery } from "../photo-gallery/photo-gallery.component";
 import "./center-panel.component.css";
 
@@ -161,7 +162,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
         ${synthesis
           ? html`
               <section>
-                <pre class="output">${synthesis}</pre>
+                ${xmlEditor(synthesis, (value: string) => synthesisOutput$.next(value))}
               </section>
               <section>
                 <textarea

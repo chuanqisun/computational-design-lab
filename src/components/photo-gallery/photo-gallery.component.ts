@@ -2,6 +2,7 @@ import { html, render } from "lit-html";
 import type { BehaviorSubject } from "rxjs";
 import { deletePhoto, generateAnimation, generateEdit } from "../../lib/studio-ai";
 import type { PhotoCard } from "../../lib/studio-types";
+import { mountXmlEditor } from "../../sdk/xml-editor";
 import "./photo-gallery.component.css";
 
 export interface PhotoGalleryProps {
@@ -31,18 +32,22 @@ export function openAnimationDialog(photoId: string, photoGallery$: BehaviorSubj
       .value=${photo.soundDescription}
     ></textarea>
     <menu>
-      <button @click=${() => {
-        const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
-        const instructions = textarea?.value.trim() || photo.animationPrompt;
-        const soundTextarea = dialog.querySelector("#sound-description") as HTMLTextAreaElement;
-        const soundDesc = soundTextarea?.value.trim() || photo.soundDescription;
-        if (!instructions) {
-          alert("Please provide animation instructions.");
-          return;
-        }
-        dialog.close();
-        generateAnimation(photoId, instructions, soundDesc, photoGallery$);
-      }}>Generate Animation</button>
+      <button
+        @click=${() => {
+          const textarea = dialog.querySelector("#animation-instructions") as HTMLTextAreaElement;
+          const instructions = textarea?.value.trim() || photo.animationPrompt;
+          const soundTextarea = dialog.querySelector("#sound-description") as HTMLTextAreaElement;
+          const soundDesc = soundTextarea?.value.trim() || photo.soundDescription;
+          if (!instructions) {
+            alert("Please provide animation instructions.");
+            return;
+          }
+          dialog.close();
+          generateAnimation(photoId, instructions, soundDesc, photoGallery$);
+        }}
+      >
+        Generate Animation
+      </button>
     </menu>
   `;
 
@@ -50,9 +55,14 @@ export function openAnimationDialog(photoId: string, photoGallery$: BehaviorSubj
   dialog.showModal();
 }
 
+let activeEditEditor: ReturnType<typeof mountXmlEditor> | null = null;
+
 export function openEditDialog(photoId: string, photoGallery$: BehaviorSubject<PhotoCard[]>) {
   const photo = photoGallery$.value.find((p) => p.id === photoId);
   if (!photo) return;
+
+  activeEditEditor?.destroy();
+  activeEditEditor = null;
 
   const dialog = document.getElementById("edit-dialog") as HTMLDialogElement;
   const dialogContent = dialog.querySelector(".dialog-content") as HTMLElement;
@@ -62,26 +72,29 @@ export function openEditDialog(photoId: string, photoGallery$: BehaviorSubject<P
       <h2>Edit XML</h2>
       <button commandfor="edit-dialog" command="close">Close</button>
     </div>
-    <textarea
-      id="edit-xml-code"
-      placeholder="Edit the XML code..."
-      .value=${photo.prompt || photo.sourceXml}
-    ></textarea>
+    <div id="edit-xml-editor"></div>
     <menu>
-      <button @click=${() => {
-        const xmlTextarea = dialog.querySelector("#edit-xml-code") as HTMLTextAreaElement;
-        const editedXml = xmlTextarea?.value.trim() || "";
-        if (!editedXml) {
-          alert("Please provide XML code.");
-          return;
-        }
-        dialog.close();
-        generateEdit(photoId, editedXml, photoGallery$);
-      }}>Apply Edit</button>
+      <button
+        @click=${() => {
+          const editedXml = activeEditEditor?.getValue().trim() || "";
+          if (!editedXml) {
+            alert("Please provide XML code.");
+            return;
+          }
+          dialog.close();
+          activeEditEditor?.destroy();
+          activeEditEditor = null;
+          generateEdit(photoId, editedXml, photoGallery$);
+        }}
+      >
+        Apply Edit
+      </button>
     </menu>
   `;
 
   render(template, dialogContent);
+  const editorContainer = dialogContent.querySelector("#edit-xml-editor") as HTMLElement;
+  activeEditEditor = mountXmlEditor(editorContainer, photo.prompt || photo.sourceXml || "");
   dialog.showModal();
 }
 

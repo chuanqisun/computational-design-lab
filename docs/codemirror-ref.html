@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>JSON ↔ YAML Converter</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      /* reset & layout */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        font-family: sans-serif;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        background-color: Canvas;
+      }
+
+      /* top toolbar */
+      #toolbar {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+      }
+      #toolbar-title {
+        flex: 1;
+        font-weight: bold;
+      }
+      #toolbar button {
+        margin-left: 8px;
+        padding: 6px 12px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      /* main panels */
+      #main {
+        flex: 1;
+        display: flex;
+        position: relative;
+        min-height: 0;
+      }
+      .panel {
+        flex: 1;
+        overflow: hidden;
+      }
+      #divider {
+        flex: 0 0 auto;
+        width: 4px;
+        cursor: col-resize;
+        background: Canvas;
+      }
+      #divider:hover,
+      #divider.resizing {
+        background: Highlight;
+      }
+      .cm-editor {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <div id="toolbar-title">JSON ↔ YAML Converter</div>
+      <button id="copyJsonBtn">Copy JSON</button>
+      <button id="copyYamlBtn">Copy YAML</button>
+    </div>
+
+    <div id="main">
+      <div id="left" class="panel"></div>
+      <div id="divider"></div>
+      <div id="right" class="panel"></div>
+    </div>
+
+    <script type="module">
+      // -- pull in the YAML library --
+      import { parse as parseYAML, stringify as stringifyYAML } from "https://esm.sh/yaml";
+
+      // -- pull in CodeMirror 6 essentials --
+      import { EditorState } from "https://esm.sh/@codemirror/state";
+      import {
+        EditorView,
+        keymap,
+        highlightActiveLine,
+        highlightActiveLineGutter,
+        lineNumbers,
+      } from "https://esm.sh/@codemirror/view";
+      import { defaultHighlightStyle, syntaxHighlighting } from "https://esm.sh/@codemirror/language";
+      import { defaultKeymap } from "https://esm.sh/@codemirror/commands";
+      import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark";
+      import { json } from "https://esm.sh/@codemirror/lang-json";
+      import { yaml } from "https://esm.sh/@codemirror/lang-yaml";
+
+      // -- shared editor extensions --
+      const commonExtensions = [
+        lineNumbers(),
+        highlightActiveLineGutter(),
+        highlightActiveLine(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        keymap.of(defaultKeymap),
+        oneDark,
+      ];
+
+      // -- flags to avoid infinite loops when programmatically updating --
+      let updatingLeft = false;
+      let updatingRight = false;
+
+      // -- create the JSON (left) editor --
+      const leftView = new EditorView({
+        parent: document.getElementById("left"),
+        state: EditorState.create({
+          doc: `{
+  "hello": "world",
+  "nested": { "num": 123 }
+}`,
+          extensions: [
+            ...commonExtensions,
+            json(),
+            EditorView.updateListener.of((update) => {
+              if (!updatingLeft && update.docChanged) {
+                const txt = update.state.doc.toString();
+                convertJsonToYaml(txt);
+              }
+            }),
+          ],
+        }),
+      });
+
+      // -- create the YAML (right) editor --
+      const rightView = new EditorView({
+        parent: document.getElementById("right"),
+        state: EditorState.create({
+          doc: `# YAML output`,
+          extensions: [
+            ...commonExtensions,
+            yaml(),
+            EditorView.updateListener.of((update) => {
+              if (!updatingRight && update.docChanged) {
+                const txt = update.state.doc.toString();
+                convertYamlToJson(txt);
+              }
+            }),
+          ],
+        }),
+      });
+
+      // -- conversion routines --
+      function convertJsonToYaml(jsonText) {
+        try {
+          const obj = JSON.parse(jsonText);
+          const yml = stringifyYAML(obj, { indent: 2 });
+          updatingRight = true;
+          rightView.dispatch({
+            changes: { from: 0, to: rightView.state.doc.length, insert: yml },
+          });
+        } catch (e) {
+          updatingRight = true;
+          rightView.dispatch({
+            changes: { from: 0, to: rightView.state.doc.length, insert: `# JSON parse error:\n# ${e.message}` },
+          });
+        } finally {
+          updatingRight = false;
+        }
+      }
+
+      function convertYamlToJson(yamlText) {
+        try {
+          const obj = parseYAML(yamlText);
+          const js = JSON.stringify(obj, null, 2);
+          updatingLeft = true;
+          leftView.dispatch({
+            changes: { from: 0, to: leftView.state.doc.length, insert: js },
+          });
+        } catch (e) {
+          updatingLeft = true;
+          leftView.dispatch({
+            changes: { from: 0, to: leftView.state.doc.length, insert: `// YAML parse error:\n// ${e.message}` },
+          });
+        } finally {
+          updatingLeft = false;
+        }
+      }
+
+      // -- initialize with a first conversion --
+      convertJsonToYaml(leftView.state.doc.toString());
+
+      // -- copy buttons --
+      document.getElementById("copyJsonBtn").addEventListener("click", async () => {
+        const code = leftView.state.doc.toString();
+        try {
+          await navigator.clipboard.writeText(code);
+          alert("JSON copied to clipboard!");
+        } catch (err) {
+          alert("Failed to copy JSON: " + err);
+        }
+      });
+      document.getElementById("copyYamlBtn").addEventListener("click", async () => {
+        const code = rightView.state.doc.toString();
+        try {
+          await navigator.clipboard.writeText(code);
+          alert("YAML copied to clipboard!");
+        } catch (err) {
+          alert("Failed to copy YAML: " + err);
+        }
+      });
+
+      // -- drag‑to‑resize panels --
+      const divider = document.getElementById("divider");
+      const leftPanel = document.getElementById("left");
+      const rightPanel = document.getElementById("right");
+      divider.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startLeftW = leftPanel.getBoundingClientRect().width;
+        const totalW = divider.parentElement.getBoundingClientRect().width;
+        divider.classList.add("resizing");
+        function onMouseMove(e) {
+          const dx = e.clientX - startX;
+          const newLeftW = startLeftW + dx;
+          const min = 100;
+          if (newLeftW < min || newLeftW > totalW - min) return;
+          leftPanel.style.flex = "none";
+          rightPanel.style.flex = "none";
+          leftPanel.style.width = newLeftW + "px";
+          rightPanel.style.width = totalW - newLeftW - divider.offsetWidth + "px";
+        }
+        function onMouseUp() {
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("mouseup", onMouseUp);
+          divider.classList.remove("resizing");
+        }
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+      });
+    </script>
+  </body>
+</html>
