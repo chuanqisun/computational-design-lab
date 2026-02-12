@@ -34,6 +34,10 @@
     flex-shrink: 0;
     padding-block: 1ch 0.5ch;
   }
+
+  &:not(:has(.accordion-body button)) {
+    display: none;
+  }
 }
 
 .accordion-body {
