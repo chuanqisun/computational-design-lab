@@ -1,6 +1,12 @@
+.scan-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+  margin-bottom: 2ch;
+}
+
 .scan-video {
   width: 100%;
-  max-width: 480px;
   background: #000;
 }
 
