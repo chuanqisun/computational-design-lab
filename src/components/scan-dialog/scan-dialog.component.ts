@@ -64,14 +64,18 @@ export function openScanDialog(props: ScanDialogProps) {
       <h2>Scan Product</h2>
       <div class="scan-section">
         <h3>Upload files</h3>
-        <button @click=${() => {
-          const input = document.createElement("input");
-          input.type = "file";
-          input.accept = "image/*";
-          input.multiple = true;
-          input.onchange = handleFileUpload;
-          input.click();
-        }}>Choose files</button>
+        <button
+          @click=${() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.multiple = true;
+            input.onchange = handleFileUpload;
+            input.click();
+          }}
+        >
+          Choose files
+        </button>
       </div>
       <div class="scan-section">
         <h3>Webcam</h3>
