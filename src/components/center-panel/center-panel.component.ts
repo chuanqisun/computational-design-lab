@@ -2,7 +2,7 @@ import type { Content } from "@google/genai";
 import { html } from "lit-html";
 import type { BehaviorSubject } from "rxjs";
 import { combineLatest, map } from "rxjs";
-import { synthesize, revise, takePhoto } from "../../lib/studio-ai";
+import { revise, synthesize, takePhoto } from "../../lib/studio-ai";
 import type { PhotoCard, ScannedPhoto } from "../../lib/studio-types";
 import { materialsById, mechanismsById, shapesById } from "../../lib/studio-utils";
 import { createComponent } from "../../sdk/create-component";
@@ -26,14 +26,11 @@ export interface CenterPanelProps {
   scannedPhotos$: BehaviorSubject<ScannedPhoto[]>;
 }
 
-const removePill = (
-  type: string,
-  id: string,
-  props: CenterPanelProps,
-) => {
+const removePill = (type: string, id: string, props: CenterPanelProps) => {
   if (type === "color") props.pickedColors$.next(props.pickedColors$.value.filter((i) => i !== id));
   if (type === "material") props.pickedMaterials$.next(props.pickedMaterials$.value.filter((i) => i !== id));
-  if (type === "surfaceOption") props.pickedSurfaceOptions$.next(props.pickedSurfaceOptions$.value.filter((i) => i !== id));
+  if (type === "surfaceOption")
+    props.pickedSurfaceOptions$.next(props.pickedSurfaceOptions$.value.filter((i) => i !== id));
   if (type === "mechanism") props.pickedMechanisms$.next(props.pickedMechanisms$.value.filter((i) => i !== id));
   if (type === "shape") props.pickedShapes$.next(props.pickedShapes$.value.filter((i) => i !== id));
   if (type === "scan") props.scannedPhotos$.next(props.scannedPhotos$.value.filter((p) => p.id !== id));
@@ -41,21 +38,44 @@ const removePill = (
 
 export const CenterPanelComponent = createComponent((props: CenterPanelProps) => {
   const {
-    pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$,
-    customInstructions$, synthesisOutput$, isSynthesizing$, editInstructions$,
-    conversationHistory$, photoScene$, photoGallery$, scannedPhotos$,
+    pickedColors$,
+    pickedMaterials$,
+    pickedSurfaceOptions$,
+    pickedMechanisms$,
+    pickedShapes$,
+    customInstructions$,
+    synthesisOutput$,
+    isSynthesizing$,
+    editInstructions$,
+    conversationHistory$,
+    photoScene$,
+    photoGallery$,
+    scannedPhotos$,
   } = props;
 
   const output$ = combineLatest([
-    pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$,
+    pickedColors$,
+    pickedMaterials$,
+    pickedSurfaceOptions$,
+    pickedMechanisms$,
+    pickedShapes$,
   ]).pipe(
     map(([colors, materials, surfaceOptions, mechanisms, shapes]) => ({
-      colors, materials, surfaceOptions, mechanisms, shapes,
+      colors,
+      materials,
+      surfaceOptions,
+      mechanisms,
+      shapes,
     })),
   );
 
   const allPills$ = combineLatest([
-    pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$, scannedPhotos$,
+    pickedColors$,
+    pickedMaterials$,
+    pickedSurfaceOptions$,
+    pickedMechanisms$,
+    pickedShapes$,
+    scannedPhotos$,
   ]).pipe(
     map(([colorIds, materialIds, surfaceOptionIds, mechanismIds, shapeIds, photos]) => [
       ...photos.map((p) => ({
@@ -71,7 +91,12 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
         id,
         thumbnailUrl: undefined,
       })),
-      ...surfaceOptionIds.map((name) => ({ label: name, type: "surfaceOption" as const, id: name, thumbnailUrl: undefined })),
+      ...surfaceOptionIds.map((name) => ({
+        label: name,
+        type: "surfaceOption" as const,
+        id: name,
+        thumbnailUrl: undefined,
+      })),
       ...mechanismIds.map((id) => ({
         label: mechanismsById.get(id)?.name || id,
         type: "mechanism" as const,
@@ -100,36 +125,60 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
     }),
   );
 
-  const handleSynthesize = () => synthesize({
-    pickedColors: pickedColors$.value,
-    pickedMaterials: pickedMaterials$.value,
-    pickedSurfaceOptions: pickedSurfaceOptions$.value,
-    pickedMechanisms: pickedMechanisms$.value,
-    pickedShapes: pickedShapes$.value,
-    customInstructions: customInstructions$.value,
-    scannedPhotos: scannedPhotos$.value,
-    synthesisOutput$, isSynthesizing$, conversationHistory$,
-  });
+  const handleSynthesize = () =>
+    synthesize({
+      pickedColors: pickedColors$.value,
+      pickedMaterials: pickedMaterials$.value,
+      pickedSurfaceOptions: pickedSurfaceOptions$.value,
+      pickedMechanisms: pickedMechanisms$.value,
+      pickedShapes: pickedShapes$.value,
+      customInstructions: customInstructions$.value,
+      scannedPhotos: scannedPhotos$.value,
+      synthesisOutput$,
+      isSynthesizing$,
+      conversationHistory$,
+    });
 
-  const handleRevise = () => revise({
-    editInstructions: editInstructions$.value,
-    synthesisOutput$, isSynthesizing$, conversationHistory$, editInstructions$,
-  });
+  const handleRevise = () =>
+    revise({
+      editInstructions: editInstructions$.value,
+      synthesisOutput$,
+      isSynthesizing$,
+      conversationHistory$,
+      editInstructions$,
+    });
 
-  const handleTakePhoto = () => takePhoto({
-    synthesisOutput: synthesisOutput$.value,
-    photoScene: photoScene$.value,
-    photoGallery$,
-  });
+  const handleTakePhoto = () =>
+    takePhoto({
+      synthesisOutput: synthesisOutput$.value,
+      photoScene: photoScene$.value,
+      photoGallery$,
+    });
 
   const template$ = combineLatest([
-    output$, allPills$, synthesisOutput$, isSynthesizing$, customInstructions$,
-    editInstructions$, conversationHistory$, photoScene$, suggestedScenes$, photoGallery$,
+    output$,
+    allPills$,
+    synthesisOutput$,
+    isSynthesizing$,
+    customInstructions$,
+    editInstructions$,
+    conversationHistory$,
+    photoScene$,
+    suggestedScenes$,
+    photoGallery$,
   ]).pipe(
     map(
       ([
-        data, pills, synthesis, isSynthesizing, customInstr,
-        editInstr, history, photoScene, suggestedScenes, gallery,
+        _data,
+        pills,
+        synthesis,
+        isSynthesizing,
+        customInstr,
+        editInstr,
+        history,
+        photoScene,
+        suggestedScenes,
+        gallery,
       ]) => html`
         ${pills.length > 0
           ? html`<div class="pills">
@@ -144,10 +193,6 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
             </div>`
           : null}
         <section>
-          <h2>Selection</h2>
-          <pre class="output">${JSON.stringify(data, null, 2)}</pre>
-        </section>
-        <section>
           <textarea
             placeholder="Custom instructions (optional)..."
             .value=${customInstr}
@@ -161,9 +206,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
         </section>
         ${synthesis
           ? html`
-              <section>
-                ${xmlEditor(synthesis, (value: string) => synthesisOutput$.next(value))}
-              </section>
+              <section>${xmlEditor(synthesis, (value: string) => synthesisOutput$.next(value))}</section>
               <section>
                 <textarea
                   placeholder="Edit instructions..."
@@ -171,7 +214,10 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
                   @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
                 ></textarea>
                 <menu>
-                  <button @click=${handleRevise} ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}>
+                  <button
+                    @click=${handleRevise}
+                    ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}
+                  >
                     ${isSynthesizing ? "Revising..." : "Revise"}
                   </button>
                 </menu>
