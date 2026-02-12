@@ -52,6 +52,20 @@ export async function clearAllPersistence(): Promise<void> {
   await db.clear(IMAGE_CACHE_STORE);
 }
 
+export async function clearPersistenceExcept(excludeKeys: string[]): Promise<void> {
+  const db = await dbPromise;
+  const allKeys = await db.getAllKeys(STORE_NAME);
+  for (const key of allKeys) {
+    if (!excludeKeys.includes(key as string)) await db.delete(STORE_NAME, key);
+  }
+}
+
+export async function clearGalleryPersistence(): Promise<void> {
+  const db = await dbPromise;
+  await db.delete(STORE_NAME, "studio:photoGallery");
+  await db.clear(IMAGE_CACHE_STORE);
+}
+
 /**
  * Synchronizes a BehaviorSubject with IndexedDB.
  * Loads the initial value from DB and subscribes to future changes.

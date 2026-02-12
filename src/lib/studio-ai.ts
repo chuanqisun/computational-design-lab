@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, type Content } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
+import type { BehaviorSubject } from "rxjs";
 import { loadApiKeys } from "../components/connections/storage";
 import { colors } from "../components/material-library/colors";
 import { materials } from "../components/material-library/materials";
@@ -7,7 +8,6 @@ import { mechanisms } from "../components/material-library/mechanisms";
 import { shapes } from "../components/material-library/shapes";
 import type { PhotoCard, ScannedPhoto, ScanResult } from "./studio-types";
 import { colorsByName, materialsById, mechanismsById, shapesById } from "./studio-utils";
-import type { BehaviorSubject } from "rxjs";
 
 const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
 
@@ -131,10 +131,7 @@ Pick only items that are visibly present on the product in the photo. Return emp
       contents: [
         {
           role: "user",
-          parts: [
-            { inlineData: { data: base64Data, mimeType } },
-            { text: promptText },
-          ],
+          parts: [{ inlineData: { data: base64Data, mimeType } }, { text: promptText }],
         },
       ],
     });
@@ -164,9 +161,7 @@ Pick only items that are visibly present on the product in the photo. Return emp
     return result;
   } catch (e) {
     scannedPhotos$.next(
-      scannedPhotos$.value.map((p) =>
-        p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p,
-      ),
+      scannedPhotos$.value.map((p) => (p.id === photo.id ? { ...p, label: "Scan failed", isScanning: false } : p)),
     );
     console.error("Scan failed:", e);
     return null;
@@ -188,8 +183,16 @@ export interface SynthesizeParams {
 
 export async function synthesize(params: SynthesizeParams) {
   const {
-    pickedColors, pickedMaterials, pickedSurfaceOptions, pickedMechanisms, pickedShapes,
-    customInstructions, scannedPhotos, synthesisOutput$, isSynthesizing$, conversationHistory$,
+    pickedColors,
+    pickedMaterials,
+    pickedSurfaceOptions,
+    pickedMechanisms,
+    pickedShapes,
+    customInstructions,
+    scannedPhotos,
+    synthesisOutput$,
+    isSynthesizing$,
+    conversationHistory$,
   } = params;
 
   const apiKey = loadApiKeys().gemini;
@@ -234,16 +237,17 @@ export async function synthesize(params: SynthesizeParams) {
       pickedShapeData.length >
     0;
   if (!hasSelection) {
-    synthesisOutput$.next("Please select at least one item before synthesizing.");
+    synthesisOutput$.next("Please scan or select components before synthesizing.");
     return;
   }
 
   const inputJson = JSON.stringify(data, null, 2);
   const custom = customInstructions.trim();
   const photos = scannedPhotos.filter((p) => !p.isScanning);
-  const photoNote = photos.length > 0
-    ? `\n\nNote: The user has scanned ${photos.length} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.`
-    : "";
+  const photoNote =
+    photos.length > 0
+      ? `\n\nNote: The user has scanned ${photos.length} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.`
+      : "";
   const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${photoNote}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
 
   const userParts: Content["parts"] = [];
@@ -520,11 +524,7 @@ export async function generateAnimation(
   photoGallery$.next(updatedGallery);
 }
 
-export async function generateEdit(
-  photoId: string,
-  editedXml: string,
-  photoGallery$: BehaviorSubject<PhotoCard[]>,
-) {
+export async function generateEdit(photoId: string, editedXml: string, photoGallery$: BehaviorSubject<PhotoCard[]>) {
   const photo = photoGallery$.value.find((p) => p.id === photoId);
   if (!photo) return;
 

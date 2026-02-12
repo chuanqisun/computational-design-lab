@@ -1,5 +1,6 @@
 import { html, render } from "lit-html";
 import type { BehaviorSubject } from "rxjs";
+import { clearGalleryPersistence } from "../../lib/persistence";
 import { deletePhoto, generateAnimation, generateEdit } from "../../lib/studio-ai";
 import type { PhotoCard } from "../../lib/studio-types";
 import { mountXmlEditor } from "../../sdk/xml-editor";
@@ -103,6 +104,11 @@ export const renderPhotoGallery = (gallery: PhotoCard[], photoGallery$: Behavior
     ? html`
         <section>
           <h2>Photo gallery</h2>
+          <button @click=${async () => {
+            if (!confirm("Clear all photos and videos?")) return;
+            photoGallery$.next([]);
+            await clearGalleryPersistence();
+          }}>Clear all</button>
           <div class="output-cards">
             ${gallery.map(
               (photo) => html`

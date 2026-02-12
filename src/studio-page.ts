@@ -1,14 +1,14 @@
 import type { Content } from "@google/genai";
 import { html, render } from "lit-html";
-import { BehaviorSubject, Subject, EMPTY, from, mergeMap, scan } from "rxjs";
+import { BehaviorSubject, EMPTY, from, mergeMap, scan, Subject } from "rxjs";
 import { CenterPanelComponent } from "./components/center-panel/center-panel.component";
 import { loadApiKeys } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { LeftPanelComponent } from "./components/left-panel/left-panel.component";
+import { clearPersistenceExcept, persistSubject } from "./lib/persistence";
 import { runScanAI } from "./lib/studio-ai";
 import type { PhotoCard, ScannedPhoto } from "./lib/studio-types";
-import { clearAllPersistence, persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import "./studio-page.css";
 
@@ -53,9 +53,7 @@ scanTrigger$
           );
           return result;
         }),
-      ).pipe(
-        mergeMap((result) => (result ? from([result]) : EMPTY)),
-      ),
+      ).pipe(mergeMap((result) => (result ? from([result]) : EMPTY))),
     ),
     scan(
       (acc, result) => ({
@@ -68,9 +66,7 @@ scanTrigger$
     ),
   )
   .subscribe((accumulated) => {
-    const mergeUnique = (current: string[], additions: string[]) => [
-      ...new Set([...current, ...additions]),
-    ];
+    const mergeUnique = (current: string[], additions: string[]) => [...new Set([...current, ...additions])];
     pickedShapes$.next(mergeUnique(pickedShapes$.value, accumulated.shapes));
     pickedMaterials$.next(mergeUnique(pickedMaterials$.value, accumulated.materials));
     pickedMechanisms$.next(mergeUnique(pickedMechanisms$.value, accumulated.mechanisms));
@@ -90,16 +86,34 @@ GenerativeVideoElement.define(() => ({
 // Main layout
 const Main = createComponent(() => {
   return html`
-    <aside class="panel-left">${LeftPanelComponent({
-      pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$,
-      filterText$,
-      scanDialogProps: { scannedPhotos$, scanTrigger$ },
-    })}</aside>
-    <main class="panel-center">${CenterPanelComponent({
-      pickedColors$, pickedMaterials$, pickedSurfaceOptions$, pickedMechanisms$, pickedShapes$,
-      customInstructions$, synthesisOutput$, isSynthesizing$, editInstructions$,
-      conversationHistory$, photoScene$, photoGallery$, scannedPhotos$,
-    })}</main>
+    <aside class="panel-left">
+      ${LeftPanelComponent({
+        pickedColors$,
+        pickedMaterials$,
+        pickedSurfaceOptions$,
+        pickedMechanisms$,
+        pickedShapes$,
+        filterText$,
+        scanDialogProps: { scannedPhotos$, scanTrigger$ },
+      })}
+    </aside>
+    <main class="panel-center">
+      ${CenterPanelComponent({
+        pickedColors$,
+        pickedMaterials$,
+        pickedSurfaceOptions$,
+        pickedMechanisms$,
+        pickedShapes$,
+        customInstructions$,
+        synthesisOutput$,
+        isSynthesizing$,
+        editInstructions$,
+        conversationHistory$,
+        photoScene$,
+        photoGallery$,
+        scannedPhotos$,
+      })}
+    </main>
   `;
 });
 
@@ -107,9 +121,21 @@ const Main = createComponent(() => {
 const resetButton = document.getElementById("reset-button");
 if (resetButton) {
   resetButton.addEventListener("click", async () => {
-    if (!confirm("Are you sure you want to reset? All data will be lost.")) return;
-    await clearAllPersistence();
-    window.location.reload();
+    if (!confirm("Are you sure you want to clear input? All input data will be lost.")) return;
+    pickedColors$.next([]);
+    pickedMaterials$.next([]);
+    pickedSurfaceOptions$.next([]);
+    pickedMechanisms$.next([]);
+    pickedShapes$.next([]);
+    filterText$.next("");
+    customInstructions$.next("");
+    synthesisOutput$.next("");
+    isSynthesizing$.next(false);
+    editInstructions$.next("");
+    conversationHistory$.next([]);
+    photoScene$.next("Product stand by itself");
+    scannedPhotos$.next([]);
+    await clearPersistenceExcept(["studio:photoGallery"]);
   });
 }
 

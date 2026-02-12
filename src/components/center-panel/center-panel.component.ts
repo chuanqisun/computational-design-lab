@@ -205,55 +205,53 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
           </menu>
         </section>
         ${synthesis
-          ? html`
-              <section>${xmlEditor(synthesis, (value: string) => synthesisOutput$.next(value))}</section>
-              <section>
-                <textarea
-                  placeholder="Edit instructions..."
-                  .value=${editInstr}
-                  @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
-                ></textarea>
-                <menu>
-                  <button
-                    @click=${handleRevise}
-                    ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}
-                  >
-                    ${isSynthesizing ? "Revising..." : "Revise"}
-                  </button>
-                </menu>
-              </section>
-              <section>
-                <h2>Photo booth</h2>
-                <textarea
-                  placeholder="Specify photo shoot scene..."
-                  .value=${photoScene}
-                  @input=${(e: Event) => photoScene$.next((e.target as HTMLTextAreaElement).value)}
-                ></textarea>
-                ${suggestedScenes.length > 0
-                  ? html`
-                      <div class="suggested-scenes">
-                        <p>Suggested scenes:</p>
-                        <div class="scene-buttons">
-                          <button class="scene-button" @click=${() => photoScene$.next("Product stand by itself")}>
-                            Product stand by itself
-                          </button>
-                          ${suggestedScenes.map(
-                            (scene) =>
-                              html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
-                                ${scene}
-                              </button>`,
-                          )}
-                        </div>
-                      </div>
-                    `
-                  : null}
-                <menu>
-                  <button @click=${handleTakePhoto}>Take photo</button>
-                </menu>
-              </section>
-              ${renderPhotoGallery(gallery, photoGallery$)}
-            `
+          ? html`<section>${xmlEditor(synthesis, (value: string) => synthesisOutput$.next(value))}</section>`
           : null}
+        <section>
+          <textarea
+            placeholder="Edit instructions..."
+            .value=${editInstr}
+            @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
+          <menu>
+            <button
+              @click=${handleRevise}
+              ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}
+            >
+              ${isSynthesizing ? "Revising..." : "Revise"}
+            </button>
+          </menu>
+        </section>
+        <section>
+          <h2>Photo booth</h2>
+          <textarea
+            placeholder="Specify photo shoot scene..."
+            .value=${photoScene}
+            @input=${(e: Event) => photoScene$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
+          ${suggestedScenes.length > 0
+            ? html`
+                <div class="suggested-scenes">
+                  <p>Suggested scenes:</p>
+                  <div class="scene-buttons">
+                    <button class="scene-button" @click=${() => photoScene$.next("Product stand by itself")}>
+                      Product stand by itself
+                    </button>
+                    ${suggestedScenes.map(
+                      (scene) =>
+                        html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
+                          ${scene}
+                        </button>`,
+                    )}
+                  </div>
+                </div>
+              `
+            : null}
+          <menu>
+            <button @click=${handleTakePhoto} ?disabled=${!synthesis}>Take photo</button>
+          </menu>
+        </section>
+        ${renderPhotoGallery(gallery, photoGallery$)}
       `,
     ),
   );
