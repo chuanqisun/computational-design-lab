@@ -104,11 +104,15 @@ export const renderPhotoGallery = (gallery: PhotoCard[], photoGallery$: Behavior
     ? html`
         <section>
           <h2>Photo gallery</h2>
-          <button @click=${async () => {
-            if (!confirm("Clear all photos and videos?")) return;
-            photoGallery$.next([]);
-            await clearGalleryPersistence();
-          }}>Clear all</button>
+          <button
+            @click=${async () => {
+              if (!confirm("Clear all photos and videos?")) return;
+              photoGallery$.next([]);
+              await clearGalleryPersistence();
+            }}
+          >
+            Clear all
+          </button>
           <div class="output-cards">
             ${gallery.map(
               (photo) => html`

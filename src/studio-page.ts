@@ -3,6 +3,7 @@ import { html, render } from "lit-html";
 import { BehaviorSubject, EMPTY, from, mergeMap, scan, Subject } from "rxjs";
 import { CenterPanelComponent } from "./components/center-panel/center-panel.component";
 import { loadApiKeys } from "./components/connections/storage";
+import { useSetupDialog } from "./components/connections/use-setup-dialog";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { LeftPanelComponent } from "./components/left-panel/left-panel.component";
@@ -27,6 +28,7 @@ const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
 const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
 const scannedPhotos$ = new BehaviorSubject<ScannedPhoto[]>([]);
+const apiKeys$ = new BehaviorSubject(loadApiKeys());
 
 // Persist state
 persistSubject(pickedColors$, "studio:pickedColors");
@@ -75,12 +77,12 @@ scanTrigger$
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
-  flux: { apiKey: loadApiKeys().together || "" },
-  gemini: { apiKey: loadApiKeys().gemini || "" },
+  flux: { apiKey: apiKeys$.value.together || "" },
+  gemini: { apiKey: apiKeys$.value.gemini || "" },
 }));
 
 GenerativeVideoElement.define(() => ({
-  gemini: { apiKey: loadApiKeys().gemini || "" },
+  gemini: { apiKey: apiKeys$.value.gemini || "" },
 }));
 
 // Main layout
@@ -161,5 +163,10 @@ const observer = new MutationObserver((mutations) => {
   }
 });
 observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ["status"] });
+
+useSetupDialog({
+  dialogElement: document.getElementById("setup-dialog") as HTMLDialogElement,
+  apiKeys$,
+});
 
 render(Main(), document.getElementById("app")!);

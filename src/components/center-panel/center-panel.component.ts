@@ -214,10 +214,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
             @input=${(e: Event) => editInstructions$.next((e.target as HTMLTextAreaElement).value)}
           ></textarea>
           <menu>
-            <button
-              @click=${handleRevise}
-              ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}
-            >
+            <button @click=${handleRevise} ?disabled=${isSynthesizing || !editInstr.trim() || history.length === 0}>
               ${isSynthesizing ? "Revising..." : "Revise"}
             </button>
           </menu>
@@ -239,9 +236,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
                     </button>
                     ${suggestedScenes.map(
                       (scene) =>
-                        html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>
-                          ${scene}
-                        </button>`,
+                        html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
                     )}
                   </div>
                 </div>
