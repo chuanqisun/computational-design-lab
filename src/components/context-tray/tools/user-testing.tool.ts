@@ -65,7 +65,7 @@ export const UserTestingTool = createComponent(
       filter((action) => action),
       withLatestFrom(selectedImages$, apiKeys$, lockedMoods$),
       tap(([_, selectedImages, apiKeys, lockedMoods]) => {
-        if (selectedImages.length === 0 || !apiKeys.openai) {
+        if (selectedImages.length === 0 || !apiKeys.gemini) {
           return;
         }
 
@@ -77,12 +77,12 @@ export const UserTestingTool = createComponent(
           const scanObservable$ = requiredList
             ? scanMoodsSupervised$({
                 image,
-                apiKey: apiKeys.openai!,
+                apiKey: apiKeys.gemini!,
                 requiredList,
               })
             : scanMoods$({
                 image,
-                apiKey: apiKeys.openai!,
+                apiKey: apiKeys.gemini!,
               });
 
           return scanObservable$.pipe(

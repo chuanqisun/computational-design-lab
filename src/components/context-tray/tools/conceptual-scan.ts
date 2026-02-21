@@ -94,7 +94,7 @@ export const ConceptualScanTool = createComponent(
       tap(([scanType, selectedImages, selectedTexts, apiKeys]) => {
         const selectedItems = [...selectedImages, ...selectedTexts];
 
-        if (selectedItems.length === 0 || !apiKeys.openai) {
+        if (selectedItems.length === 0 || !apiKeys.gemini) {
           return;
         }
 
@@ -111,7 +111,7 @@ export const ConceptualScanTool = createComponent(
         const task$ = scanConcepts$({
           items: scanInputs,
           instruction: scanType.instruction,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
         }).pipe(
           tap((concept) => {
             const { x, y, z } = positionGenerator.next().value;
