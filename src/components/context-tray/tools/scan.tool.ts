@@ -209,7 +209,6 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
                 ${stream
                   ? html`<video id="scan-tool-video" autoplay playsinline class="scan-tool-video"></video>`
                   : html``}
-
                 ${pendingPhotos.length > 0
                   ? html`
                       <div class="scan-tool-previews">
