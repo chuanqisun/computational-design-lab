@@ -10,6 +10,7 @@ import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { FileTool } from "./tools/file.tool";
 import { MoodScanTool } from "./tools/mood-scan.tool";
 import { RenderTool } from "./tools/render.tool";
+import { ScanTool } from "./tools/scan.tool";
 import { TextContentTool } from "./tools/text-content.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
 import { WriterTool } from "./tools/writer.tool";
@@ -37,6 +38,7 @@ export const ContextTrayComponent = createComponent(
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
+    const scanToolUI = ScanTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
@@ -49,6 +51,7 @@ export const ContextTrayComponent = createComponent(
             <summary>New</summary>
             <div class="tool-body">${renderToolUI}</div>
             <div class="tool-body">${writerToolUI}</div>
+            <div class="tool-body">${scanToolUI}</div>
           </details>
           ${selectedImages.length > 0
             ? html` <details class="tool-container" open>

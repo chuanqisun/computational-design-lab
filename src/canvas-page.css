@@ -42,6 +42,10 @@ dialog:open {
   height: auto;
 }
 
+dialog:not(:open) {
+  display: none;
+}
+
 /* Form elements */
 label {
   color: var(--color-text-secondary);
