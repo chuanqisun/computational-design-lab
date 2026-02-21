@@ -63,7 +63,10 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
           contents: [
             {
               role: "user",
-              parts: [{ text: "Analyze this image for moods and arousal levels." }, { inlineData: { data: base64Data, mimeType } }],
+              parts: [
+                { text: "Analyze this image for moods and arousal levels." },
+                { inlineData: { data: base64Data, mimeType } },
+              ],
             },
           ],
         });
@@ -162,7 +165,10 @@ export function scanMoodsSupervised$(inputs: {
           contents: [
             {
               role: "user",
-              parts: [{ text: "Analyze this image for moods and arousal levels." }, { inlineData: { data: base64Data, mimeType } }],
+              parts: [
+                { text: "Analyze this image for moods and arousal levels." },
+                { inlineData: { data: base64Data, mimeType } },
+              ],
             },
           ],
         });
@@ -185,4 +191,3 @@ export function scanMoodsSupervised$(inputs: {
     })();
   });
 }
-
