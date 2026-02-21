@@ -9,11 +9,10 @@ export const TextContentTool = createComponent(({ selectedTexts$ }: { selectedTe
       if (selectedTexts.length === 0) return html``;
       return html`
         <div class="text-content-section">
-          <h3>Text Content</h3>
           ${selectedTexts.map(
             (txt: TextItem) => html`
               <div class="text-item-content">
-                <h4>${txt.title}</h4>
+                <h3>${txt.title}</h3>
                 <div class="text-content">${txt.content}</div>
               </div>
             `,

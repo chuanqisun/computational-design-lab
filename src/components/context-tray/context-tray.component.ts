@@ -12,6 +12,7 @@ import { MoodScanTool } from "./tools/mood-scan.tool";
 import { RenderTool } from "./tools/render.tool";
 import { TextContentTool } from "./tools/text-content.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
+import { WriterTool } from "./tools/writer.tool";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
@@ -35,6 +36,7 @@ export const ContextTrayComponent = createComponent(
     const moodScanUI = MoodScanTool({ selectedImages$, items$, apiKeys$ });
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
+    const writerToolUI = WriterTool({ items$, apiKeys$ });
     const canvasToolUI = CanvasTool({ items$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
@@ -44,8 +46,9 @@ export const ContextTrayComponent = createComponent(
         return html`<aside class="context-tray">
           <p>${totalSelected} selected</p>
           <details class="tool-container" open>
-            <summary>Render</summary>
+            <summary>New</summary>
             <div class="tool-body">${renderToolUI}</div>
+            <div class="tool-body">${writerToolUI}</div>
           </details>
           ${selectedImages.length > 0
             ? html` <details class="tool-container" open>
