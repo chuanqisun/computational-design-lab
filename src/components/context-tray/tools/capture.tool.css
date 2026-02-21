@@ -1,0 +1,63 @@
+.capture-tool {
+  display: grid;
+  gap: 1ch;
+
+  .capture-tool-dialog-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .capture-tool-header {
+    border-bottom: 1px solid #ccc;
+    padding: 1ch 2ch;
+    flex-shrink: 0;
+  }
+
+  .capture-tool-content {
+    display: grid;
+    align-content: start;
+    gap: 1ch;
+    padding: 1ch 2ch;
+    overflow: auto;
+    flex: 1;
+  }
+
+  .capture-tool-video {
+    width: 100%;
+    max-width: 48ch;
+    height: auto;
+    border: 1px solid #ccc;
+  }
+
+  .capture-tool-previews {
+    display: grid;
+    gap: 1ch;
+  }
+
+  .capture-tool-preview {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  .capture-tool-preview img {
+    width: 4ch;
+    height: 4ch;
+    object-fit: cover;
+    border: 1px solid #ccc;
+  }
+
+  .capture-tool-menu {
+    display: flex;
+    gap: 1ch;
+    margin: 0;
+    padding: 0;
+  }
+
+  .capture-tool-footer {
+    border-top: 1px solid #ccc;
+    padding: 1ch 2ch;
+    flex-shrink: 0;
+  }
+}

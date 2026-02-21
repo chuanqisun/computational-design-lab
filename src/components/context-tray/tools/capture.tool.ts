@@ -4,7 +4,7 @@ import type { PendingPhoto } from "../../../lib/studio-types";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
-import "./scan.tool.css";
+import "./capture.tool.css";
 
 const createThumbnail = (fullDataUrl: string) =>
   new Promise<string>((resolve, reject) => {
@@ -29,12 +29,12 @@ const createThumbnail = (fullDataUrl: string) =>
     img.src = fullDataUrl;
   });
 
-export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<CanvasItem[]> }) => {
+export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubject<CanvasItem[]> }) => {
   const pendingPhotos$ = new BehaviorSubject<PendingPhoto[]>([]);
   const stream$ = new BehaviorSubject<MediaStream | null>(null);
 
   const closeDialog = () => {
-    const dialog = document.getElementById("scan-tool-dialog") as HTMLDialogElement | null;
+    const dialog = document.getElementById("capture-tool-dialog") as HTMLDialogElement | null;
     if (dialog?.open) {
       dialog.close();
     }
@@ -49,12 +49,12 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
   };
 
   const openFilePicker = () => {
-    const input = document.getElementById("scan-tool-file-input") as HTMLInputElement | null;
+    const input = document.getElementById("capture-tool-file-input") as HTMLInputElement | null;
     input?.click();
   };
 
   const openDialog = () => {
-    const dialog = document.getElementById("scan-tool-dialog") as HTMLDialogElement | null;
+    const dialog = document.getElementById("capture-tool-dialog") as HTMLDialogElement | null;
     if (!dialog) return;
     if (!dialog.open) {
       pendingPhotos$.next([]);
@@ -97,7 +97,7 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
       stream$.next(stream);
 
       requestAnimationFrame(() => {
-        const video = document.getElementById("scan-tool-video") as HTMLVideoElement | null;
+        const video = document.getElementById("capture-tool-video") as HTMLVideoElement | null;
         if (video) {
           video.srcObject = stream;
         }
@@ -108,7 +108,7 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
   };
 
   const captureFromCamera = async () => {
-    const video = document.getElementById("scan-tool-video") as HTMLVideoElement | null;
+    const video = document.getElementById("capture-tool-video") as HTMLVideoElement | null;
     if (!video?.videoWidth || !video.videoHeight) return;
 
     const canvas = document.createElement("canvas");
@@ -154,7 +154,7 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
       isSelected: false,
       zIndex: maxZ + index + 1,
       metadata: {
-        source: "scan-tool",
+        source: "capture-tool",
         thumbnailUrl: photo.thumbnailUrl,
       },
     }));
@@ -168,7 +168,7 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
   const stopCameraEffect$ = stream$.pipe(
     tap((stream) => {
       if (stream) return;
-      const video = document.getElementById("scan-tool-video") as HTMLVideoElement | null;
+      const video = document.getElementById("capture-tool-video") as HTMLVideoElement | null;
       if (video) {
         video.srcObject = null;
       }
@@ -179,17 +179,17 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
   const template$ = combineLatest([pendingPhotos$, stream$]).pipe(
     map(([pendingPhotos, stream]) => {
       return html`
-        <div class="scan-tool">
+        <div class="capture-tool">
           <button @click=${openDialog}>Capture</button>
 
-          <dialog id="scan-tool-dialog" @close=${stopCamera}>
-            <div class="scan-tool-dialog-body">
-              <header class="scan-tool-header">
+          <dialog id="capture-tool-dialog" @close=${stopCamera}>
+            <div class="capture-tool-dialog-body">
+              <header class="capture-tool-header">
                 <h3>Capture</h3>
               </header>
 
               <input
-                id="scan-tool-file-input"
+                id="capture-tool-file-input"
                 type="file"
                 accept="image/*"
                 multiple
@@ -197,8 +197,8 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
                 hidden
               />
 
-              <section class="scan-tool-content">
-                <menu class="scan-tool-menu">
+              <section class="capture-tool-content">
+                <menu class="capture-tool-menu">
                   <button @click=${openFilePicker}>Upload</button>
                   ${stream
                     ? html`<button @click=${captureFromCamera}>Capture</button>
@@ -207,14 +207,14 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
                 </menu>
 
                 ${stream
-                  ? html`<video id="scan-tool-video" autoplay playsinline class="scan-tool-video"></video>`
+                  ? html`<video id="capture-tool-video" autoplay playsinline class="capture-tool-video"></video>`
                   : html``}
                 ${pendingPhotos.length > 0
                   ? html`
-                      <div class="scan-tool-previews">
+                      <div class="capture-tool-previews">
                         ${pendingPhotos.map(
                           (photo) => html`
-                            <div class="scan-tool-preview">
+                            <div class="capture-tool-preview">
                               <img src=${photo.thumbnailUrl} alt="Pending scan" />
                               <button @click=${() => removePending(photo.id)}>Remove</button>
                             </div>
@@ -225,8 +225,8 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
                   : html``}
               </section>
 
-              <footer class="scan-tool-footer">
-                <menu class="scan-tool-menu">
+              <footer class="capture-tool-footer">
+                <menu class="capture-tool-menu">
                   <button ?disabled=${pendingPhotos.length === 0} @click=${commitPhotos}>Confirm</button>
                   <button @click=${closeDialog}>Close</button>
                 </menu>

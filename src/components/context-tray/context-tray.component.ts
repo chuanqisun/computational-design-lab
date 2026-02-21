@@ -6,10 +6,10 @@ import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
 import { CanvasTool } from "./tools/canvas.tool";
+import { CaptureTool } from "./tools/capture.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { FileTool } from "./tools/file.tool";
 import { RenderTool } from "./tools/render.tool";
-import { ScanTool } from "./tools/scan.tool";
 import { TextContentTool } from "./tools/text-content.tool";
 import { UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
@@ -38,7 +38,7 @@ export const ContextTrayComponent = createComponent(
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
-    const scanToolUI = ScanTool({ items$ });
+    const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
 
     const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
@@ -49,9 +49,9 @@ export const ContextTrayComponent = createComponent(
           <p>${totalSelected} selected</p>
           <details class="tool-container" open>
             <summary>New</summary>
+            <div class="tool-body">${captureToolUI}</div>
             <div class="tool-body">${renderToolUI}</div>
             <div class="tool-body">${writerToolUI}</div>
-            <div class="tool-body">${scanToolUI}</div>
           </details>
           ${selectedImages.length > 0
             ? html` <details class="tool-container" open>
