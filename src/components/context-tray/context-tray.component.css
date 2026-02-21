@@ -1,19 +1,11 @@
 .context-tray {
   display: grid;
 
-  .blend-section {
-    margin-top: 1rem;
-  }
-
   .blend-section textarea {
     width: 100%;
     min-height: 2lh;
     field-sizing: content;
     resize: none;
-  }
-
-  .blend-section button {
-    margin-top: 0.5rem;
   }
 
   .text-content {

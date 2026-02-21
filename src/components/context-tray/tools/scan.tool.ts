@@ -180,12 +180,12 @@ export const ScanTool = createComponent(({ items$ }: { items$: BehaviorSubject<C
     map(([pendingPhotos, stream]) => {
       return html`
         <div class="scan-tool">
-          <button @click=${openDialog}>Scan</button>
+          <button @click=${openDialog}>Capture</button>
 
           <dialog id="scan-tool-dialog" @close=${stopCamera}>
             <div class="scan-tool-dialog-body">
               <header class="scan-tool-header">
-                <h3>Scan</h3>
+                <h3>Capture</h3>
               </header>
 
               <input
