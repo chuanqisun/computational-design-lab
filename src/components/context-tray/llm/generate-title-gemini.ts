@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Observable } from "rxjs";
 import { progress$ } from "../../progress/progress";
 
-export function generateTitle(input: { text: string; apiKey: string }): Observable<string> {
+export function generateTitle$(input: { text: string; apiKey: string }): Observable<string> {
   return new Observable<string>((subscriber) => {
     progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
 
