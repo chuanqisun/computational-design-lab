@@ -8,10 +8,10 @@ import { BlendTool } from "./tools/blend.tool";
 import { CanvasTool } from "./tools/canvas.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan";
 import { FileTool } from "./tools/file.tool";
-import { MoodScanTool } from "./tools/mood-scan.tool";
 import { RenderTool } from "./tools/render.tool";
 import { ScanTool } from "./tools/scan.tool";
 import { TextContentTool } from "./tools/text-content.tool";
+import { UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
 import { WriterTool } from "./tools/writer.tool";
 
@@ -34,7 +34,7 @@ export const ContextTrayComponent = createComponent(
     const textContentUI = TextContentTool({ selectedTexts$ });
     const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selectedImages$, items$, apiKeys$ });
-    const moodScanUI = MoodScanTool({ selectedImages$, items$, apiKeys$ });
+    const userTestingUI = UserTestingTool({ selectedImages$, items$, apiKeys$ });
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
@@ -55,12 +55,12 @@ export const ContextTrayComponent = createComponent(
           </details>
           ${selectedImages.length > 0
             ? html` <details class="tool-container" open>
-                  <summary>Conceptual Scan</summary>
+                  <summary>Scan</summary>
                   <div class="tool-body">${conceptualScanUI}</div>
                 </details>
                 <details class="tool-container" open>
-                  <summary>Mood Scan</summary>
-                  <div class="tool-body">${moodScanUI}</div>
+                  <summary>User testing</summary>
+                  <div class="tool-body">${userTestingUI}</div>
                 </details>`
             : nothing}
           ${selectedImages.length > 1

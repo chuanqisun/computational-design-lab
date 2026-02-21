@@ -17,7 +17,7 @@ import { sortItemsAlongAxis } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
 import { submitTask } from "../tasks";
-import "./mood-scan.css";
+import "./user-testing.css";
 
 interface MoodEntry {
   mood: string;
@@ -29,7 +29,7 @@ interface MoodResult {
   moods: MoodEntry[];
 }
 
-export const MoodScanTool = createComponent(
+export const UserTestingTool = createComponent(
   ({
     selectedImages$,
     apiKeys$,
