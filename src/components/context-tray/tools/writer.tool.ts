@@ -1,14 +1,5 @@
 import { html } from "lit-html";
-import {
-  BehaviorSubject,
-  filter,
-  ignoreElements,
-  map,
-  mergeWith,
-  tap,
-  withLatestFrom,
-  type Observable,
-} from "rxjs";
+import { BehaviorSubject, filter, ignoreElements, map, mergeWith, tap, withLatestFrom, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
