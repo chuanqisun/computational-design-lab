@@ -7,7 +7,7 @@ import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
 import { CanvasTool } from "./tools/canvas.tool";
 import { CaptureTool } from "./tools/capture.tool";
-import { ConceptualScanTool } from "./tools/conceptual-scan";
+import { ConceptualScanTool } from "./tools/conceptual-scan.tool";
 import { FileTool } from "./tools/file.tool";
 import { RenderTool } from "./tools/render.tool";
 import { TextContentTool } from "./tools/text-content.tool";
@@ -31,7 +31,7 @@ export const ContextTrayComponent = createComponent(
     const selectedTexts$ = texts$.pipe(map((texts) => texts.filter((txt: TextItem) => txt.isSelected)));
 
     const conceptualScanUI = ConceptualScanTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
-    const textContentUI = TextContentTool({ selectedTexts$ });
+    const textContentUI = TextContentTool({ selectedTexts$, items$ });
     const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
     const userTestingUI = UserTestingTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });

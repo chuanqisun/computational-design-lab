@@ -1,0 +1,32 @@
+.text-content-tool {
+  .text-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .input-group label {
+    font-size: 0.8rem;
+    color: #666;
+  }
+
+  .input-group input,
+  .input-group textarea {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .input-group textarea {
+    min-height: 100px;
+    resize: vertical;
+    field-sizing: content;
+  }
+}

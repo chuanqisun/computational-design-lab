@@ -16,7 +16,7 @@ import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanConcepts$, type ConceptualScanInput } from "../llm/scan-concepts";
 import { submitTask } from "../tasks";
-import "./conceptual-scan.css";
+import "./conceptual-scan.tool.css";
 
 export const ConceptualScanTool = createComponent(
   ({
