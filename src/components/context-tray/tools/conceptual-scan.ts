@@ -32,22 +32,57 @@ export const ConceptualScanTool = createComponent(
   }) => {
     const scanTypes = [
       {
-        id: "emotional-resonance",
-        label: "Emotional resonance",
+        id: "emotions",
+        label: "Emotions",
         instruction:
-          "Analyze the selected items and identify the emotional qualities they evoke. Focus on feelings, moods, and psychological responses that users might experience when interacting with these design elements.",
+          "Analyze the selected items and describe how people feel when interacting with them. Focus on emotional responses, moods, and psychological impact.",
       },
       {
-        id: "material-properties",
-        label: "Material properties",
+        id: "associations",
+        label: "Associations",
         instruction:
-          "Examine the selected items and analyze their material characteristics. Focus on texture, weight, durability, sustainability, tactile qualities, and how the materials contribute to the overall design experience.",
+          "Identify what concepts, objects, memories, or cultural references people associate with the selected items.",
       },
       {
-        id: "feature-detection",
-        label: "Feature detection",
+        id: "symbolism",
+        label: "Symbolism",
         instruction:
-          "Scan the selected items for technological features and interaction capabilities. Identify user interface elements, functional components, interaction methods, and innovative technologies that enable user engagement.",
+          "Extract symbols, icons, and abstract meanings from the selected items. What do these elements represent metaphorically?",
+      },
+      {
+        id: "shape",
+        label: "Shape",
+        instruction: "Analyze the geometric shapes, contours, silhouettes, and profiles present in the selected items.",
+      },
+      {
+        id: "material",
+        label: "Material",
+        instruction:
+          "Identify the materials involved in or inspired by the selected items. Focus on physical properties and material expression.",
+      },
+      {
+        id: "color",
+        label: "Color",
+        instruction:
+          "Analyze the color palette present in the selected items and any colors associated with the underlying concepts.",
+      },
+      {
+        id: "tactility",
+        label: "Tactility",
+        instruction:
+          "Describe how the selected items would feel to the touch. Focus on texture, temperature, hardness, and surface finish.",
+      },
+      {
+        id: "acoustics",
+        label: "Acoustics",
+        instruction:
+          "Imagine the sounds associated with the selected items. What do people hear when using or interacting with them?",
+      },
+      {
+        id: "interactions",
+        label: "Interactions",
+        instruction:
+          "Describe how people interact with the selected items. Focus on gestures, ergonomics, and functional usage patterns.",
       },
     ];
 
