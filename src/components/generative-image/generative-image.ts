@@ -2,9 +2,12 @@ import { html, render } from "lit-html";
 import { combineLatest, concat, from, of, Subject } from "rxjs";
 import { catchError, distinctUntilChanged, map, switchMap, tap } from "rxjs/operators";
 import { getCachedImage, setCachedImage } from "../../lib/persistence";
-import { generateImage as generateImageFlux, type FluxConnection } from "../design/generate-image-flux";
 import { generateImage as generateImageGemini } from "../design/generate-image-gemini";
 import "./generative-image.css";
+
+export interface GenerativeImageProvider {
+  apiKey: string;
+}
 
 type Status = "empty" | "loading" | "error" | "success";
 
@@ -15,8 +18,7 @@ interface ImageState {
 }
 
 interface ImageConnections {
-  flux: FluxConnection;
-  gemini: FluxConnection;
+  gemini: GenerativeImageProvider;
 }
 
 export class GenerativeImageElement extends HTMLElement {
@@ -102,10 +104,8 @@ export class GenerativeImageElement extends HTMLElement {
 
             try {
               const connections = GenerativeImageElement.getConnections();
-              const isFlux = attrs.model && attrs.model.startsWith("black-forest-labs/");
-              const useGemini = !attrs.model || !isFlux;
-              const connection = useGemini ? connections.gemini : connections.flux;
-              const generateFn = useGemini ? generateImageGemini : generateImageFlux;
+              const connection = connections.gemini;
+              const generateFn = generateImageGemini;
 
               const generation$ = generateFn(connection, {
                 prompt: attrs.prompt,
