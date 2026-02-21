@@ -4,7 +4,7 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { generateCaption } from "../llm/generate-caption";
+import { generateTitle } from "../llm/generate-title-gemini";
 import { submitTask } from "../tasks";
 
 export const WriterTool = createComponent(
@@ -23,7 +23,7 @@ export const WriterTool = createComponent(
           return;
         }
 
-        const task$ = generateCaption({ text: trimmed, apiKey: apiKeys.gemini }).pipe(
+        const task$ = generateTitle({ text: trimmed, apiKey: apiKeys.gemini }).pipe(
           map((caption) => {
             const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
             const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };

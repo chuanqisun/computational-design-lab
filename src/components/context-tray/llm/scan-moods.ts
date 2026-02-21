@@ -1,15 +1,15 @@
 import { GoogleGenAI, type Schema, Type } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
-import type { ImageItem } from "../../canvas/canvas.component";
+import type { ImageItem, TextItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 export interface MoodResult {
-  imageId: string;
+  itemId: string;
   moods: Array<{ mood: string; arousal: number }>;
 }
 
-export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observable<MoodResult> {
+export function scanMoods$(inputs: { item: ImageItem | TextItem; apiKey: string }): Observable<MoodResult> {
   return new Observable<MoodResult>((subscriber) => {
     const ai = new GoogleGenAI({ apiKey: inputs.apiKey });
     const parser = new JSONParser();
@@ -20,7 +20,7 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
         const moodEntry = entry.value as unknown as { mood: string; arousal: number };
         if (moodEntry.mood && typeof moodEntry.arousal === "number") {
           if (!currentResult) {
-            currentResult = { imageId: inputs.image.id, moods: [] };
+            currentResult = { itemId: inputs.item.id, moods: [] };
           }
           currentResult.moods.push(moodEntry);
         }
@@ -48,10 +48,17 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
           required: ["moods"],
         };
 
-        const developerPrompt = `Analyze the provided image and identify 3-5 moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.`;
+        const developerPrompt = `Analyze the provided item and identify 3-5 moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.`;
 
-        const base64Data = inputs.image.src.replace(/^data:image\/\w+;base64,/, "");
-        const mimeType = inputs.image.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+        const parts: any[] = [{ text: "Analyze this item for moods and arousal levels." }];
+
+        if (inputs.item.type === "image") {
+          const base64Data = inputs.item.src.replace(/^data:image\/\w+;base64,/, "");
+          const mimeType = inputs.item.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+          parts.push({ inlineData: { data: base64Data, mimeType } });
+        } else if (inputs.item.type === "text") {
+          parts.push({ text: `Title: ${inputs.item.title}\nContent: ${inputs.item.content}` });
+        }
 
         const response = await ai.models.generateContentStream({
           model: "gemini-2.5-flash",
@@ -63,10 +70,7 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
           contents: [
             {
               role: "user",
-              parts: [
-                { text: "Analyze this image for moods and arousal levels." },
-                { inlineData: { data: base64Data, mimeType } },
-              ],
+              parts: parts,
             },
           ],
         });
@@ -91,7 +95,7 @@ export function scanMoods$(inputs: { image: ImageItem; apiKey: string }): Observ
 }
 
 export function scanMoodsSupervised$(inputs: {
-  image: ImageItem;
+  item: ImageItem | TextItem;
   apiKey: string;
   requiredList?: string[];
 }): Observable<MoodResult> {
@@ -105,7 +109,7 @@ export function scanMoodsSupervised$(inputs: {
         const moodEntry = entry.value as unknown as { mood: string; arousal: number };
         if (moodEntry.mood && typeof moodEntry.arousal === "number") {
           if (!currentResult) {
-            currentResult = { imageId: inputs.image.id, moods: [] };
+            currentResult = { itemId: inputs.item.id, moods: [] };
           }
           currentResult.moods.push(moodEntry);
         }
@@ -120,13 +124,13 @@ export function scanMoodsSupervised$(inputs: {
         if (inputs.requiredList && inputs.requiredList.length > 0) {
           const requiredListFormatted = inputs.requiredList.map((m) => `"${m}"`).join(", ");
           promptParts.push(
-            `Analyze the provided image and assign an arousal level to each of the following moods: ${requiredListFormatted}.`,
+            `Analyze the provided item and assign an arousal level to each of the following moods: ${requiredListFormatted}.`,
           );
           promptParts.push(
-            `For each mood in the list, provide the exact mood string and an arousal level from 1 to 10, where 1 means the image has very low intensity of that mood and 10 means the image has very high intensity of that mood.`,
+            `For each mood in the list, provide the exact mood string and an arousal level from 1 to 10, where 1 means the item has very low intensity of that mood and 10 means the item has very high intensity of that mood.`,
           );
         } else {
-          promptParts.push("Analyze the provided image and identify 3-5 moods it evokes.");
+          promptParts.push("Analyze the provided item and identify 3-5 moods it evokes.");
           promptParts.push(
             "For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.",
           );
@@ -152,8 +156,15 @@ export function scanMoodsSupervised$(inputs: {
           required: ["moods"],
         };
 
-        const base64Data = inputs.image.src.replace(/^data:image\/\w+;base64,/, "");
-        const mimeType = inputs.image.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+        const parts: any[] = [{ text: "Analyze this item for moods and arousal levels." }];
+
+        if (inputs.item.type === "image") {
+          const base64Data = inputs.item.src.replace(/^data:image\/\w+;base64,/, "");
+          const mimeType = inputs.item.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+          parts.push({ inlineData: { data: base64Data, mimeType } });
+        } else if (inputs.item.type === "text") {
+          parts.push({ text: `Title: ${inputs.item.title}\nContent: ${inputs.item.content}` });
+        }
 
         const response = await ai.models.generateContentStream({
           model: "gemini-2.5-flash",
@@ -165,10 +176,7 @@ export function scanMoodsSupervised$(inputs: {
           contents: [
             {
               role: "user",
-              parts: [
-                { text: "Analyze this image for moods and arousal levels." },
-                { inlineData: { data: base64Data, mimeType } },
-              ],
+              parts: parts,
             },
           ],
         });

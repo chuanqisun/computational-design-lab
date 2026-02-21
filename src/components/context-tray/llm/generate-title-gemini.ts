@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Observable } from "rxjs";
 import { progress$ } from "../../progress/progress";
 
-export function generateCaption(input: { text: string; apiKey: string }): Observable<string> {
+export function generateTitle(input: { text: string; apiKey: string }): Observable<string> {
   return new Observable<string>((subscriber) => {
     progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
 
@@ -16,7 +16,7 @@ export function generateCaption(input: { text: string; apiKey: string }): Observ
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-2.5-flash-lite";
+        const model = "gemini-3-flash-preview";
 
         const response = await ai.models.generateContentStream({
           model,
@@ -29,7 +29,7 @@ export function generateCaption(input: { text: string; apiKey: string }): Observ
               role: "user",
               parts: [
                 {
-                  text: `Create one short canvas caption (max 8 words) from this text. Return caption only, no quotes.\n\n${input.text}`,
+                  text: `One word/short phrase summary of text. Return text directly, no quotes.\n\n${input.text}`,
                 },
               ],
             },

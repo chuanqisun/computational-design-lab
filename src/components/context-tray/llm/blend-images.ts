@@ -1,13 +1,17 @@
 import { GoogleGenAI, type Part } from "@google/genai";
 import { Observable } from "rxjs";
-import type { ImageItem } from "../../canvas/canvas.component";
+import type { ImageItem, TextItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 /**
- * Use Google Gen AI gemini flash 2.5 image model to blend images based on user provided instruction.
+ * Use Google Gen AI gemini flash 2.5 image model to blend items based on user provided instruction.
  * Returns the observable of image data url
  */
-export function blendImages(input: { instruction: string; images: ImageItem[]; apiKey: string }): Observable<string> {
+export function blendImages(input: {
+  instruction: string;
+  items: (ImageItem | TextItem)[];
+  apiKey: string;
+}): Observable<string> {
   return new Observable<string>((subscriber) => {
     progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
 
@@ -40,12 +44,18 @@ export function blendImages(input: { instruction: string; images: ImageItem[]; a
           return { mimeType, data };
         };
 
-        // Add images to parts
-        for (const image of input.images) {
-          const { mimeType, data } = parseDataUrl(image.src);
-          parts.push({
-            inlineData: { mimeType, data },
-          });
+        // Add items to parts
+        for (const item of input.items) {
+          if (item.type === "image") {
+            const { mimeType, data } = parseDataUrl(item.src);
+            parts.push({
+              inlineData: { mimeType, data },
+            });
+          } else if (item.type === "text") {
+            parts.push({
+              text: item.content,
+            });
+          }
         }
 
         const response = await ai.models.generateContentStream({

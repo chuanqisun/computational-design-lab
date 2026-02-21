@@ -33,8 +33,8 @@ export const ContextTrayComponent = createComponent(
     const conceptualScanUI = ConceptualScanTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
     const textContentUI = TextContentTool({ selectedTexts$ });
     const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
-    const blendToolUI = BlendTool({ selectedImages$, items$, apiKeys$ });
-    const userTestingUI = UserTestingTool({ selectedImages$, items$, apiKeys$ });
+    const blendToolUI = BlendTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
+    const userTestingUI = UserTestingTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
     const downloadToolTUI = FileTool({ selectedImages$ });
     const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
@@ -53,7 +53,7 @@ export const ContextTrayComponent = createComponent(
             <div class="tool-body">${renderToolUI}</div>
             <div class="tool-body">${writerToolUI}</div>
           </details>
-          ${selectedImages.length > 0
+          ${totalSelected > 0
             ? html` <details class="tool-container" open>
                   <summary>Scan</summary>
                   <div class="tool-body">${conceptualScanUI}</div>
@@ -63,7 +63,7 @@ export const ContextTrayComponent = createComponent(
                   <div class="tool-body">${userTestingUI}</div>
                 </details>`
             : nothing}
-          ${selectedImages.length > 1
+          ${totalSelected > 1
             ? html`<details class="tool-container" open>
                 <summary>Blend Tool</summary>
                 <div class="tool-body">${blendToolUI}</div>

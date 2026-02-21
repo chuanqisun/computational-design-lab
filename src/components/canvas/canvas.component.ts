@@ -3,7 +3,7 @@ import { repeat } from "lit-html/directives/repeat.js";
 import { BehaviorSubject, Subject, catchError, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
-import { generateTitle$ } from "../context-tray/llm/generate-title";
+import { generateTitle$ } from "../context-tray/llm/generate-title-openai";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
 import { getViewportCenter } from "./layout";

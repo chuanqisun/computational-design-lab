@@ -12,7 +12,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { ImageItem } from "../../canvas/canvas.component";
+import type { ImageItem, TextItem } from "../../canvas/canvas.component";
 import { sortItemsAlongAxis } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
@@ -25,17 +25,19 @@ interface MoodEntry {
 }
 
 interface MoodResult {
-  imageId: string;
+  itemId: string;
   moods: MoodEntry[];
 }
 
 export const UserTestingTool = createComponent(
   ({
     selectedImages$,
+    selectedTexts$,
     apiKeys$,
     items$,
   }: {
     selectedImages$: Observable<ImageItem[]>;
+    selectedTexts$: Observable<TextItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
     items$: BehaviorSubject<any[]>;
   }) => {
@@ -47,13 +49,17 @@ export const UserTestingTool = createComponent(
     const sortXMood$ = new BehaviorSubject<string | null>(null);
     const sortYMood$ = new BehaviorSubject<string | null>(null);
 
+    const selectedItems$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
+      map(([images, texts]) => [...images, ...texts]),
+    );
+
     // Load existing mood scan results from metadata
-    const loadExistingResults$ = selectedImages$.pipe(
-      tap((selectedImages) => {
+    const loadExistingResults$ = selectedItems$.pipe(
+      tap((selectedItems) => {
         const results = new Map<string, { mood: string; arousal: number }[]>();
-        selectedImages.forEach((img) => {
-          if (img.metadata?.moodScan) {
-            results.set(img.id, img.metadata.moodScan);
+        selectedItems.forEach((item) => {
+          if (item.metadata?.moodScan) {
+            results.set(item.id, item.metadata.moodScan);
           }
         });
         moodResults$.next(results);
@@ -63,9 +69,9 @@ export const UserTestingTool = createComponent(
 
     const scanEffect$ = scanAction$.pipe(
       filter((action) => action),
-      withLatestFrom(selectedImages$, apiKeys$, lockedMoods$),
-      tap(([_, selectedImages, apiKeys, lockedMoods]) => {
-        if (selectedImages.length === 0 || !apiKeys.gemini) {
+      withLatestFrom(selectedItems$, apiKeys$, lockedMoods$),
+      tap(([_, selectedItems, apiKeys, lockedMoods]) => {
+        if (selectedItems.length === 0 || !apiKeys.gemini) {
           return;
         }
 
@@ -73,15 +79,15 @@ export const UserTestingTool = createComponent(
 
         const requiredList = lockedMoods.size > 0 ? Array.from(lockedMoods) : undefined;
 
-        const tasks = selectedImages.map((image) => {
+        const tasks = selectedItems.map((item) => {
           const scanObservable$ = requiredList
             ? scanMoodsSupervised$({
-                image,
+                item,
                 apiKey: apiKeys.gemini!,
                 requiredList,
               })
             : scanMoods$({
-                image,
+                item,
                 apiKey: apiKeys.gemini!,
               });
 
@@ -89,21 +95,21 @@ export const UserTestingTool = createComponent(
             tap((result: MoodResult) => {
               // Update in-memory results
               const currentResults = moodResults$.value;
-              currentResults.set(result.imageId, result.moods);
+              currentResults.set(result.itemId, result.moods);
               moodResults$.next(new Map(currentResults));
 
               // Persist to metadata
               const currentItems = items$.value;
-              const updatedItems = currentItems.map((item) =>
-                item.id === result.imageId
+              const updatedItems = currentItems.map((currentItem) =>
+                currentItem.id === result.itemId
                   ? {
-                      ...item,
+                      ...currentItem,
                       metadata: {
-                        ...item.metadata,
+                        ...currentItem.metadata,
                         moodScan: result.moods,
                       },
                     }
-                  : item,
+                  : currentItem,
               );
               items$.next(updatedItems);
             }),
@@ -129,16 +135,16 @@ export const UserTestingTool = createComponent(
 
     const sortXEffect$ = sortXMood$.pipe(
       filter((mood) => mood !== null),
-      withLatestFrom(selectedImages$, moodResults$),
-      tap(([mood, selectedImages, moodResults]) => {
-        if (selectedImages.length < 2 || !mood) return;
+      withLatestFrom(selectedItems$, moodResults$),
+      tap(([mood, selectedItems, moodResults]) => {
+        if (selectedItems.length < 2 || !mood) return;
 
         const sorted = sortItemsAlongAxis({
           axis: "x",
-          items: selectedImages,
-          getPosition: (img) => img.x,
-          getValue: (img) => {
-            const moods = moodResults.get(img.id) || [];
+          items: selectedItems,
+          getPosition: (item) => item.x,
+          getValue: (item) => {
+            const moods = moodResults.get(item.id) || [];
             return moods.find((m) => m.mood === mood)?.arousal || 0;
           },
         });
@@ -156,16 +162,16 @@ export const UserTestingTool = createComponent(
 
     const sortYEffect$ = sortYMood$.pipe(
       filter((mood) => mood !== null),
-      withLatestFrom(selectedImages$, moodResults$),
-      tap(([mood, selectedImages, moodResults]) => {
-        if (selectedImages.length < 2 || !mood) return;
+      withLatestFrom(selectedItems$, moodResults$),
+      tap(([mood, selectedItems, moodResults]) => {
+        if (selectedItems.length < 2 || !mood) return;
 
         const sorted = sortItemsAlongAxis({
           axis: "y",
-          items: selectedImages,
-          getPosition: (img) => img.y,
-          getValue: (img) => {
-            const moods = moodResults.get(img.id) || [];
+          items: selectedItems,
+          getPosition: (item) => item.y,
+          getValue: (item) => {
+            const moods = moodResults.get(item.id) || [];
             return moods.find((m) => m.mood === mood)?.arousal || 0;
           },
         });
@@ -182,15 +188,15 @@ export const UserTestingTool = createComponent(
     );
 
     const template$ = combineLatest([
-      selectedImages$,
+      selectedItems$,
       moodResults$,
       scanning$,
       lockedMoods$,
       sortXMood$,
       sortYMood$,
     ]).pipe(
-      map(([selectedImages, moodResults, scanning, lockedMoods, _sortXMood, _sortYMood]) => {
-        if (selectedImages.length === 0) return html``;
+      map(([selectedItems, moodResults, scanning, lockedMoods, _sortXMood, _sortYMood]) => {
+        if (selectedItems.length === 0) return html``;
 
         const hasResults = moodResults.size > 0;
 
@@ -222,11 +228,11 @@ export const UserTestingTool = createComponent(
             ${hasResults
               ? html`
                   <div class="mood-results">
-                    ${selectedImages.length === 1
+                    ${selectedItems.length === 1
                       ? html`
                           <div class="single-image-results">
                             ${Array.from(moodResults.entries())
-                              .filter(([id]) => id === selectedImages[0].id)
+                              .filter(([id]) => id === selectedItems[0].id)
                               .map(
                                 ([_, moods]) => html`
                                   ${[...moods]
@@ -250,7 +256,7 @@ export const UserTestingTool = createComponent(
                                 const moodAverages = new Map<string, { total: number; count: number }>();
 
                                 for (const [id, moods] of moodResults.entries()) {
-                                  if (selectedImages.some((img) => img.id === id)) {
+                                  if (selectedItems.some((item) => item.id === id)) {
                                     for (const { mood, arousal } of moods) {
                                       const current = moodAverages.get(mood) || { total: 0, count: 0 };
                                       moodAverages.set(mood, {
