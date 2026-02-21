@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { Observable } from "rxjs";
 import { progress$ } from "../../progress/progress";
 
@@ -22,6 +22,9 @@ export function generateTitle$(input: { text: string; apiKey: string }): Observa
           model,
           config: {
             responseModalities: ["TEXT"],
+            thinkingConfig: {
+              thinkingLevel: ThinkingLevel.MINIMAL,
+            },
             abortSignal: abortController.signal,
           },
           contents: [

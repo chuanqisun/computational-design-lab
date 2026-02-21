@@ -1,4 +1,4 @@
-import { GoogleGenAI, type Schema, Type } from "@google/genai";
+import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
 import type { ImageItem, TextItem } from "../../canvas/canvas.component";
@@ -61,11 +61,14 @@ export function scanMoods$(inputs: { item: ImageItem | TextItem; apiKey: string 
         }
 
         const response = await ai.models.generateContentStream({
-          model: "gemini-2.5-flash",
+          model: "gemini-3-flash-preview",
           config: {
             responseMimeType: "application/json",
             responseSchema: schema,
             systemInstruction: developerPrompt,
+            thinkingConfig: {
+              thinkingLevel: ThinkingLevel.MINIMAL,
+            },
           },
           contents: [
             {

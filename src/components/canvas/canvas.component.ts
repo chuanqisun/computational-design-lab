@@ -3,7 +3,7 @@ import { repeat } from "lit-html/directives/repeat.js";
 import { BehaviorSubject, Subject, catchError, ignoreElements, map, mergeWith, of, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
-import { generateTitle$ } from "../context-tray/llm/generate-title-openai";
+import { generateTitle$ } from "../context-tray/llm/generate-title-gemini";
 import "./canvas.component.css";
 import { processClipboardPaste } from "./clipboard";
 import { getViewportCenter } from "./layout";
@@ -106,9 +106,9 @@ export const CanvasComponent = createComponent(
         props.items$.next([...props.items$.value, newText]);
 
         // Generate title for the new text item
-        const apiKey = props.apiKeys$.value.openai;
+        const apiKey = props.apiKeys$.value.gemini;
         if (apiKey) {
-          generateTitle$({ fullText: text, apiKey })
+          generateTitle$({ text, apiKey })
             .pipe(
               catchError(() => of("Text")), // Fallback to "Text" if generation fails
             )
