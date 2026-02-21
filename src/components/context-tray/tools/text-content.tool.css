@@ -1,9 +1,10 @@
 .text-content-tool {
+  display: grid;
+  gap: 1ch;
+
   .text-item-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
+    display: grid;
+    gap: 0.5ch;
   }
 
   .input-group {
@@ -25,8 +26,9 @@
   }
 
   .input-group textarea {
-    min-height: 100px;
-    resize: vertical;
+    min-height: 3ch;
+    resize: none;
     field-sizing: content;
+    max-height: 20ch;
   }
 }

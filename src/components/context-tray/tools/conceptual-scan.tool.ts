@@ -84,6 +84,12 @@ export const ConceptualScanTool = createComponent(
         instruction:
           "Describe how people interact with the selected items. Focus on gestures, ergonomics, and functional usage patterns.",
       },
+      {
+        id: "narrative",
+        label: "Narrative",
+        instruction:
+          "Create a narrative based on the selected items. Weave together the visual and textual elements into a cohesive story or scenario.",
+      },
     ];
 
     const scan$ = new BehaviorSubject<(typeof scanTypes)[number] | null>(null);

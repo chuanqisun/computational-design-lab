@@ -29,8 +29,9 @@ export const TextContentTool = createComponent(
               (txt) => html`
                 <div class="text-item-content">
                   <div class="input-group">
-                    <label>Title</label>
+                    <label for="title-${txt.id}">Title</label>
                     <input
+                      id="title-${txt.id}"
                       type="text"
                       .value=${txt.title}
                       @input=${(e: Event) =>
@@ -40,8 +41,9 @@ export const TextContentTool = createComponent(
                     />
                   </div>
                   <div class="input-group">
-                    <label>Content</label>
+                    <label for="content-${txt.id}">Content</label>
                     <textarea
+                      id="content-${txt.id}"
                       .value=${txt.content}
                       @input=${(e: Event) =>
                         updateItem(txt.id, {
