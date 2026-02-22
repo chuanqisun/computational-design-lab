@@ -10,6 +10,8 @@
   --color-error: #d73a49;
   --color-error-bg: #fff5f5;
   --color-error-border: #fdaeb7;
+  --section-header-background: #000;
+  --section-header-text-color: white;
   --page-background: white;
   --spacing-unit: 1ch;
 }

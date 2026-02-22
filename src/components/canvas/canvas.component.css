@@ -89,3 +89,59 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
+
+.card-open-button {
+  width: 100%;
+  padding: 0.25ch 0;
+  font-size: 0.8em;
+  border: none;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+}
+
+#card-detail-dialog {
+  .card-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1ch;
+    padding: 2ch;
+    max-width: 40rem;
+  }
+
+  .card-dialog-image {
+    width: 100%;
+    max-height: 50vh;
+    object-fit: contain;
+  }
+
+  .card-dialog-gen-image {
+    width: 100%;
+    max-height: 50vh;
+
+    img {
+      width: 100%;
+      max-height: 50vh;
+      object-fit: contain;
+    }
+  }
+
+  .card-dialog-title {
+    font-weight: bold;
+  }
+
+  .card-dialog-text {
+    color: var(--color-text-secondary);
+    white-space: pre-wrap;
+  }
+
+  .card-dialog-actions {
+    display: flex;
+    gap: 1ch;
+  }
+}

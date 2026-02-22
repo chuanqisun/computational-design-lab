@@ -1,11 +1,14 @@
 import { html } from "lit-html";
 import { repeat } from "lit-html/directives/repeat.js";
-import { BehaviorSubject, Subject, catchError, ignoreElements, map, mergeWith, of, tap } from "rxjs";
+import { BehaviorSubject, Subject, catchError, combineLatest, filter, ignoreElements, map, mergeWith, of, tap, withLatestFrom } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
+import { observe } from "../../sdk/observe-directive";
 import type { ApiKeys } from "../connections/storage";
 import { generateTitle$ } from "../context-tray/llm/generate-title-gemini";
+import { submitTask } from "../context-tray/tasks";
+import { generateImage, type GeminiConnection } from "../design/generate-image-gemini";
 import "./canvas.component.css";
-import { processClipboardPaste } from "./clipboard";
+import { copyItemsToClipboard, processClipboardPaste } from "./clipboard";
 import { getViewportCenter } from "./layout";
 import {
   analyzeClick,
@@ -70,9 +73,16 @@ export const CanvasComponent = createComponent(
     // Actions
     const pasteImage$ = new Subject<string>();
     const pasteText$ = new Subject<string>();
+    const pasteItems$ = new Subject<CanvasItem[]>();
     const moveItems$ = new Subject<{ moves: { id: string; x: number; y: number }[] }>();
     const deleteSelected$ = new Subject<void>();
     const updateCard$ = new Subject<{ id: string; updates: Partial<CanvasItem> }>();
+
+    // Card dialog state
+    const openedCardId$ = new BehaviorSubject<string | null>(null);
+    const dialogPrompt$ = new BehaviorSubject<string>("");
+    const isRegenerating$ = new BehaviorSubject<boolean>(false);
+    const regenerate$ = new BehaviorSubject<boolean>(false);
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
@@ -131,6 +141,33 @@ export const CanvasComponent = createComponent(
       }),
     );
 
+    const pasteItemsEffect$ = pasteItems$.pipe(
+      tap((pastedItems) => {
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+
+        // Calculate center of pasted items to offset them
+        const avgX = pastedItems.reduce((sum, i) => sum + i.x, 0) / pastedItems.length;
+        const avgY = pastedItems.reduce((sum, i) => sum + i.y, 0) / pastedItems.length;
+        const offsetX = center.x - avgX;
+        const offsetY = center.y - avgY;
+
+        // Deselect all existing items
+        const deselected = props.items$.value.map((item) => ({ ...item, isSelected: false }));
+
+        const newItems: CanvasItem[] = pastedItems.map((item, index) => ({
+          ...item,
+          id: `paste-${Date.now()}-${index}`,
+          x: item.x + offsetX,
+          y: item.y + offsetY,
+          isSelected: true,
+          zIndex: getNextZIndex() + index,
+        }));
+
+        props.items$.next([...deselected, ...newItems]);
+      }),
+    );
+
     const moveEffect$ = moveItems$.pipe(
       tap(({ moves }) => {
         const currentItems = props.items$.value;
@@ -157,6 +194,52 @@ export const CanvasComponent = createComponent(
         props.items$.next(updatedItems);
       }),
     );
+
+    const regenerateEffect$ = regenerate$.pipe(
+      filter((v) => v === true),
+      withLatestFrom(openedCardId$, dialogPrompt$, props.apiKeys$),
+      tap(([_, cardId, prompt, apiKeys]) => {
+        regenerate$.next(false);
+        if (!cardId || !prompt.trim() || !apiKeys.gemini) return;
+
+        isRegenerating$.next(true);
+        const connection: GeminiConnection = { apiKey: apiKeys.gemini };
+
+        const task$ = generateImage(connection, { prompt, width: 512, height: 512 }).pipe(
+          tap((result) => {
+            updateCard$.next({ id: cardId, updates: { imageSrc: result.url, imagePrompt: prompt } });
+            isRegenerating$.next(false);
+          }),
+          tap({ error: () => isRegenerating$.next(false) }),
+        );
+
+        submitTask(task$);
+      }),
+      ignoreElements(),
+    );
+
+    // Card dialog actions
+    const openCard = (item: CanvasItem) => {
+      openedCardId$.next(item.id);
+      dialogPrompt$.next(item.imagePrompt || "");
+      const dialog = document.getElementById("card-detail-dialog") as HTMLDialogElement | null;
+      dialog?.showModal();
+    };
+
+    const closeCardDialog = () => {
+      const dialog = document.getElementById("card-detail-dialog") as HTMLDialogElement | null;
+      dialog?.close();
+      openedCardId$.next(null);
+    };
+
+    const downloadImage = (src: string) => {
+      const link = document.createElement("a");
+      link.href = src;
+      link.download = `${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
       e.stopPropagation(); // Prevent canvas click when clicking on item
@@ -235,8 +318,37 @@ export const CanvasComponent = createComponent(
       }
     };
 
+    // Clipboard: copy
+    const handleCopy = (event: ClipboardEvent) => {
+      const selected = props.items$.value.filter((item) => item.isSelected);
+      if (selected.length === 0) return;
+      event.preventDefault();
+      copyItemsToClipboard(event, selected);
+    };
+
+    // Clipboard: cut
+    const handleCut = (event: ClipboardEvent) => {
+      const selected = props.items$.value.filter((item) => item.isSelected);
+      if (selected.length === 0) return;
+      event.preventDefault();
+      copyItemsToClipboard(event, selected);
+      deleteSelected$.next();
+    };
+
     // Handle paste event
     const handlePaste = (event: ClipboardEvent) => {
+      // Check for internal canvas items format first
+      const canvasData = event.clipboardData?.getData("text/x-canvas-items");
+      if (canvasData) {
+        try {
+          const items = JSON.parse(canvasData) as CanvasItem[];
+          if (Array.isArray(items) && items.length > 0) {
+            pasteItems$.next(items);
+            return;
+          }
+        } catch { /* fall through to external paste */ }
+      }
+
       processClipboardPaste(event).subscribe((action) => {
         if (action.type === "image") pasteImage$.next(action.src);
         else pasteText$.next(action.content);
@@ -254,6 +366,39 @@ export const CanvasComponent = createComponent(
       }
     };
 
+    // Card dialog template
+    const cardDialog$ = combineLatest([openedCardId$, items$, dialogPrompt$, isRegenerating$]).pipe(
+      map(([cardId, items, prompt, isRegenerating]) => {
+        const card = cardId ? items.find((i) => i.id === cardId) : null;
+        if (!card) return html``;
+
+        return html`
+          <div class="card-dialog-body">
+            ${card.imageSrc
+              ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
+              : card.imagePrompt
+                ? html`<generative-image class="card-dialog-gen-image" prompt="${card.imagePrompt}" width="512" height="512"></generative-image>`
+                : html``}
+            ${card.title ? html`<h3 class="card-dialog-title">${card.title}</h3>` : html``}
+            ${card.body ? html`<p class="card-dialog-text">${card.body}</p>` : html``}
+            <label>Image prompt</label>
+            <textarea
+              .value=${prompt}
+              @input=${(e: Event) => dialogPrompt$.next((e.target as HTMLTextAreaElement).value)}
+              placeholder="Describe image to generate..."
+            ></textarea>
+            <menu class="card-dialog-actions">
+              <button ?disabled=${isRegenerating || !prompt.trim()} @click=${() => regenerate$.next(true)}>
+                ${isRegenerating ? "Generating..." : "Regenerate"}
+              </button>
+              ${card.imageSrc ? html`<button @click=${() => downloadImage(card.imageSrc!)}>Download</button>` : html``}
+              <button @click=${closeCardDialog}>Close</button>
+            </menu>
+          </div>
+        `;
+      }),
+    );
+
     // Template
     const template$ = items$.pipe(
       map(
@@ -263,6 +408,8 @@ export const CanvasComponent = createComponent(
             data-canvas
             tabindex="0"
             @paste=${handlePaste}
+            @copy=${handleCopy}
+            @cut=${handleCut}
             @click=${handleCanvasClick}
             @keydown=${handleKeyDown}
           >
@@ -287,10 +434,18 @@ export const CanvasComponent = createComponent(
                     ${item.title ? html`<div class="card-title">${item.title}</div>` : html``}
                     ${item.body ? html`<div class="card-body">${item.body}</div>` : html``}
                   </div>
+                  <button
+                    class="card-open-button"
+                    @mousedown=${(e: MouseEvent) => e.stopPropagation()}
+                    @click=${(e: MouseEvent) => { e.stopPropagation(); openCard(item); }}
+                  >Open</button>
                 </div>
               `,
             )}
           </div>
+          <dialog id="card-detail-dialog" @close=${() => openedCardId$.next(null)}>
+            ${observe(cardDialog$)}
+          </dialog>
         `,
       ),
     );
@@ -300,9 +455,11 @@ export const CanvasComponent = createComponent(
       mergeWith(
         pasteEffect$.pipe(ignoreElements()),
         pasteTextEffect$.pipe(ignoreElements()),
+        pasteItemsEffect$.pipe(ignoreElements()),
         moveEffect$.pipe(ignoreElements()),
         deleteEffect$.pipe(ignoreElements()),
         updateCardEffect$.pipe(ignoreElements()),
+        regenerateEffect$,
       ),
     );
   },
