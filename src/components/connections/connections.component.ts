@@ -102,9 +102,7 @@ export const ConnectionsComponent = createComponent((props: ConnectionsComponent
   // Derived observables for template
   const isDisabled$ = testLoading$.pipe(
     mergeMap((loading) =>
-      apiKeys$.pipe(
-        map((apiKeys) => loading.openai || loading.gemini || (!apiKeys.openai && !apiKeys.gemini)),
-      ),
+      apiKeys$.pipe(map((apiKeys) => loading.openai || loading.gemini || (!apiKeys.openai && !apiKeys.gemini))),
     ),
   );
 

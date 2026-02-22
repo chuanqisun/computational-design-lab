@@ -89,6 +89,9 @@ export class GenerativeImageElement extends HTMLElement {
           switchMap((cachedUrl) => {
             // If we have a cached URL and it's NOT a retry, use it
             if (cachedUrl && attrs.retryCounter === 0) {
+              this.dispatchEvent(
+                new CustomEvent("image-loaded", { detail: { url: cachedUrl }, bubbles: true, composed: true }),
+              );
               return of({
                 status: "success" as Status,
                 imageUrl: cachedUrl,
@@ -116,6 +119,9 @@ export class GenerativeImageElement extends HTMLElement {
               }).pipe(
                 tap((result) => {
                   setCachedImage(cacheKey, result.url);
+                  this.dispatchEvent(
+                    new CustomEvent("image-loaded", { detail: { url: result.url }, bubbles: true, composed: true }),
+                  );
                 }),
                 map((result) => ({
                   status: "success" as Status,

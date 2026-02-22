@@ -1,8 +1,7 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, debounceTime, ignoreElements, map, merge, mergeWith, of, skip, switchMap } from "rxjs";
 import "./canvas-page.css";
-import { migrateItem, type CanvasItem } from "./components/canvas/canvas.component";
-import { CanvasComponent } from "./components/canvas/canvas.component";
+import { CanvasComponent, type CanvasItem } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, loadCanvasItems, saveCanvasItems, type ApiKeys } from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
@@ -25,11 +24,7 @@ GenerativeVideoElement.define(() => ({
 
 // Initialize items from IndexedDB (with migration)
 const items$ = new BehaviorSubject<CanvasItem[]>([]);
-loadCanvasItems().then((loadedItems) => {
-  if (loadedItems.length > 0) {
-    items$.next(loadedItems.map(migrateItem));
-  }
-});
+loadCanvasItems().then((loadedItems) => items$.next(loadedItems));
 
 // Auto-save items when they change (debounced)
 const autoSave$ = items$.pipe(
