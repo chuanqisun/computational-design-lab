@@ -1,0 +1,92 @@
+.design-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.design-tool .requirements-btn {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.design-tool .requirements-btn:hover {
+  background: var(--bg-surface-3);
+}
+
+.design-tool .generate-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.design-tool .num-designs-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.design-tool .generate-btn {
+  flex: 1;
+  padding: 8px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.design-tool .generate-btn:hover {
+  background: var(--primary-color-hover);
+}
+
+.requirements-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.option-btn {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-surface-2);
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.option-btn:hover {
+  background: var(--bg-surface-3);
+}
+
+.option-btn.selected {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.requirements-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
