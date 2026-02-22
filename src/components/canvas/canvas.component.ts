@@ -72,7 +72,11 @@ export function migrateItem(raw: any): CanvasItem {
 }
 
 export const CanvasComponent = createComponent(
-  (props: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
+  (props: {
+    items$: BehaviorSubject<CanvasItem[]>;
+    apiKeys$: BehaviorSubject<ApiKeys>;
+    interaction$?: Subject<"start" | "end">;
+  }) => {
     // Internal state
     const items$ = props.items$;
 
@@ -243,6 +247,7 @@ export const CanvasComponent = createComponent(
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
       if ((e.target as HTMLElement).closest("[data-card-open]")) return;
       e.stopPropagation();
+      props.interaction$?.next("start");
 
       const { isCtrl, isShift } = getModifierKeys(e);
       const currentState: SelectionState = {
@@ -293,6 +298,7 @@ export const CanvasComponent = createComponent(
       const handleMouseUp = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        props.interaction$?.next("end");
 
         if (hasMoved) {
           const newPositions = calculateFinalPositions(draggedData);

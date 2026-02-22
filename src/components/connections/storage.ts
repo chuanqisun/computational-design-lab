@@ -25,7 +25,7 @@ export function clearApiKeys(): void {
 interface MoodboardDB extends DBSchema {
   items: {
     key: string;
-    value: CanvasItem;
+    value: CanvasItem[];
   };
   "material-page": {
     key: string;
@@ -34,7 +34,8 @@ interface MoodboardDB extends DBSchema {
 }
 
 const DB_NAME = "moodboard-db";
-const DB_VERSION = 2; // Bump version to add store
+const DB_VERSION = 3;
+const CANVAS_ITEMS_KEY = "canvas-items";
 
 let dbPromise: Promise<IDBPDatabase<MoodboardDB>> | null = null;
 
@@ -42,9 +43,13 @@ function getDB(): Promise<IDBPDatabase<MoodboardDB>> {
   if (!dbPromise) {
     dbPromise = openDB<MoodboardDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        if (!db.objectStoreNames.contains("items")) {
-          db.createObjectStore("items", { keyPath: "id" });
+        if (oldVersion < 3) {
+          if (db.objectStoreNames.contains("items")) {
+            db.deleteObjectStore("items");
+          }
+          db.createObjectStore("items");
         }
+
         if (oldVersion < 2) {
           if (!db.objectStoreNames.contains("material-page")) {
             db.createObjectStore("material-page");
@@ -58,21 +63,14 @@ function getDB(): Promise<IDBPDatabase<MoodboardDB>> {
 
 export async function saveCanvasItems(items: CanvasItem[]): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction("items", "readwrite");
-
-  // Clear existing items
-  await tx.store.clear();
-
-  // Save all items
-  await Promise.all(items.map((item) => tx.store.put(item)));
-
-  await tx.done;
+  await db.put("items", items, CANVAS_ITEMS_KEY);
 }
 
 export async function loadCanvasItems(): Promise<CanvasItem[]> {
   try {
     const db = await getDB();
-    return await db.getAll("items");
+    const items = await db.get("items", CANVAS_ITEMS_KEY);
+    return items || [];
   } catch (error) {
     console.error("Failed to load canvas items:", error);
     return [];
@@ -81,7 +79,7 @@ export async function loadCanvasItems(): Promise<CanvasItem[]> {
 
 export async function clearCanvasItems(): Promise<void> {
   const db = await getDB();
-  await db.clear("items");
+  await db.delete("items", CANVAS_ITEMS_KEY);
 }
 
 // Material page persistence

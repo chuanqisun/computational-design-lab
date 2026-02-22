@@ -1,5 +1,22 @@
 import { html, render } from "lit-html";
-import { BehaviorSubject, debounceTime, ignoreElements, map, merge, mergeWith, of, skip, switchMap } from "rxjs";
+import {
+  BehaviorSubject,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  ignoreElements,
+  map,
+  merge,
+  mergeWith,
+  of,
+  scan,
+  shareReplay,
+  skip,
+  startWith,
+  Subject,
+  switchMap,
+  take,
+} from "rxjs";
 import "./canvas-page.css";
 import { CanvasComponent, type CanvasItem } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
@@ -25,13 +42,74 @@ GenerativeVideoElement.define(() => ({
 // Initialize items from IndexedDB (with migration)
 const items$ = new BehaviorSubject<CanvasItem[]>([]);
 loadCanvasItems().then((loadedItems) => items$.next(loadedItems));
+const canvasInteraction$ = new Subject<"start" | "end">();
+
+type PersistedCanvasItem = Omit<CanvasItem, "isSelected">;
+
+function toPersistedItems(items: CanvasItem[]): PersistedCanvasItem[] {
+  return items.map(({ isSelected: _isSelected, ...persisted }) => persisted);
+}
+
+function isSamePersistedItems(prev: PersistedCanvasItem[], curr: PersistedCanvasItem[]): boolean {
+  if (prev.length !== curr.length) return false;
+
+  for (let i = 0; i < prev.length; i += 1) {
+    const a = prev[i];
+    const b = curr[i];
+
+    if (
+      a.id !== b.id ||
+      a.x !== b.x ||
+      a.y !== b.y ||
+      a.width !== b.width ||
+      a.height !== b.height ||
+      a.zIndex !== b.zIndex ||
+      a.title !== b.title ||
+      a.body !== b.body ||
+      a.imageSrc !== b.imageSrc ||
+      a.imagePrompt !== b.imagePrompt
+    ) {
+      return false;
+    }
+
+    const aMetadata = a.metadata;
+    const bMetadata = b.metadata;
+
+    if (aMetadata !== bMetadata) {
+      if (!aMetadata || !bMetadata) return false;
+      if (JSON.stringify(aMetadata) !== JSON.stringify(bMetadata)) return false;
+    }
+  }
+
+  return true;
+}
+
+const isCanvasIdle$ = canvasInteraction$.pipe(
+  scan((activeCount, event) => {
+    if (event === "start") return activeCount + 1;
+    return Math.max(0, activeCount - 1);
+  }, 0),
+  map((activeCount) => activeCount === 0),
+  startWith(true),
+  distinctUntilChanged(),
+  shareReplay({ refCount: true, bufferSize: 1 }),
+);
 
 // Auto-save items when they change (debounced)
 const autoSave$ = items$.pipe(
   skip(1), // Skip initial empty value
-  debounceTime(250), // Wait 500ms after last change
+  map(toPersistedItems),
+  distinctUntilChanged(isSamePersistedItems),
   switchMap((items) =>
-    saveCanvasItems(items).catch((error) => {
+    isCanvasIdle$.pipe(
+      filter((isIdle) => isIdle),
+      take(1),
+      map(() => items),
+    ),
+  ),
+  debounceTime(250),
+  switchMap((items) =>
+    saveCanvasItems(items as CanvasItem[]).catch((error) => {
       console.error("Failed to save canvas items:", error);
     }),
   ),
@@ -40,7 +118,7 @@ const autoSave$ = items$.pipe(
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
-  const canvasUI = CanvasComponent({ items$, apiKeys$ });
+  const canvasUI = CanvasComponent({ items$, apiKeys$, interaction$: canvasInteraction$ });
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
