@@ -78,8 +78,17 @@ export function persistSubject<T>(subject: BehaviorSubject<T>, key: string): voi
     }
   });
 
+export function persistSubject<T>(subject: BehaviorSubject<T>, key: string): Promise<void> {
+  const loaded = get<T>(key).then((value) => {
+    if (value !== undefined) {
+      subject.next(value);
+    }
+  });
+
   // Persist changes, skipping the initial default value of the BehaviorSubject
   subject.pipe(skip(1)).subscribe((value) => {
     set(key, value);
   });
+
+  return loaded;
 }
