@@ -43,30 +43,28 @@ export const ContextTrayComponent = createComponent(
           ${totalSelected > 0
             ? html`
                 <section class="tool-section">
-                  <h2>Design</h2>
-                  <div class="tool-body">${designToolUI}</div>
+                  <h2>Visualize</h2>
+                  <div class="tool-body">${visualizeUI}</div>
                 </section>
                 <section class="tool-section">
                   <h2>Scan</h2>
                   <div class="tool-body">${conceptualScanUI}</div>
+                </section>
+                ${totalSelected > 1
+                  ? html`<section class="tool-section">
+                      <h2>Blend</h2>
+                      <div class="tool-body">${blendToolUI}</div>
+                    </section>`
+                  : nothing}
+                <section class="tool-section">
+                  <h2>Design</h2>
+                  <div class="tool-body">${designToolUI}</div>
                 </section>
                 <section class="tool-section">
                   <h2>User testing</h2>
                   <div class="tool-body">${userTestingUI}</div>
                 </section>
               `
-            : nothing}
-          ${totalSelected > 1
-            ? html`<section class="tool-section">
-                <h2>Blend</h2>
-                <div class="tool-body">${blendToolUI}</div>
-              </section>`
-            : nothing}
-          ${selectedWithText.length > 0
-            ? html`<section class="tool-section">
-                <h2>Visualize</h2>
-                <div class="tool-body">${visualizeUI}</div>
-              </section>`
             : nothing}
           <section class="tool-section">
             <h2>Canvas</h2>
