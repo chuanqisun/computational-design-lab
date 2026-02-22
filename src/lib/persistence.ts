@@ -70,14 +70,6 @@ export async function clearGalleryPersistence(): Promise<void> {
  * Synchronizes a BehaviorSubject with IndexedDB.
  * Loads the initial value from DB and subscribes to future changes.
  */
-export function persistSubject<T>(subject: BehaviorSubject<T>, key: string): void {
-  // Load initial value
-  get<T>(key).then((value) => {
-    if (value !== undefined) {
-      subject.next(value);
-    }
-  });
-
 export function persistSubject<T>(subject: BehaviorSubject<T>, key: string): Promise<void> {
   const loaded = get<T>(key).then((value) => {
     if (value !== undefined) {
