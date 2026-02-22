@@ -123,15 +123,6 @@
 }
 
 #card-detail-dialog {
-  position: fixed;
-  inset: 2ch;
-  width: auto;
-  height: auto;
-  max-width: none;
-  max-height: none;
-  border: 1px solid #ccc;
-  padding: 0;
-
   .card-dialog-body {
     height: 100%;
   }

@@ -220,7 +220,7 @@ export const CanvasComponent = createComponent(
     const openCard = (item: CanvasItem) => {
       openedCardId$.next(item.id);
       const dialog = document.getElementById("card-detail-dialog") as HTMLDialogElement | null;
-      if (dialog && !dialog.open) dialog.show();
+      if (dialog && !dialog.open) dialog.showModal();
     };
 
     const closeCardDialog = () => {
@@ -438,12 +438,7 @@ export const CanvasComponent = createComponent(
     const handleDialogClick = (e: MouseEvent) => {
       const dialog = e.currentTarget as HTMLDialogElement;
       const rect = dialog.getBoundingClientRect();
-      if (
-        e.clientX < rect.left ||
-        e.clientX > rect.right ||
-        e.clientY < rect.top ||
-        e.clientY > rect.bottom
-      ) {
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
         closeCardDialog();
       }
     };
