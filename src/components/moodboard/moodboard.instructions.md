@@ -24,7 +24,7 @@ We generate 5 initially, and 3 incrementally
 
 Artifact generation is single thread but we will receive incremental outputs (as we do in concept generation).
 
-Text-to-image generation happens automatically within the generative-image web component. Each artifact's description is passed as the prompt to the component, which handles the image generation process internally using the Together.ai API.
+Text-to-image generation happens automatically within the generative-image web component. Each artifact's description is passed as the prompt to the component, which handles the image generation process internally using the Gemini API.
 
 ## User control
 

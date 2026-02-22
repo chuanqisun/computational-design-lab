@@ -23,7 +23,6 @@ const saveState$ = new BehaviorSubject<void>(undefined);
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
-  flux: { apiKey: apiKeys$.value.together || "" },
   gemini: { apiKey: apiKeys$.value.gemini || "" },
 }));
 

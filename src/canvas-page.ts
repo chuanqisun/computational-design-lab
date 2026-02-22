@@ -16,7 +16,6 @@ import { observe } from "./sdk/observe-directive";
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
-  flux: { apiKey: loadApiKeys().together || "" },
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 

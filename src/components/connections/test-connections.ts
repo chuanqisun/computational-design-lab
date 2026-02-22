@@ -4,7 +4,7 @@ import { from, Observable } from "rxjs";
 import type { ApiKeys } from "./storage";
 
 export interface TestConnectionRequest {
-  provider: "openai" | "together" | "gemini";
+  provider: "openai" | "gemini";
   apiKeys: ApiKeys;
 }
 

@@ -25,7 +25,7 @@ A Human-AI co-iterative loop. Non-linear progression. End with product requireme
 ## Model access
 
 - Use OpenAI SDK response API for text gen
-- Use Together.ai for image gen
+- Use Gemini for image gen
 
 ## OpenAI SDK docs
 
@@ -70,37 +70,6 @@ OUTPUT
 }
 ```
 
-## Together.ai docs
+## Gemini docs
 
-Models
-
-- Free model (strict rate limit, use for testing only): `black-forest-labs/FLUX.1-schnell-Free`
-- Low cost model: `black-forest-labs/FLUX.1-schnell`
-
-INPUT
-
-```ts
-import Together from "together-ai";
-
-const together = new Together();
-
-const response = await together.images.create({
-  model: "black-forest-labs/FLUX.1-schnell",
-  prompt: "",
-  steps: 3,
-});
-console.log(response.data[0].b64_json);
-```
-
-OUTPUT
-
-```json
-{
-  "data": [
-    {
-      "b64_json": "<base64-encoded-image-data>",
-      "revised_prompt": "<revised-prompt-if-applicable>"
-    }
-  ]
-}
-```
+See `src/components/connections/gemini.instructions.md` for Gemini docs.
