@@ -9,6 +9,7 @@ import { CanvasTool } from "./tools/canvas.tool";
 import { CaptureTool } from "./tools/capture.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan.tool";
 import { DesignTool } from "./tools/design.tool";
+import { IterateTool } from "./tools/iterate.tool";
 import { RenderTool } from "./tools/render.tool";
 import { UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
@@ -24,13 +25,14 @@ export const ContextTrayComponent = createComponent(
     const visualizeUI = VisualizeTool({ selectedWithText$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selected$, items$, apiKeys$ });
     const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
+    const iterateUI = IterateTool({ selected$, items$, apiKeys$ });
     const renderToolUI = RenderTool({ selected$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
 
     const template$ = combineLatest([selected$, selectedWithText$]).pipe(
-      map(([selected, selectedWithText]) => {
+      map(([selected, _selectedWithText]) => {
         const totalSelected = selected.length;
 
         return html`<aside class="context-tray">
@@ -63,6 +65,10 @@ export const ContextTrayComponent = createComponent(
                 <section class="tool-section">
                   <h2>User testing</h2>
                   <div class="tool-body">${userTestingUI}</div>
+                </section>
+                <section class="tool-section">
+                  <h2>Iterate</h2>
+                  <div class="tool-body">${iterateUI}</div>
                 </section>
               `
             : nothing}

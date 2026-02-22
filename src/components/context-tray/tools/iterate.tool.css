@@ -1,0 +1,11 @@
+.iterate-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+.iterate-tool .iterate-row {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
