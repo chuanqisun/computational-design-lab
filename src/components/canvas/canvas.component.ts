@@ -434,16 +434,9 @@ export const CanvasComponent = createComponent(
       }),
     );
 
-    // Close dialog when clicking outside (non-modal behavior)
+    // Close dialog when clicking on the dialog element directly (not its content)
     const handleDialogClick = (e: MouseEvent) => {
-      const dialog = e.currentTarget as HTMLDialogElement;
-      const rect = dialog.getBoundingClientRect();
-      if (
-        e.clientX < rect.left ||
-        e.clientX > rect.right ||
-        e.clientY < rect.top ||
-        e.clientY > rect.bottom
-      ) {
+      if (e.target === e.currentTarget) {
         closeCardDialog();
       }
     };

@@ -124,16 +124,19 @@
 
 #card-detail-dialog {
   position: fixed;
-  inset: 2ch;
-  width: auto;
-  height: auto;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
-  border: 1px solid #ccc;
-  padding: 0;
+  border: none;
+  padding: 2ch;
+  background: transparent;
 
   .card-dialog-body {
     height: 100%;
+    background: white;
+    border: 1px solid #ccc;
   }
 
   .card-dialog-layout {

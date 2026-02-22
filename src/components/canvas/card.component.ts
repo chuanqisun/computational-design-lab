@@ -34,8 +34,6 @@ export const CardComponent = createComponent(
       distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
     );
 
-    const isGenerating$ = new BehaviorSubject(false);
-
     // Effects
     const autoGenerateEffect$ = item$.pipe(
       withLatestFrom(props.apiKeys$),
@@ -50,7 +48,6 @@ export const CardComponent = createComponent(
       }),
       debounceTime(2000),
       tap(() => {
-        isGenerating$.next(true);
         progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       }),
       switchMap(([item, apiKeys]) => {
@@ -63,7 +60,6 @@ export const CardComponent = createComponent(
 
         return fillCard(content, apiKeys.gemini!).pipe(
           tap((updates) => {
-            isGenerating$.next(false);
             progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
             if (Object.keys(updates).length > 0) {
               props.onUpdate(updates);
@@ -71,7 +67,6 @@ export const CardComponent = createComponent(
           }),
           catchError((err) => {
             console.error("Auto-generate failed", err);
-            isGenerating$.next(false);
             progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
             return of(null);
           }),
