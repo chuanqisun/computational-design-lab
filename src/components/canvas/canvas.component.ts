@@ -562,6 +562,12 @@ export const CanvasComponent = createComponent(
           });
           return;
         }
+
+        if (key === "a") {
+          event.preventDefault();
+          props.items$.next(props.items$.value.map((item) => ({ ...item, isSelected: true })));
+          return;
+        }
       }
 
       if (event.key === "Delete" || event.key === "Backspace") {

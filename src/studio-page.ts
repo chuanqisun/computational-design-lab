@@ -30,17 +30,31 @@ const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
 const scannedPhotos$ = new BehaviorSubject<ScannedPhoto[]>([]);
 const apiKeys$ = new BehaviorSubject(loadApiKeys());
 
+const clearInputs = () => {
+  pickedColors$.next([]);
+  pickedMaterials$.next([]);
+  pickedSurfaceOptions$.next([]);
+  pickedMechanisms$.next([]);
+  pickedShapes$.next([]);
+  filterText$.next("");
+  customInstructions$.next("");
+  editInstructions$.next("");
+  scannedPhotos$.next([]);
+};
+
 // Persist state
-persistSubject(pickedColors$, "studio:pickedColors");
-persistSubject(pickedMaterials$, "studio:pickedMaterials");
-persistSubject(pickedSurfaceOptions$, "studio:pickedSurfaceOptions");
-persistSubject(pickedMechanisms$, "studio:pickedMechanisms");
-persistSubject(pickedShapes$, "studio:pickedShapes");
-persistSubject(customInstructions$, "studio:customInstructions");
-persistSubject(synthesisOutput$, "studio:synthesisOutput");
-persistSubject(editInstructions$, "studio:editInstructions");
-persistSubject(photoScene$, "studio:photoScene");
-persistSubject(photoGallery$, "studio:photoGallery");
+const persistenceReady = Promise.all([
+  persistSubject(pickedColors$, "studio:pickedColors"),
+  persistSubject(pickedMaterials$, "studio:pickedMaterials"),
+  persistSubject(pickedSurfaceOptions$, "studio:pickedSurfaceOptions"),
+  persistSubject(pickedMechanisms$, "studio:pickedMechanisms"),
+  persistSubject(pickedShapes$, "studio:pickedShapes"),
+  persistSubject(customInstructions$, "studio:customInstructions"),
+  persistSubject(synthesisOutput$, "studio:synthesisOutput"),
+  persistSubject(editInstructions$, "studio:editInstructions"),
+  persistSubject(photoScene$, "studio:photoScene"),
+  persistSubject(photoGallery$, "studio:photoGallery"),
+]);
 
 // Scan pipeline: parallel scans are additive-only with auto-dedup
 const scanTrigger$ = new Subject<ScannedPhoto>();
@@ -123,19 +137,11 @@ const resetButton = document.getElementById("reset-button");
 if (resetButton) {
   resetButton.addEventListener("click", async () => {
     if (!confirm("Are you sure you want to clear input? All input data will be lost.")) return;
-    pickedColors$.next([]);
-    pickedMaterials$.next([]);
-    pickedSurfaceOptions$.next([]);
-    pickedMechanisms$.next([]);
-    pickedShapes$.next([]);
-    filterText$.next("");
-    customInstructions$.next("");
+    clearInputs();
     synthesisOutput$.next("");
     isSynthesizing$.next(false);
-    editInstructions$.next("");
     conversationHistory$.next([]);
     photoScene$.next("Product stand by itself");
-    scannedPhotos$.next([]);
     await clearPersistenceExcept(["studio:photoGallery"]);
   });
 }
@@ -169,3 +175,52 @@ useSetupDialog({
 });
 
 render(Main(), document.getElementById("app")!);
+
+// Handle import from canvas via fromCanvasBlob query param
+const fromCanvasBlob = new URLSearchParams(window.location.search).get("fromCanvasBlob");
+if (fromCanvasBlob) {
+  persistenceReady.then(async () => {
+    const isDirty =
+      scannedPhotos$.value.length > 0 ||
+      pickedShapes$.value.length > 0 ||
+      pickedMaterials$.value.length > 0 ||
+      pickedColors$.value.length > 0 ||
+      pickedMechanisms$.value.length > 0;
+
+    if (isDirty && !confirm("Importing from canvas will replace all current Studio input. Continue?")) return;
+
+    try {
+      const response = await fetch(fromCanvasBlob);
+      const items: Array<{ title?: string; body?: string; imageSrc?: string; imagePrompt?: string }> =
+        await response.json();
+
+      clearInputs();
+
+      for (const item of items) {
+        if (!item.imageSrc) continue;
+        const photo: ScannedPhoto = {
+          id: `canvas-${crypto.randomUUID()}`,
+          thumbnailUrl: item.imageSrc,
+          fullDataUrl: item.imageSrc,
+          label: "scanning...",
+          isScanning: true,
+        };
+        scannedPhotos$.next([...scannedPhotos$.value, photo]);
+        scanTrigger$.next(photo);
+      }
+
+      const cardDescriptions = items
+        .filter((item) => item.title || item.body)
+        .map((item) => [item.title, item.body].filter(Boolean).join("\n"))
+        .join("\n\n");
+
+      if (cardDescriptions) {
+        customInstructions$.next(
+          `Design a bottle inspired by the following design concept(s):\n\n${cardDescriptions}\n\nUse these concepts to guide the bottle's form, material, texture, color, and overall aesthetic.`,
+        );
+      }
+    } catch (e) {
+      console.error("Failed to import from canvas:", e);
+    }
+  });
+}

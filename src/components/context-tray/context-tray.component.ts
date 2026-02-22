@@ -9,6 +9,7 @@ import { CanvasTool } from "./tools/canvas.tool";
 import { CaptureTool } from "./tools/capture.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan.tool";
 import { DesignTool } from "./tools/design.tool";
+import { ExportTool } from "./tools/export.tool";
 import { IterateTool } from "./tools/iterate.tool";
 import { RenderTool } from "./tools/render.tool";
 import { UserTestingTool } from "./tools/user-testing.tool";
@@ -30,6 +31,7 @@ export const ContextTrayComponent = createComponent(
     const writerToolUI = WriterTool({ items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
+    const exportToolUI = ExportTool({ items$ });
 
     const template$ = combineLatest([selected$, selectedWithText$]).pipe(
       map(([selected, _selectedWithText]) => {
@@ -76,6 +78,12 @@ export const ContextTrayComponent = createComponent(
             <h2>Canvas</h2>
             <div class="tool-body">${canvasToolUI}</div>
           </section>
+          ${totalSelected > 0
+            ? html` <section class="tool-section">
+                <h2>Export</h2>
+                <div class="tool-body">${exportToolUI}</div>
+              </section>`
+            : nothing}
         </aside>`;
       }),
     );
