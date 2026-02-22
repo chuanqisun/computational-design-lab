@@ -1,5 +1,15 @@
 import { html } from "lit-html";
-import { BehaviorSubject, combineLatest, filter, ignoreElements, map, mergeWith, Observable, tap, withLatestFrom } from "rxjs";
+import {
+  BehaviorSubject,
+  combineLatest,
+  filter,
+  ignoreElements,
+  map,
+  mergeWith,
+  Observable,
+  tap,
+  withLatestFrom,
+} from "rxjs";
 import { allSurfaceOptions, toggleItem } from "../../../lib/studio-utils";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
@@ -83,8 +93,8 @@ export const DesignTool = createComponent(
               content: concept.description,
               x,
               y,
-              width: 300,
-              height: 300,
+              width: 200,
+              height: 200,
               isSelected: false,
               zIndex: z,
             };
