@@ -30,6 +30,18 @@ const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
 const scannedPhotos$ = new BehaviorSubject<ScannedPhoto[]>([]);
 const apiKeys$ = new BehaviorSubject(loadApiKeys());
 
+const clearInputs = () => {
+  pickedColors$.next([]);
+  pickedMaterials$.next([]);
+  pickedSurfaceOptions$.next([]);
+  pickedMechanisms$.next([]);
+  pickedShapes$.next([]);
+  filterText$.next("");
+  customInstructions$.next("");
+  editInstructions$.next("");
+  scannedPhotos$.next([]);
+};
+
 // Persist state
 const persistenceReady = Promise.all([
   persistSubject(pickedColors$, "studio:pickedColors"),
@@ -125,19 +137,11 @@ const resetButton = document.getElementById("reset-button");
 if (resetButton) {
   resetButton.addEventListener("click", async () => {
     if (!confirm("Are you sure you want to clear input? All input data will be lost.")) return;
-    pickedColors$.next([]);
-    pickedMaterials$.next([]);
-    pickedSurfaceOptions$.next([]);
-    pickedMechanisms$.next([]);
-    pickedShapes$.next([]);
-    filterText$.next("");
-    customInstructions$.next("");
+    clearInputs();
     synthesisOutput$.next("");
     isSynthesizing$.next(false);
-    editInstructions$.next("");
     conversationHistory$.next([]);
     photoScene$.next("Product stand by itself");
-    scannedPhotos$.next([]);
     await clearPersistenceExcept(["studio:photoGallery"]);
   });
 }
@@ -190,7 +194,7 @@ if (fromCanvasBlob) {
       const items: Array<{ title?: string; body?: string; imageSrc?: string; imagePrompt?: string }> =
         await response.json();
 
-      scannedPhotos$.next([]);
+      clearInputs();
 
       for (const item of items) {
         if (!item.imageSrc) continue;
