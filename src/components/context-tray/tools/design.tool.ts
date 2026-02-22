@@ -89,9 +89,10 @@ export const DesignTool = createComponent(
             ></textarea>
 
             <div class="generate-row">
-              <label>Count:</label>
+              <label for="design-count">Count</label>
               <input
                 type="number"
+                id="design-count"
                 min="1"
                 max="4"
                 class="num-designs-input"

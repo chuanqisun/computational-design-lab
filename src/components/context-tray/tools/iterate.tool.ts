@@ -46,7 +46,8 @@ export const IterateTool = createComponent(
 
         const task$ = designConcepts$({
           items: selected,
-          requirements: prompt.trim() || "Iterate and improve on the existing designs, incorporating any feedback provided.",
+          requirements:
+            prompt.trim() || "Iterate and improve on the existing designs, incorporating any feedback provided.",
           numDesigns,
           apiKey: apiKeys.gemini,
         }).pipe(
@@ -87,9 +88,10 @@ export const IterateTool = createComponent(
               @input=${(e: Event) => prompt$.next((e.target as HTMLTextAreaElement).value)}
             ></textarea>
             <div class="iterate-row">
-              <label>Count:</label>
+              <label for="iterate-count">Count</label>
               <input
                 type="number"
+                id="iterate-count"
                 min="1"
                 max="5"
                 .value=${String(numDesigns)}
