@@ -22,7 +22,12 @@ import { generateImage, type GeminiConnection } from "../design/generate-image-g
 import { enhancePrompt } from "./ai-helpers";
 import "./canvas.component.css";
 import { CardComponent } from "./card.component";
-import { copyItemsToClipboard, processClipboardPaste } from "./clipboard";
+import {
+  copyItemsToClipboard,
+  parseItemsFromClipboardText,
+  processClipboardPaste,
+  serializeItemsForClipboardText,
+} from "./clipboard";
 import { getViewportCenter } from "./layout";
 import {
   analyzeClick,
@@ -416,8 +421,20 @@ export const CanvasComponent = createComponent(
     };
 
     // Clipboard: copy
+    const getSelectedItems = () => props.items$.value.filter((item) => item.isSelected);
+
+    const writeSelectedItemsToClipboard = async () => {
+      const selected = getSelectedItems();
+      if (selected.length === 0) return false;
+
+      if (!navigator.clipboard?.writeText) return false;
+
+      await navigator.clipboard.writeText(serializeItemsForClipboardText(selected));
+      return true;
+    };
+
     const handleCopy = (event: ClipboardEvent) => {
-      const selected = props.items$.value.filter((item) => item.isSelected);
+      const selected = getSelectedItems();
       if (selected.length === 0) return;
       event.preventDefault();
       copyItemsToClipboard(event, selected);
@@ -425,7 +442,7 @@ export const CanvasComponent = createComponent(
 
     // Clipboard: cut
     const handleCut = (event: ClipboardEvent) => {
-      const selected = props.items$.value.filter((item) => item.isSelected);
+      const selected = getSelectedItems();
       if (selected.length === 0) return;
       event.preventDefault();
       copyItemsToClipboard(event, selected);
@@ -438,35 +455,28 @@ export const CanvasComponent = createComponent(
       return !!target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
     };
 
-    const handlePaste = (event: ClipboardEvent) => {
-      if (isEditableTarget(event.target)) return;
-
+    const handleParsedPasteData = (params: {
+      event?: ClipboardEvent;
+      clipboardItems?: DataTransferItemList;
+      canvasItems?: CanvasItem[] | null;
+      plainText?: string;
+    }) => {
       let handled = false;
 
-      // Check for internal canvas items format first
-      const canvasData = event.clipboardData?.getData("text/x-canvas-items");
-      if (canvasData) {
-        try {
-          const items = JSON.parse(canvasData) as CanvasItem[];
-          if (Array.isArray(items) && items.length > 0) {
-            event.preventDefault();
-            handled = true;
-            pasteItems$.next(items);
-            return;
-          }
-        } catch {
-          /* fall through to external paste */
-        }
+      if (params.canvasItems && params.canvasItems.length > 0) {
+        params.event?.preventDefault();
+        pasteItems$.next(params.canvasItems);
+        return;
       }
 
-      const clipboardItems = event.clipboardData?.items;
+      const clipboardItems = params.clipboardItems;
       if (clipboardItems) {
         for (let i = 0; i < clipboardItems.length; i++) {
           const clipboardItem = clipboardItems[i];
           if (clipboardItem.type.includes("image")) {
             const file = clipboardItem.getAsFile();
             if (file) {
-              if (!handled) event.preventDefault();
+              if (!handled) params.event?.preventDefault();
               handled = true;
               pasteImageFile$.next(file);
             }
@@ -474,11 +484,42 @@ export const CanvasComponent = createComponent(
         }
       }
 
-      processClipboardPaste(event, { includeImages: false }).subscribe((action) => {
-        if (!handled) {
-          event.preventDefault();
-          handled = true;
+      const plainText = params.plainText?.trim();
+      if (plainText) {
+        if (!handled) params.event?.preventDefault();
+        pasteText$.next(plainText);
+      }
+    };
+
+    const handlePaste = (event: ClipboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+
+      const canvasData = event.clipboardData?.getData("text/x-canvas-items");
+      let canvasItemsFromCustomType: CanvasItem[] | null = null;
+
+      if (canvasData) {
+        try {
+          const parsed = JSON.parse(canvasData) as CanvasItem[];
+          if (Array.isArray(parsed)) canvasItemsFromCustomType = parsed;
+        } catch {
+          canvasItemsFromCustomType = null;
         }
+      }
+
+      const plainText = event.clipboardData?.getData("text/plain") || "";
+      const canvasItemsFromText = parseItemsFromClipboardText(plainText);
+
+      handleParsedPasteData({
+        event,
+        clipboardItems: event.clipboardData?.items,
+        canvasItems: canvasItemsFromCustomType ?? canvasItemsFromText,
+        plainText: canvasItemsFromText ? "" : plainText,
+      });
+
+      if (canvasItemsFromCustomType || canvasItemsFromText) return;
+
+      processClipboardPaste(event, { includeImages: false }).subscribe((action) => {
+        event.preventDefault();
         if (action.type === "image") pasteImage$.next(action.src);
         else pasteText$.next(action.content);
       });
@@ -491,6 +532,38 @@ export const CanvasComponent = createComponent(
 
     // Handle keydown event for delete/backspace
     const handleKeyDown = (event: KeyboardEvent) => {
+      const isMod = event.ctrlKey || event.metaKey;
+
+      if (isMod && !isEditableTarget(event.target)) {
+        const key = event.key.toLowerCase();
+
+        if (key === "c") {
+          event.preventDefault();
+          void writeSelectedItemsToClipboard();
+          return;
+        }
+
+        if (key === "x") {
+          event.preventDefault();
+          void writeSelectedItemsToClipboard().then((didWrite) => {
+            if (didWrite) deleteSelected$.next();
+          });
+          return;
+        }
+
+        if (key === "v" && navigator.clipboard?.readText) {
+          event.preventDefault();
+          void navigator.clipboard.readText().then((text) => {
+            const canvasItems = parseItemsFromClipboardText(text);
+            handleParsedPasteData({
+              canvasItems,
+              plainText: canvasItems ? "" : text,
+            });
+          });
+          return;
+        }
+      }
+
       if (event.key === "Delete" || event.key === "Backspace") {
         const hasSelected = props.items$.value.some((item) => item.isSelected);
         if (hasSelected) {
@@ -499,6 +572,11 @@ export const CanvasComponent = createComponent(
         }
       }
     };
+
+    const globalKeydownEffect$ = fromEvent<KeyboardEvent>(document, "keydown").pipe(
+      tap((event) => handleKeyDown(event)),
+      ignoreElements(),
+    );
 
     // Card dialog template — editable fields, image on left, text on right
     const cardDialog$ = combineLatest([openedCardId$, items$, isRegenerating$]).pipe(
@@ -586,7 +664,6 @@ export const CanvasComponent = createComponent(
             @copy=${handleCopy}
             @cut=${handleCut}
             @mousedown=${handleCanvasMouseDown}
-            @keydown=${handleKeyDown}
           >
             ${repeat(
               items,
@@ -633,6 +710,7 @@ export const CanvasComponent = createComponent(
         updateCardEffect$.pipe(ignoreElements()),
         regenerateEffect$,
         globalPasteEffect$,
+        globalKeydownEffect$,
       ),
     );
   },

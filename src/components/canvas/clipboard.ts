@@ -4,12 +4,35 @@ import type { CanvasItem } from "./canvas.component";
 
 export type PasteAction = { type: "image"; src: string } | { type: "text"; content: string };
 
+const CANVAS_ITEMS_TEXT_PREFIX = "__canvas_items__:";
+
 interface ProcessClipboardPasteOptions {
   includeImages?: boolean;
 }
 
+function stripTransientFields(item: CanvasItem): Omit<CanvasItem, "isSelected" | "zIndex"> {
+  const { isSelected: _, zIndex: _z, ...rest } = item;
+  return rest;
+}
+
+export function serializeItemsForClipboardText(items: CanvasItem[]): string {
+  const serialized = items.map(stripTransientFields);
+  return `${CANVAS_ITEMS_TEXT_PREFIX}${JSON.stringify(serialized)}`;
+}
+
+export function parseItemsFromClipboardText(text: string): CanvasItem[] | null {
+  if (!text.startsWith(CANVAS_ITEMS_TEXT_PREFIX)) return null;
+
+  try {
+    const parsed = JSON.parse(text.slice(CANVAS_ITEMS_TEXT_PREFIX.length)) as CanvasItem[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function copyItemsToClipboard(event: ClipboardEvent, items: CanvasItem[]): void {
-  const serialized = items.map(({ isSelected: _, zIndex: _z, ...rest }) => rest);
+  const serialized = items.map(stripTransientFields);
   event.clipboardData?.setData("text/x-canvas-items", JSON.stringify(serialized));
   const textContent = items
     .map((i) => [i.title, i.body].filter(Boolean).join(": "))
