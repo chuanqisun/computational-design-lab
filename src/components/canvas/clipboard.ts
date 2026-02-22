@@ -1,7 +1,18 @@
 import { merge, Observable, of } from "rxjs";
 import { map } from "rxjs/operators";
+import type { CanvasItem } from "./canvas.component";
 
 export type PasteAction = { type: "image"; src: string } | { type: "text"; content: string };
+
+export function copyItemsToClipboard(event: ClipboardEvent, items: CanvasItem[]): void {
+  const serialized = items.map(({ isSelected: _, zIndex: _z, ...rest }) => rest);
+  event.clipboardData?.setData("text/x-canvas-items", JSON.stringify(serialized));
+  const textContent = items
+    .map((i) => [i.title, i.body].filter(Boolean).join(": "))
+    .filter(Boolean)
+    .join("\n");
+  event.clipboardData?.setData("text/plain", textContent || "canvas items");
+}
 
 export function processClipboardPaste(event: ClipboardEvent): Observable<PasteAction> {
   const items = event.clipboardData?.items;

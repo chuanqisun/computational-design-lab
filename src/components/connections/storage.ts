@@ -3,7 +3,6 @@ import type { CanvasItem } from "../canvas/canvas.component";
 
 export interface ApiKeys {
   openai?: string;
-  together?: string;
   gemini?: string;
 }
 

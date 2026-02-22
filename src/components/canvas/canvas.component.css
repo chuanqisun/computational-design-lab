@@ -89,3 +89,110 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
+
+.card-title.placeholder,
+.card-body.placeholder {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.card-placeholder-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  color: var(--color-text-tertiary);
+  font-size: 0.8em;
+}
+
+.card-open-button {
+  width: 100%;
+  padding: 0.25ch 0;
+  font-size: 0.8em;
+  border: none;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f0f0f0;
+  }
+}
+
+#card-detail-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: none;
+  padding: 2ch;
+  background: transparent;
+
+  .card-dialog-body {
+    height: 100%;
+    background: white;
+    border: 1px solid #ccc;
+  }
+
+  .card-dialog-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2ch;
+    padding: 2ch;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .card-dialog-image-col {
+    min-height: 0;
+    display: flex;
+    align-items: start;
+  }
+
+  .card-dialog-image {
+    width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .card-dialog-gen-image {
+    width: 100%;
+    max-height: 100%;
+
+    img {
+      width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  .card-dialog-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    color: var(--color-text-tertiary);
+  }
+
+  .card-dialog-info-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5ch;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .card-dialog-actions {
+    display: flex;
+    gap: 1ch;
+    margin-top: auto;
+    padding-top: 1ch;
+  }
+}

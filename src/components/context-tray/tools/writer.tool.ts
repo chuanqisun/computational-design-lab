@@ -4,8 +4,6 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { generateTitle$ } from "../llm/generate-title-gemini";
-import { submitTask } from "../tasks";
 
 export const WriterTool = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: Observable<ApiKeys> }) => {
@@ -23,31 +21,26 @@ export const WriterTool = createComponent(
           return;
         }
 
-        const task$ = generateTitle$({ text: trimmed, apiKey: apiKeys.gemini }).pipe(
-          map((caption) => {
-            const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
-            const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-            const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+        const isTitle = trimmed.split(/\s+/).length < 5 && !trimmed.includes("\n");
 
-            const card: CanvasItem = {
-              id: `writer-${Date.now()}`,
-              title: caption || "Text",
-              body: trimmed,
-              imagePrompt: trimmed,
-              x: center.x - 100,
-              y: center.y - 150,
-              width: 200,
-              height: 300,
-              isSelected: false,
-              zIndex: maxZ + 1,
-            };
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+        const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
 
-            items$.next([...items$.value, card]);
-            inputText$.next("");
-          }),
-        );
+        const card: CanvasItem = {
+          id: `writer-${Date.now()}`,
+          title: isTitle ? trimmed : undefined,
+          body: isTitle ? undefined : trimmed,
+          x: center.x - 100,
+          y: center.y - 150,
+          width: 200,
+          height: 300,
+          isSelected: false,
+          zIndex: maxZ + 1,
+        };
 
-        submitTask(task$);
+        items$.next([...items$.value, card]);
+        inputText$.next("");
       }),
       ignoreElements(),
     );

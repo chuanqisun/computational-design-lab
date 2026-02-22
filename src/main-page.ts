@@ -15,7 +15,6 @@ import { createComponent } from "./sdk/create-component";
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
-  flux: { apiKey: loadApiKeys().together || "" },
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 
