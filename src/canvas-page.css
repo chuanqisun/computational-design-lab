@@ -120,6 +120,16 @@ input:focus {
   outline: 2px solid var(--color-text-active);
 }
 
+textarea {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 3ch;
+  resize: none;
+  field-sizing: content;
+  max-height: 20ch;
+}
+
 .connections-dialog-body {
   padding: 2ch;
   display: grid;

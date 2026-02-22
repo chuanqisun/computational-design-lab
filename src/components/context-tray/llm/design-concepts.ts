@@ -6,17 +6,12 @@ import { progress$ } from "../../progress/progress";
 
 export type DesignInput = Pick<TextItem, "title" | "content"> | Pick<ImageItem, "src">;
 
-export interface DesignRequirement {
-  materials: string[];
-  colors: string[];
-  shapes: string[];
-  mechanisms: string[];
-  surfaceOptions: string[];
-}
+export type DesignRequirement = string;
 
 export interface DesignConcept {
   title: string;
   description: string;
+  imagePrompt: string;
 }
 
 export function designConcepts$(inputs: {
@@ -34,7 +29,7 @@ export function designConcepts$(inputs: {
       // Check if this is an array item under the "designs" key
       if (typeof entry.key === "number" && entry.parent && entry.value && typeof entry.value === "object") {
         const design = entry.value as unknown as DesignConcept;
-        if (design.title && design.description) {
+        if (design.title && design.description && design.imagePrompt) {
           subscriber.next(design);
         }
       }
@@ -53,8 +48,9 @@ export function designConcepts$(inputs: {
                 properties: {
                   title: { type: Type.STRING },
                   description: { type: Type.STRING },
+                  imagePrompt: { type: Type.STRING },
                 },
-                required: ["title", "description"],
+                required: ["title", "description", "imagePrompt"],
               },
             },
           },
@@ -70,20 +66,19 @@ export function designConcepts$(inputs: {
           throw new Error("Invalid item type");
         });
 
-        const requirementText = `
-Materials: ${inputs.requirements.materials.join(", ") || "Any"}
-Colors: ${inputs.requirements.colors.join(", ") || "Any"}
-Shapes: ${inputs.requirements.shapes.join(", ") || "Any"}
-Mechanisms: ${inputs.requirements.mechanisms.join(", ") || "Any"}
-Surface Options: ${inputs.requirements.surfaceOptions.join(", ") || "Any"}
-`;
+        const requirementText = inputs.requirements || "Any";
 
         const prompt = `
 Generate ${inputs.numDesigns} unique design concepts based on the provided inputs (images and texts) and the following requirements:
 ${requirementText}
 
-For each design, provide a highly detailed text description that captures both the conceptual vision and the specific physical details (materials, form, finish, mechanism).
-Focus on how the requirements are integrated into the design.
+CRITICAL: Every design concept MUST explicitly draw inspiration from ALL provided reference items (both images and texts). You must synthesise ideas from all inputs, but you can interpret them differently to create variety across the designs.
+
+For each design, provide:
+1. A highly detailed text description (title and description). The description must:
+   - Capture the conceptual vision and specific physical details (materials, form, finish, mechanism).
+   - Explicitly rationalize how the reference texts and images influenced the design. Explain the connection between the input references and the resulting design choices.
+2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio look.
 `;
 
         contents.push({ text: prompt });

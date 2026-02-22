@@ -17,18 +17,4 @@
     font-size: 0.8rem;
     color: #666;
   }
-
-  .input-group input,
-  .input-group textarea {
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-
-  .input-group textarea {
-    min-height: 3ch;
-    resize: none;
-    field-sizing: content;
-    max-height: 20ch;
-  }
 }
