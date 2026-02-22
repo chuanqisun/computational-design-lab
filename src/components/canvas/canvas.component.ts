@@ -266,6 +266,7 @@ export const CanvasComponent = createComponent(
 
     // Drag handling — ignore clicks originating from the Open button
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
+      if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest("[data-card-open]")) return;
       e.stopPropagation();
       props.interaction$?.next("start");
@@ -337,6 +338,7 @@ export const CanvasComponent = createComponent(
 
     // Handle canvas mousedown: start marquee selection or deselect all on direct click
     const handleCanvasMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
       if (!isCanvasDirectClick(e)) return;
 
       const { isCtrl, isShift } = getModifierKeys(e);
