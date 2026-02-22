@@ -12,7 +12,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
+import { getConceptLayout } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { generateImage } from "../../design/generate-image-gemini";
 import { designConcepts$, type DesignInput } from "../llm/design-concepts";
@@ -50,7 +50,7 @@ export const DesignTool = createComponent(
           ...texts.map((txt) => ({ title: txt.title, content: txt.content })),
         ];
 
-        const positionGenerator = getNextPositions([...images, ...texts]);
+        const layoutGenerator = getConceptLayout([...images, ...texts]);
 
         const task$ = designConcepts$({
           items: designInputs,
@@ -59,18 +59,18 @@ export const DesignTool = createComponent(
           apiKey: apiKeys.gemini,
         }).pipe(
           tap((concept) => {
-            const { x, y, z } = positionGenerator.next().value;
+            const layout = layoutGenerator.next().value;
             const newText: CanvasItem = {
               id: `text-${Date.now()}-${Math.random()}`,
               type: "text",
               title: concept.title,
               content: concept.description,
-              x,
-              y,
+              x: layout.text.x,
+              y: layout.text.y,
               width: 200,
               height: 200,
               isSelected: false,
-              zIndex: z,
+              zIndex: layout.text.z,
             };
             items$.next([...items$.value, newText]);
 
@@ -85,18 +85,17 @@ export const DesignTool = createComponent(
                 },
               ).pipe(
                 tap((result) => {
-                  const { x: imgX, y: imgY, z: imgZ } = positionGenerator.next().value;
                   const newImage: CanvasItem = {
                     id: `image-${Date.now()}-${Math.random()}`,
                     type: "image",
                     title: concept.title,
                     src: result.url,
-                    x: imgX,
-                    y: imgY,
+                    x: layout.image.x,
+                    y: layout.image.y,
                     width: 200,
                     height: 200,
                     isSelected: false,
-                    zIndex: imgZ,
+                    zIndex: layout.image.z,
                   };
                   items$.next([...items$.value, newImage]);
                 }),
