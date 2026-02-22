@@ -127,6 +127,7 @@
   border: 1px dashed var(--color-selection-outline);
   background: rgba(41, 94, 160, 0.08);
   pointer-events: none;
+  z-index: 9999;
 }
 
 #card-detail-dialog {
