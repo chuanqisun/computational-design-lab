@@ -172,3 +172,28 @@ export function getModifierKeys(event: MouseEvent): { isCtrl: boolean; isShift: 
     isShift: event.shiftKey,
   };
 }
+
+export interface MarqueeRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Select items that intersect with the marquee rectangle
+ */
+export function selectItemsInMarquee(items: CanvasItem[], marquee: MarqueeRect, isAdditive: boolean): CanvasItem[] {
+  const marqueeRight = marquee.x + marquee.width;
+  const marqueeBottom = marquee.y + marquee.height;
+
+  return items.map((item) => {
+    const intersects =
+      item.x < marqueeRight &&
+      item.x + item.width > marquee.x &&
+      item.y < marqueeBottom &&
+      item.y + item.height > marquee.y;
+
+    return { ...item, isSelected: isAdditive ? item.isSelected || intersects : intersects };
+  });
+}

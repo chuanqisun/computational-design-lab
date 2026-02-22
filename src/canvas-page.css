@@ -53,6 +53,26 @@ label {
   color: var(--color-text-secondary);
 }
 
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  padding: var(--spacing-unit);
+  border: 1px solid #ccc;
+  width: 100%;
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--color-text-active);
+}
+
+textarea {
+  resize: none;
+  field-sizing: content;
+  min-height: 2lh;
+}
+
 menu {
   display: flex;
   gap: 1ch;
@@ -61,23 +81,7 @@ menu {
   textarea {
     flex: 1;
     min-width: 20ch;
-    resize: none;
-    field-sizing: content;
   }
-}
-
-textarea {
-  font-family: inherit;
-  font-size: inherit;
-  resize: none;
-  field-sizing: content;
-  width: 100%;
-  padding: var(--spacing-unit);
-  border: 1px solid #ccc;
-}
-
-textarea:focus {
-  outline: 2px solid var(--color-text-active);
 }
 
 button {
@@ -103,33 +107,6 @@ button:disabled {
   background: #f8f8f8;
   color: #ccc;
   cursor: not-allowed;
-}
-
-button.small {
-  padding: calc(var(--spacing-unit) / 2) var(--spacing-unit);
-  font-size: 0.9em;
-}
-
-input {
-  font-family: inherit;
-  font-size: inherit;
-  padding: var(--spacing-unit);
-  border: 1px solid #ccc;
-  width: 100%;
-}
-
-input:focus {
-  outline: 2px solid var(--color-text-active);
-}
-
-textarea {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-height: 3ch;
-  resize: none;
-  field-sizing: content;
-  max-height: 20ch;
 }
 
 .connections-dialog-body {
@@ -250,13 +227,6 @@ generative-image {
   min-height: 0;
 }
 
-@media (orientation: portrait) {
-  .main {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
-  }
-}
-
 .canvas-area {
   overflow: auto;
 }
@@ -270,11 +240,4 @@ generative-image {
   gap: 1ch;
   overflow-y: auto;
   overflow-x: hidden;
-}
-
-@media (orientation: portrait) {
-  .context-tray-area {
-    height: 50vh;
-    overflow-x: auto;
-  }
 }
