@@ -1,6 +1,6 @@
 import { GoogleGenAI, type Part } from "@google/genai";
 import { Observable } from "rxjs";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 /**
@@ -9,7 +9,7 @@ import { progress$ } from "../../progress/progress";
  */
 export function blendImages(input: {
   instruction: string;
-  items: (ImageItem | TextItem)[];
+  items: CanvasItem[];
   apiKey: string;
 }): Observable<string> {
   return new Observable<string>((subscriber) => {
@@ -46,14 +46,15 @@ export function blendImages(input: {
 
         // Add items to parts
         for (const item of input.items) {
-          if (item.type === "image") {
-            const { mimeType, data } = parseDataUrl(item.src);
+          if (item.imageSrc) {
+            const { mimeType, data } = parseDataUrl(item.imageSrc);
             parts.push({
               inlineData: { mimeType, data },
             });
-          } else if (item.type === "text") {
+          }
+          if (item.body) {
             parts.push({
-              text: item.content,
+              text: item.body,
             });
           }
         }

@@ -12,7 +12,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { sortItemsAlongAxis } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
@@ -31,15 +31,13 @@ interface MoodResult {
 
 export const UserTestingTool = createComponent(
   ({
-    selectedImages$,
-    selectedTexts$,
+    selected$,
     apiKeys$,
     items$,
   }: {
-    selectedImages$: Observable<ImageItem[]>;
-    selectedTexts$: Observable<TextItem[]>;
+    selected$: Observable<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
-    items$: BehaviorSubject<any[]>;
+    items$: BehaviorSubject<CanvasItem[]>;
   }) => {
     const moodResults$ = new BehaviorSubject<Map<string, { mood: string; arousal: number }[]>>(new Map());
     const scanning$ = new BehaviorSubject<boolean>(false);
@@ -49,9 +47,7 @@ export const UserTestingTool = createComponent(
     const sortXMood$ = new BehaviorSubject<string | null>(null);
     const sortYMood$ = new BehaviorSubject<string | null>(null);
 
-    const selectedItems$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
-      map(([images, texts]) => [...images, ...texts]),
-    );
+    const selectedItems$ = selected$;
 
     // Load existing mood scan results from metadata
     const loadExistingResults$ = selectedItems$.pipe(

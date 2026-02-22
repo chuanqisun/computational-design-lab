@@ -22,29 +22,36 @@ import {
 
 export interface CanvasItem {
   id: string;
-  type: string;
   x: number;
   y: number;
   width: number;
   height: number;
   isSelected?: boolean;
   zIndex?: number;
-  src?: string;
   title?: string;
-  content?: string;
+  body?: string;
+  imageSrc?: string;
+  imagePrompt?: string;
   metadata?: Record<string, any>;
 }
 
-// Legacy interfaces for backward compatibility
-export interface ImageItem extends CanvasItem {
-  type: "image";
-  src: string;
+export function hasImage(item: CanvasItem): boolean {
+  return !!(item.imageSrc || item.imagePrompt);
 }
 
-export interface TextItem extends CanvasItem {
-  type: "text";
-  title: string;
-  content: string;
+export function hasText(item: CanvasItem): boolean {
+  return !!(item.body);
+}
+
+/** Migrate legacy items from IndexedDB */
+export function migrateItem(item: any): CanvasItem {
+  if (item.type === "image") {
+    return { ...item, imageSrc: item.imageSrc ?? item.src, type: undefined, src: undefined };
+  }
+  if (item.type === "text") {
+    return { ...item, body: item.body ?? item.content, type: undefined, content: undefined };
+  }
+  return item;
 }
 
 export const CanvasComponent = createComponent(
@@ -64,25 +71,33 @@ export const CanvasComponent = createComponent(
     const pasteText$ = new Subject<string>();
     const moveItems$ = new Subject<{ moves: { id: string; x: number; y: number }[] }>();
     const deleteSelected$ = new Subject<void>();
-    const updateTextTitle$ = new Subject<{ id: string; title: string }>();
+    const updateCard$ = new Subject<{ id: string; updates: Partial<CanvasItem> }>();
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
       tap((src) => {
         const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+        const cardId = `img-${Date.now()}`;
 
-        const newImage: CanvasItem = {
-          id: `img-${Date.now()}`,
-          type: "image",
-          src,
+        const card: CanvasItem = {
+          id: cardId,
+          imageSrc: src,
           x: center.x - 100,
-          y: center.y - 100,
+          y: center.y - 150,
           width: 200,
-          height: 200,
+          height: 300,
           zIndex: getNextZIndex(),
         };
-        props.items$.next([...props.items$.value, newImage]);
+        props.items$.next([...props.items$.value, card]);
+
+        // Eventually generate title
+        const apiKey = props.apiKeys$.value.gemini;
+        if (apiKey) {
+          generateTitle$({ text: "Describe this pasted image briefly", apiKey })
+            .pipe(catchError(() => of("Image")))
+            .subscribe((title) => updateCard$.next({ id: cardId, updates: { title } }));
+        }
       }),
     );
 
@@ -90,31 +105,27 @@ export const CanvasComponent = createComponent(
       tap((text) => {
         const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+        const cardId = `text-${Date.now()}`;
 
-        const textId = `text-${Date.now()}`;
-        const newText: CanvasItem = {
-          id: textId,
-          type: "text",
+        const card: CanvasItem = {
+          id: cardId,
           title: "Text",
-          content: text,
+          body: text,
+          imagePrompt: text,
           x: center.x - 100,
-          y: center.y - 100,
+          y: center.y - 150,
           width: 200,
-          height: 200,
+          height: 300,
           zIndex: getNextZIndex(),
         };
-        props.items$.next([...props.items$.value, newText]);
+        props.items$.next([...props.items$.value, card]);
 
-        // Generate title for the new text item
+        // Generate title
         const apiKey = props.apiKeys$.value.gemini;
         if (apiKey) {
           generateTitle$({ text, apiKey })
-            .pipe(
-              catchError(() => of("Text")), // Fallback to "Text" if generation fails
-            )
-            .subscribe((generatedTitle) => {
-              updateTextTitle$.next({ id: textId, title: generatedTitle });
-            });
+            .pipe(catchError(() => of("Text")))
+            .subscribe((title) => updateCard$.next({ id: cardId, updates: { title } }));
         }
       }),
     );
@@ -138,12 +149,10 @@ export const CanvasComponent = createComponent(
       }),
     );
 
-    const updateTitleEffect$ = updateTextTitle$.pipe(
-      tap(({ id, title }) => {
+    const updateCardEffect$ = updateCard$.pipe(
+      tap(({ id, updates }) => {
         const currentItems = props.items$.value;
-        const updatedItems = currentItems.map((item) =>
-          item.id === id && item.type === "text" ? { ...item, title } : item,
-        );
+        const updatedItems = currentItems.map((item) => (item.id === id ? { ...item, ...updates } : item));
         props.items$.next(updatedItems);
       }),
     );
@@ -259,33 +268,26 @@ export const CanvasComponent = createComponent(
             ${repeat(
               items,
               (item) => item.id,
-              (item) => {
-                if (item.type === "image") {
-                  return html`
-                    <div
-                      class="canvas-item canvas-image ${item.isSelected ? "selected" : ""}"
-                      data-id="${item.id}"
-                      style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
-                      0};"
-                      @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
-                    >
-                      <img src="${item.src || ""}" alt="Pasted image" />
-                    </div>
-                  `;
-                } else {
-                  return html`
-                    <div
-                      class="canvas-item canvas-text text ${item.isSelected ? "selected" : ""}"
-                      data-id="${item.id}"
-                      style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
-                      0};"
-                      @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
-                    >
-                      <div class="text-title">${item.title}</div>
-                    </div>
-                  `;
-                }
-              },
+              (item) => html`
+                <div
+                  class="canvas-card ${item.isSelected ? "selected" : ""}"
+                  data-id="${item.id}"
+                  style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex || 0};"
+                  @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
+                >
+                  <div class="card-image-area">
+                    ${item.imageSrc
+                      ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
+                      : item.imagePrompt
+                        ? html`<generative-image prompt="${item.imagePrompt}" width="200" height="200"></generative-image>`
+                        : html``}
+                  </div>
+                  <div class="card-text-area">
+                    ${item.title ? html`<div class="card-title">${item.title}</div>` : html``}
+                    ${item.body ? html`<div class="card-body">${item.body}</div>` : html``}
+                  </div>
+                </div>
+              `,
             )}
           </div>
         `,
@@ -299,7 +301,7 @@ export const CanvasComponent = createComponent(
         pasteTextEffect$.pipe(ignoreElements()),
         moveEffect$.pipe(ignoreElements()),
         deleteEffect$.pipe(ignoreElements()),
-        updateTitleEffect$.pipe(ignoreElements()),
+        updateCardEffect$.pipe(ignoreElements()),
       ),
     );
   },

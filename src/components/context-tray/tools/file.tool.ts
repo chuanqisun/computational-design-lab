@@ -1,9 +1,9 @@
 import { html } from "lit-html";
 import { map, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { ImageItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 
-export const FileTool = createComponent(({ selectedImages$ }: { selectedImages$: Observable<ImageItem[]> }) => {
+export const FileTool = createComponent(({ selectedWithImage$ }: { selectedWithImage$: Observable<CanvasItem[]> }) => {
   const downloadImage = (src: string, filename: string) => {
     const link = document.createElement("a");
     link.href = src;
@@ -35,13 +35,14 @@ export const FileTool = createComponent(({ selectedImages$ }: { selectedImages$:
     }
   };
 
-  return selectedImages$.pipe(
-    map((selectedImages) => {
-      if (selectedImages.length !== 1) return html``;
+  return selectedWithImage$.pipe(
+    map((selected) => {
+      if (selected.length !== 1 || !selected[0].imageSrc) return html``;
+      const src = selected[0].imageSrc;
       return html`
-        <button @click=${() => downloadImage(selectedImages[0].src, `${Date.now()}.png`)}>Download</button>
-        <button @click=${() => copyImage(selectedImages[0].src)}>Copy</button>
-        <button @click=${() => viewImage(selectedImages[0].src)}>View</button>
+        <button @click=${() => downloadImage(src, `${Date.now()}.png`)}>Download</button>
+        <button @click=${() => copyImage(src)}>Copy</button>
+        <button @click=${() => viewImage(src)}>View</button>
       `;
     }),
   );

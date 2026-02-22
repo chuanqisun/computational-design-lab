@@ -1,7 +1,7 @@
 import { html, render } from "lit-html";
 import { BehaviorSubject, debounceTime, ignoreElements, map, merge, mergeWith, of, skip, switchMap } from "rxjs";
 import "./canvas-page.css";
-import type { CanvasItem } from "./components/canvas/canvas.component";
+import { migrateItem, type CanvasItem } from "./components/canvas/canvas.component";
 import { CanvasComponent } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
 import { loadApiKeys, loadCanvasItems, saveCanvasItems, type ApiKeys } from "./components/connections/storage";
@@ -24,11 +24,11 @@ GenerativeVideoElement.define(() => ({
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 
-// Initialize items from IndexedDB
+// Initialize items from IndexedDB (with migration)
 const items$ = new BehaviorSubject<CanvasItem[]>([]);
 loadCanvasItems().then((loadedItems) => {
   if (loadedItems.length > 0) {
-    items$.next(loadedItems);
+    items$.next(loadedItems.map(migrateItem));
   }
 });
 

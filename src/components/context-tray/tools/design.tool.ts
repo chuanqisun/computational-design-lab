@@ -11,23 +11,20 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
-import { getConceptLayout } from "../../canvas/layout";
+import type { CanvasItem } from "../../canvas/canvas.component";
+import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { generateImage } from "../../design/generate-image-gemini";
 import { designConcepts$, type DesignInput } from "../llm/design-concepts";
 import { submitTask } from "../tasks";
 import "./design.tool.css";
 
 export const DesignTool = createComponent(
   ({
-    selectedImages$,
-    selectedTexts$,
+    selected$,
     items$,
     apiKeys$,
   }: {
-    selectedImages$: Observable<ImageItem[]>;
-    selectedTexts$: Observable<TextItem[]>;
+    selected$: Observable<CanvasItem[]>;
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
@@ -38,19 +35,15 @@ export const DesignTool = createComponent(
 
     const effect$ = performGenerate$.pipe(
       filter((val) => val === true),
-      tap(() => performGenerate$.next(false)), // reset
-      withLatestFrom(selectedImages$, selectedTexts$, inputText$, numDesigns$, apiKeys$),
-      filter(([_, images, texts]) => images.length > 0 || texts.length > 0),
-      tap(([_, images, texts, requirements, numDesigns, apiKeys]) => {
+      tap(() => performGenerate$.next(false)),
+      withLatestFrom(selected$, inputText$, numDesigns$, apiKeys$),
+      filter(([_, selected]) => selected.length > 0),
+      tap(([_, selected, requirements, numDesigns, apiKeys]) => {
         if (!apiKeys.gemini) return;
         isGenerating$.next(true);
 
-        const designInputs: DesignInput[] = [
-          ...images.map((img) => ({ src: img.src })),
-          ...texts.map((txt) => ({ title: txt.title, content: txt.content })),
-        ];
-
-        const layoutGenerator = getConceptLayout([...images, ...texts]);
+        const designInputs: DesignInput[] = selected;
+        const positionGenerator = getNextPositions(selected);
 
         const task$ = designConcepts$({
           items: designInputs,
@@ -59,50 +52,20 @@ export const DesignTool = createComponent(
           apiKey: apiKeys.gemini,
         }).pipe(
           tap((concept) => {
-            const layout = layoutGenerator.next().value;
-            const newText: CanvasItem = {
-              id: `text-${Date.now()}-${Math.random()}`,
-              type: "text",
+            const { x, y, z } = positionGenerator.next().value;
+            const card: CanvasItem = {
+              id: `design-${Date.now()}-${Math.random()}`,
               title: concept.title,
-              content: concept.description,
-              x: layout.text.x,
-              y: layout.text.y,
+              body: concept.description,
+              imagePrompt: concept.imagePrompt,
+              x,
+              y,
               width: 200,
-              height: 200,
+              height: 300,
               isSelected: false,
-              zIndex: layout.text.z,
+              zIndex: z,
             };
-            items$.next([...items$.value, newText]);
-
-            if (concept.imagePrompt) {
-              const imageTask$ = generateImage(
-                { apiKey: apiKeys.gemini! },
-                {
-                  prompt: concept.imagePrompt,
-                  width: 1024,
-                  height: 1024,
-                  aspectRatio: "1:1",
-                },
-              ).pipe(
-                tap((result) => {
-                  const newImage: CanvasItem = {
-                    id: `image-${Date.now()}-${Math.random()}`,
-                    type: "image",
-                    title: concept.title,
-                    src: result.url,
-                    x: layout.image.x,
-                    y: layout.image.y,
-                    width: 200,
-                    height: 200,
-                    isSelected: false,
-                    zIndex: layout.image.z,
-                  };
-                  items$.next([...items$.value, newImage]);
-                }),
-                ignoreElements(),
-              );
-              submitTask(imageTask$);
-            }
+            items$.next([...items$.value, card]);
           }),
           tap({
             complete: () => isGenerating$.next(false),

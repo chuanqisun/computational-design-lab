@@ -12,113 +12,80 @@
   outline: 2px solid var(--color-text-active);
 }
 
-.canvas-item {
+.canvas-card {
   position: absolute;
   cursor: move;
   border: 1px solid #ccc;
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   user-select: none;
-}
-
-.canvas-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  pointer-events: none;
-}
-
-.canvas-item.text {
-  padding: 8px;
-  font-family: monospace;
-  font-size: 14px;
-  overflow: hidden;
-  white-space: nowrap;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.canvas-item.text .text-title {
+.canvas-card:hover {
+  outline: 3px solid var(--color-hover-outline);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-card.selected {
+  outline: 3px solid var(--color-selection-outline);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-image-area {
+  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  generative-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}
+
+.card-text-area {
+  flex: 1;
+  padding: 0.5ch;
+  font-family: monospace;
+  font-size: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25ch;
+}
+
+.card-title {
   font-weight: bold;
   color: var(--color-text-primary);
-  white-space: normal;
-  overflow-wrap: break-word;
-  text-align: center;
-}
-
-.canvas-item:hover {
-  outline: 3px solid var(--color-hover-outline);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.canvas-item.selected {
-  outline: 3px solid var(--color-selection-outline);
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Legacy classes for backward compatibility */
-.canvas-image {
-  position: absolute;
-  cursor: move;
-  border: 1px solid #ccc;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  user-select: none;
-}
-
-.canvas-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  pointer-events: none;
-}
-
-.canvas-image:hover {
-  outline: 3px solid var(--color-hover-outline);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.canvas-image.selected {
-  outline: 3px solid var(--color-selection-outline);
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.canvas-text {
-  position: absolute;
-  cursor: move;
-  border: 1px solid #ccc;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  user-select: none;
-  padding: 8px;
-  font-family: monospace;
-  font-size: 14px;
   overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  display: flex;
-  align-items: flex-start;
 }
 
-.canvas-text .text-title {
-  font-weight: bold;
-  color: var(--color-text-primary);
-}
-
-.canvas-text:hover {
-  outline: 3px solid var(--color-hover-outline);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.canvas-text.selected {
-  outline: 3px solid var(--color-selection-outline);
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.3);
+.card-body {
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }

@@ -126,8 +126,7 @@ export function deselectAll(currentState: SelectionState): SelectionUpdate {
  */
 export function prepareDragData(canvas: HTMLElement, selectedItems: CanvasItem[], mouseEvent: MouseEvent): DragData[] {
   return selectedItems.map((dragItem) => {
-    const cssClass = dragItem.type === "image" ? "canvas-image" : "canvas-text";
-    const el = canvas.querySelector(`.${cssClass}[data-id="${dragItem.id}"]`) as HTMLElement;
+    const el = canvas.querySelector(`.canvas-card[data-id="${dragItem.id}"]`) as HTMLElement;
     const offsetX = mouseEvent.clientX - dragItem.x;
     const offsetY = mouseEvent.clientY - dragItem.y;
     return { el, offsetX, offsetY, item: dragItem };
