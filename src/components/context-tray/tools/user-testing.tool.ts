@@ -5,29 +5,25 @@ import {
   filter,
   ignoreElements,
   map,
-  merge,
+  mergeMap,
   mergeWith,
-  Observable,
+  type Observable,
   tap,
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { sortItemsAlongAxis } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { scanMoods$, scanMoodsSupervised$ } from "../llm/scan-moods";
+import { generatePersonas$, rankDesigns$ } from "../llm/synthetic-users";
 import { submitTask } from "../tasks";
+import {
+  buildGridConfig,
+  getFeedbackPosition,
+  getHeaderItemPosition,
+  getPersonaPosition,
+  getRankedItemPosition,
+} from "./user-testing-layout";
 import "./user-testing.css";
-
-interface MoodEntry {
-  mood: string;
-  arousal: number;
-}
-
-interface MoodResult {
-  itemId: string;
-  moods: MoodEntry[];
-}
 
 export const UserTestingTool = createComponent(
   ({
@@ -39,274 +35,172 @@ export const UserTestingTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
     items$: BehaviorSubject<CanvasItem[]>;
   }) => {
-    const moodResults$ = new BehaviorSubject<Map<string, { mood: string; arousal: number }[]>>(new Map());
-    const scanning$ = new BehaviorSubject<boolean>(false);
+    const trait$ = new BehaviorSubject<string>("");
+    const segment$ = new BehaviorSubject<string>("All");
+    const numUsers$ = new BehaviorSubject<number>(3);
+    const isRunning$ = new BehaviorSubject<boolean>(false);
+    const progressMsg$ = new BehaviorSubject<string>("");
+    const startAction$ = new BehaviorSubject<boolean>(false);
 
-    const scanAction$ = new BehaviorSubject<boolean>(false);
-    const lockedMoods$ = new BehaviorSubject<Set<string>>(new Set());
-    const sortXMood$ = new BehaviorSubject<string | null>(null);
-    const sortYMood$ = new BehaviorSubject<string | null>(null);
+    const startEffect$ = startAction$.pipe(
+      filter((v) => v === true),
+      tap(() => startAction$.next(false)),
+      withLatestFrom(selected$, trait$, segment$, numUsers$, apiKeys$),
+      tap(([_, selectedItems, trait, segment, numUsers, apiKeys]) => {
+        if (selectedItems.length === 0 || !apiKeys.gemini || !trait.trim()) return;
 
-    const selectedItems$ = selected$;
+        isRunning$.next(true);
+        progressMsg$.next("Generating personas...");
 
-    // Load existing mood scan results from metadata
-    const loadExistingResults$ = selectedItems$.pipe(
-      tap((selectedItems) => {
-        const results = new Map<string, { mood: string; arousal: number }[]>();
-        selectedItems.forEach((item) => {
-          if (item.metadata?.moodScan) {
-            results.set(item.id, item.metadata.moodScan);
+        const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex ?? 0), 0);
+        const origin = {
+          x: Math.min(...selectedItems.map((i) => i.x)),
+          y: Math.min(...selectedItems.map((i) => i.y)),
+        };
+        const config = buildGridConfig(selectedItems, numUsers, origin, { colGap: 20, rowGap: 20 });
+
+        // Move original items to header row positions
+        const movedItems = items$.value.map((item) => {
+          const idx = selectedItems.findIndex((s) => s.id === item.id);
+          if (idx >= 0) {
+            const pos = getHeaderItemPosition(idx, config);
+            return { ...item, x: pos.x, y: pos.y, width: pos.width, height: pos.height };
           }
+          return item;
         });
-        moodResults$.next(results);
-      }),
-      ignoreElements(),
-    );
+        items$.next(movedItems);
 
-    const scanEffect$ = scanAction$.pipe(
-      filter((action) => action),
-      withLatestFrom(selectedItems$, apiKeys$, lockedMoods$),
-      tap(([_, selectedItems, apiKeys, lockedMoods]) => {
-        if (selectedItems.length === 0 || !apiKeys.gemini) {
-          return;
-        }
+        const task$ = generatePersonas$({
+          trait: trait.trim(),
+          segment: segment || "All",
+          numUsers,
+          apiKey: apiKeys.gemini,
+        }).pipe(
+          mergeMap((persona, userIndex) => {
+            progressMsg$.next(`Ranking for ${persona.name}...`);
 
-        scanning$.next(true);
+            const personaPos = getPersonaPosition(userIndex, config);
+            const personaCard: CanvasItem = {
+              id: `persona-${Date.now()}-${Math.random()}`,
+              title: persona.name,
+              body: `${persona.occupation}, age ${persona.age}\n${persona.description}`,
+              x: personaPos.x,
+              y: personaPos.y,
+              width: personaPos.width,
+              height: personaPos.height,
+              zIndex: maxZ + 1 + userIndex,
+              isSelected: false,
+            };
+            items$.next([...items$.value, personaCard]);
 
-        const requiredList = lockedMoods.size > 0 ? Array.from(lockedMoods) : undefined;
+            return rankDesigns$({
+              persona,
+              items: selectedItems,
+              trait: trait.trim(),
+              apiKey: apiKeys.gemini!,
+            }).pipe(
+              tap((ranking) => {
+                const newCards: CanvasItem[] = [];
 
-        const tasks = selectedItems.map((item) => {
-          const scanObservable$ = requiredList
-            ? scanMoodsSupervised$({
-                item,
-                apiKey: apiKeys.gemini!,
-                requiredList,
-              })
-            : scanMoods$({
-                item,
-                apiKey: apiKeys.gemini!,
-              });
+                ranking.rankedItemIds.forEach((itemId, rankPosition) => {
+                  const original = selectedItems.find((i) => i.id === itemId);
+                  if (!original) return;
+                  const pos = getRankedItemPosition(userIndex, rankPosition, config);
+                  newCards.push({
+                    id: `ranked-${Date.now()}-${Math.random()}`,
+                    title: original.title,
+                    body: original.body,
+                    imageSrc: original.imageSrc,
+                    imagePrompt: original.imagePrompt,
+                    x: pos.x,
+                    y: pos.y,
+                    width: pos.width,
+                    height: pos.height,
+                    zIndex: maxZ + 10 + userIndex * 10 + rankPosition,
+                    isSelected: false,
+                  });
+                });
 
-          return scanObservable$.pipe(
-            tap((result: MoodResult) => {
-              // Update in-memory results
-              const currentResults = moodResults$.value;
-              currentResults.set(result.itemId, result.moods);
-              moodResults$.next(new Map(currentResults));
+                const feedbackPos = getFeedbackPosition(userIndex, config);
+                newCards.push({
+                  id: `feedback-${Date.now()}-${Math.random()}`,
+                  title: `${persona.name}'s Feedback`,
+                  body: ranking.feedback,
+                  x: feedbackPos.x,
+                  y: feedbackPos.y,
+                  width: feedbackPos.width,
+                  height: feedbackPos.height,
+                  zIndex: maxZ + 10 + userIndex * 10 + config.numItems,
+                  isSelected: false,
+                });
 
-              // Persist to metadata
-              const currentItems = items$.value;
-              const updatedItems = currentItems.map((currentItem) =>
-                currentItem.id === result.itemId
-                  ? {
-                      ...currentItem,
-                      metadata: {
-                        ...currentItem.metadata,
-                        moodScan: result.moods,
-                      },
-                    }
-                  : currentItem,
-              );
-              items$.next(updatedItems);
-            }),
-          );
-        });
-
-        const task$ = merge(...tasks).pipe(
+                items$.next([...items$.value, ...newCards]);
+              }),
+            );
+          }),
           tap({
             complete: () => {
-              scanning$.next(false);
+              isRunning$.next(false);
+              progressMsg$.next("");
             },
             error: () => {
-              scanning$.next(false);
+              isRunning$.next(false);
+              progressMsg$.next("Error occurred");
             },
           }),
         );
 
         submitTask(task$);
-        scanAction$.next(false);
       }),
       ignoreElements(),
     );
 
-    const sortXEffect$ = sortXMood$.pipe(
-      filter((mood) => mood !== null),
-      withLatestFrom(selectedItems$, moodResults$),
-      tap(([mood, selectedItems, moodResults]) => {
-        if (selectedItems.length < 2 || !mood) return;
-
-        const sorted = sortItemsAlongAxis({
-          axis: "x",
-          items: selectedItems,
-          getPosition: (item) => item.x,
-          getValue: (item) => {
-            const moods = moodResults.get(item.id) || [];
-            return moods.find((m) => m.mood === mood)?.arousal || 0;
-          },
-        });
-
-        const currentItems = items$.value;
-        const updatedItems = currentItems.map((item) => {
-          const sortedItem = sorted.find((s) => s.item.id === item.id);
-          return sortedItem ? { ...item, x: sortedItem.position } : item;
-        });
-
-        items$.next(updatedItems);
-      }),
-      ignoreElements(),
-    );
-
-    const sortYEffect$ = sortYMood$.pipe(
-      filter((mood) => mood !== null),
-      withLatestFrom(selectedItems$, moodResults$),
-      tap(([mood, selectedItems, moodResults]) => {
-        if (selectedItems.length < 2 || !mood) return;
-
-        const sorted = sortItemsAlongAxis({
-          axis: "y",
-          items: selectedItems,
-          getPosition: (item) => item.y,
-          getValue: (item) => {
-            const moods = moodResults.get(item.id) || [];
-            return moods.find((m) => m.mood === mood)?.arousal || 0;
-          },
-        });
-
-        const currentItems = items$.value;
-        const updatedItems = currentItems.map((item) => {
-          const sortedItem = sorted.find((s) => s.item.id === item.id);
-          return sortedItem ? { ...item, y: sortedItem.position } : item;
-        });
-
-        items$.next(updatedItems);
-      }),
-      ignoreElements(),
-    );
-
-    const template$ = combineLatest([
-      selectedItems$,
-      moodResults$,
-      scanning$,
-      lockedMoods$,
-      sortXMood$,
-      sortYMood$,
-    ]).pipe(
-      map(([selectedItems, moodResults, scanning, lockedMoods, _sortXMood, _sortYMood]) => {
-        if (selectedItems.length === 0) return html``;
-
-        const hasResults = moodResults.size > 0;
-
-        // Extract all unique moods from results
-        const allMoods = new Set<string>();
-        for (const moods of moodResults.values()) {
-          for (const { mood } of moods) {
-            allMoods.add(mood);
-          }
-        }
-        const sortedMoods = Array.from(allMoods).sort();
-
-        const toggleLock = (mood: string) => {
-          const newLocked = new Set(lockedMoods);
-          if (newLocked.has(mood)) {
-            newLocked.delete(mood);
-          } else {
-            newLocked.add(mood);
-          }
-          lockedMoods$.next(newLocked);
-        };
+    const template$ = combineLatest([selected$, trait$, segment$, numUsers$, isRunning$, progressMsg$, apiKeys$]).pipe(
+      map(([selected, trait, segment, numUsers, isRunning, progressMsg, apiKeys]) => {
+        if (selected.length === 0) return html``;
 
         return html`
-          <div class="mood-scan-section">
-            <button @click=${() => scanAction$.next(true)} ?disabled=${scanning}>
-              ${scanning ? "Scanning..." : "Scan Moods"}
+          <div class="user-testing">
+            <div class="field">
+              <label>Trait</label>
+              <input
+                type="text"
+                placeholder="e.g. playfulness"
+                .value=${trait}
+                @input=${(e: Event) => trait$.next((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div class="field">
+              <label>Segment</label>
+              <input
+                type="text"
+                placeholder="All"
+                .value=${segment}
+                @input=${(e: Event) => segment$.next((e.target as HTMLInputElement).value)}
+              />
+            </div>
+            <div class="field">
+              <label>Users (K)</label>
+              <input
+                type="number"
+                min="1"
+                max="5"
+                .value=${String(numUsers)}
+                @input=${(e: Event) => numUsers$.next(parseInt((e.target as HTMLInputElement).value) || 3)}
+              />
+            </div>
+            ${progressMsg ? html`<div class="progress-msg">${progressMsg}</div>` : html``}
+            <button
+              @click=${() => startAction$.next(true)}
+              ?disabled=${isRunning || !apiKeys.gemini || !trait.trim()}
+            >
+              ${isRunning ? "Running..." : "Start"}
             </button>
-
-            ${hasResults
-              ? html`
-                  <div class="mood-results">
-                    ${selectedItems.length === 1
-                      ? html`
-                          <div class="single-image-results">
-                            ${Array.from(moodResults.entries())
-                              .filter(([id]) => id === selectedItems[0].id)
-                              .map(
-                                ([_, moods]) => html`
-                                  ${[...moods]
-                                    .sort((a, b) => a.mood.localeCompare(b.mood))
-                                    .map(
-                                      ({ mood, arousal }) => html`
-                                        <div class="mood-item" @click=${() => toggleLock(mood)}>
-                                          <span class="mood-label"> ${lockedMoods.has(mood) ? "🔒 " : ""}${mood} </span>
-                                          <span class="arousal-level">${arousal}/10</span>
-                                        </div>
-                                      `,
-                                    )}
-                                `,
-                              )}
-                          </div>
-                        `
-                      : html`
-                          <div class="multi-image-results">
-                            ${Array.from(
-                              (() => {
-                                const moodAverages = new Map<string, { total: number; count: number }>();
-
-                                for (const [id, moods] of moodResults.entries()) {
-                                  if (selectedItems.some((item) => item.id === id)) {
-                                    for (const { mood, arousal } of moods) {
-                                      const current = moodAverages.get(mood) || { total: 0, count: 0 };
-                                      moodAverages.set(mood, {
-                                        total: current.total + arousal,
-                                        count: current.count + 1,
-                                      });
-                                    }
-                                  }
-                                }
-
-                                return moodAverages;
-                              })().entries(),
-                            )
-                              .sort((a, b) => a[0].localeCompare(b[0]))
-                              .map(
-                                ([mood, { total, count }]) => html`
-                                  <div class="mood-item" @click=${() => toggleLock(mood)}>
-                                    <span class="mood-label">
-                                      ${lockedMoods.has(mood) ? "🔒 " : ""}${mood} (${count})
-                                    </span>
-                                    <span class="arousal-level">${(total / count).toFixed(1)}/5</span>
-                                  </div>
-                                `,
-                              )}
-                          </div>
-                        `}
-                  </div>
-                `
-              : html``}
-            ${hasResults && sortedMoods.length > 0
-              ? html`
-                  <div class="sort-controls">
-                    <label>
-                      Sort X:
-                      <select @change=${(e: Event) => sortXMood$.next((e.target as HTMLSelectElement).value || null)}>
-                        <option value="">-- Select mood --</option>
-                        ${sortedMoods.map((mood) => html`<option value=${mood}>${mood}</option>`)}
-                      </select>
-                    </label>
-                    <label>
-                      Sort Y:
-                      <select @change=${(e: Event) => sortYMood$.next((e.target as HTMLSelectElement).value || null)}>
-                        <option value="">-- Select mood --</option>
-                        ${sortedMoods.map((mood) => html`<option value=${mood}>${mood}</option>`)}
-                      </select>
-                    </label>
-                  </div>
-                `
-              : html``}
           </div>
         `;
       }),
     );
 
-    return template$.pipe(mergeWith(scanEffect$, loadExistingResults$, sortXEffect$, sortYEffect$));
+    return template$.pipe(mergeWith(startEffect$));
   },
 );

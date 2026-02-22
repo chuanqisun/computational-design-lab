@@ -1,44 +1,27 @@
-.mood-scan-section {
+.user-testing {
   display: flex;
   flex-direction: column;
   gap: 1ch;
 }
 
-.mood-results {
+.user-testing .field {
   display: flex;
-  flex-direction: column;
-  gap: 1ch;
-}
-
-.mood-item {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 1ch;
-  cursor: pointer;
 }
 
-.mood-label {
+.user-testing .field label {
+  flex-shrink: 0;
+  min-width: 6ch;
+}
+
+.user-testing .field input {
   flex: 1;
+  min-width: 0;
 }
 
-.arousal-level {
-  font-variant-numeric: tabular-nums;
+.user-testing .progress-msg {
   color: var(--text-secondary, #666);
+  font-style: italic;
 }
 
-.sort-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 1ch;
-}
-
-.sort-controls label {
-  display: flex;
-  align-items: center;
-  gap: 1ch;
-}
-
-.sort-controls select {
-  flex: 1;
-}
