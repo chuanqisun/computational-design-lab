@@ -1,11 +1,12 @@
-import { html } from "lit-html";
+import { html, nothing } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 
 export const ExportTool = createComponent(({ items$ }: { items$: BehaviorSubject<CanvasItem[]> }) => {
   const openInStudio = () => {
-    const data = items$.value.map(({ isSelected: _isSelected, ...item }) => item);
+    const selected = items$.value.filter((item) => item.isSelected);
+    const data = selected.map(({ isSelected: _isSelected, ...item }) => item);
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
     const blobUrl = URL.createObjectURL(blob);
     const studioUrl = new URL("studio.html", window.location.href);
@@ -16,6 +17,10 @@ export const ExportTool = createComponent(({ items$ }: { items$: BehaviorSubject
   };
 
   return items$.pipe(
-    map((items) => html`<button ?disabled=${items.length === 0} @click=${openInStudio}>Open in Studio</button>`),
+    map((items) => {
+      const selected = items.filter((item) => item.isSelected);
+      if (selected.length === 0) return html`${nothing}`;
+      return html`<button @click=${openInStudio}>Open in Studio (${selected.length})</button>`;
+    }),
   );
 });

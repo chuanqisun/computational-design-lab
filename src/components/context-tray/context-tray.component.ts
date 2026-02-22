@@ -78,10 +78,12 @@ export const ContextTrayComponent = createComponent(
             <h2>Canvas</h2>
             <div class="tool-body">${canvasToolUI}</div>
           </section>
-          <section class="tool-section">
-            <h2>Export</h2>
-            <div class="tool-body">${exportToolUI}</div>
-          </section>
+          ${totalSelected > 0
+            ? html` <section class="tool-section">
+                <h2>Export</h2>
+                <div class="tool-body">${exportToolUI}</div>
+              </section>`
+            : nothing}
         </aside>`;
       }),
     );
