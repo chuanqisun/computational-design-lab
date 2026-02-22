@@ -162,27 +162,30 @@ export const UserTestingTool = createComponent(
         return html`
           <div class="user-testing">
             <div class="field">
-              <label>Trait</label>
+              <label for="user-testing-trait">Trait</label>
               <input
                 type="text"
+                id="user-testing-trait"
                 placeholder="e.g. playfulness"
                 .value=${trait}
                 @input=${(e: Event) => trait$.next((e.target as HTMLInputElement).value)}
               />
             </div>
             <div class="field">
-              <label>Segment</label>
+              <label for="user-testing-segment">Segment</label>
               <input
                 type="text"
+                id="user-testing-segment"
                 placeholder="All"
                 .value=${segment}
                 @input=${(e: Event) => segment$.next((e.target as HTMLInputElement).value)}
               />
             </div>
             <div class="field">
-              <label>Users (K)</label>
+              <label for="user-testing-users">Users</label>
               <input
                 type="number"
+                id="user-testing-users"
                 min="1"
                 max="5"
                 .value=${String(numUsers)}
@@ -190,10 +193,7 @@ export const UserTestingTool = createComponent(
               />
             </div>
             ${progressMsg ? html`<div class="progress-msg">${progressMsg}</div>` : html``}
-            <button
-              @click=${() => startAction$.next(true)}
-              ?disabled=${isRunning || !apiKeys.gemini || !trait.trim()}
-            >
+            <button @click=${() => startAction$.next(true)} ?disabled=${isRunning || !apiKeys.gemini || !trait.trim()}>
               ${isRunning ? "Running..." : "Start"}
             </button>
           </div>
