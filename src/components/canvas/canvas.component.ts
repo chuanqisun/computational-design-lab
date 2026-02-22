@@ -232,10 +232,11 @@ export const CanvasComponent = createComponent(
       openedCardId$.next(null);
     };
 
-    const downloadImage = (src: string) => {
+    const downloadImage = (src: string, title?: string) => {
+      const name = (title || "canvas-image").replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
       const link = document.createElement("a");
       link.href = src;
-      link.download = `${Date.now()}.png`;
+      link.download = `${name}-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -391,7 +392,7 @@ export const CanvasComponent = createComponent(
               <button ?disabled=${isRegenerating || !prompt.trim()} @click=${() => regenerate$.next(true)}>
                 ${isRegenerating ? "Generating..." : "Regenerate"}
               </button>
-              ${card.imageSrc ? html`<button @click=${() => downloadImage(card.imageSrc!)}>Download</button>` : html``}
+              ${card.imageSrc ? html`<button @click=${() => downloadImage(card.imageSrc!, card.title)}>Download</button>` : html``}
               <button @click=${closeCardDialog}>Close</button>
             </menu>
           </div>
