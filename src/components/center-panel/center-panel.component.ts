@@ -226,22 +226,17 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
             .value=${photoScene}
             @input=${(e: Event) => photoScene$.next((e.target as HTMLTextAreaElement).value)}
           ></textarea>
-          ${suggestedScenes.length > 0
-            ? html`
-                <div class="suggested-scenes">
-                  <p>Suggested scenes:</p>
-                  <div class="scene-buttons">
-                    <button class="scene-button" @click=${() => photoScene$.next("Product stand by itself")}>
-                      Product stand by itself
-                    </button>
-                    ${suggestedScenes.map(
-                      (scene) =>
-                        html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
+          <div class="suggested-scenes">
+            <div class="scene-buttons">
+              <button class="scene-button ${suggestedScenes.length > 0 ? "scene-button--dimmed" : ""}" @click=${() => photoScene$.next("Product stand by itself")}>
+                Product stand by itself
+              </button>
+              ${suggestedScenes.map(
+                (scene) =>
+                  html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
+              )}
+            </div>
+          </div>
           <menu>
             <button @click=${handleTakePhoto} ?disabled=${!synthesis}>Take photo</button>
           </menu>

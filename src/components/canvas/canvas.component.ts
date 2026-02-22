@@ -570,7 +570,7 @@ export const CanvasComponent = createComponent(
         }
       }
 
-      if (event.key === "Delete" || event.key === "Backspace") {
+      if ((event.key === "Delete" || event.key === "Backspace") && !isEditableTarget(event.target)) {
         const hasSelected = props.items$.value.some((item) => item.isSelected);
         if (hasSelected) {
           event.preventDefault();
