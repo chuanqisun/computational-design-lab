@@ -210,3 +210,9 @@ export const mechanisms = [
     ],
   },
 ];
+
+export const genericInteractionOptions = [
+  "Front view of the product alone",
+  "3/4 view of the product alone, facing left",
+  "In-use shot of the product",
+];

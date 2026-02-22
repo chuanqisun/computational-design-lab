@@ -7,6 +7,7 @@ import type { PhotoCard, ScannedPhoto } from "../../lib/studio-types";
 import { materialsById, mechanismsById, shapesById } from "../../lib/studio-utils";
 import { createComponent } from "../../sdk/create-component";
 import { xmlEditor } from "../../sdk/xml-editor";
+import { genericInteractionOptions } from "../material-library/mechanisms";
 import { renderPhotoGallery } from "../photo-gallery/photo-gallery.component";
 import "./center-panel.component.css";
 
@@ -114,7 +115,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
 
   const suggestedScenes$ = pickedMechanisms$.pipe(
     map((mechanismIds) => {
-      const scenes: string[] = [];
+      const scenes: string[] = [...genericInteractionOptions];
       mechanismIds.forEach((id) => {
         const mechanism = mechanismsById.get(id);
         if (mechanism?.interactionOptions) {
@@ -228,12 +229,8 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
           ></textarea>
           <div class="suggested-scenes">
             <div class="scene-buttons">
-              <button class="scene-button ${suggestedScenes.length > 0 ? "scene-button--dimmed" : ""}" @click=${() => photoScene$.next("Product stand by itself")}>
-                Product stand by itself
-              </button>
               ${suggestedScenes.map(
-                (scene) =>
-                  html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
+                (scene) => html`<button class="scene-button" @click=${() => photoScene$.next(scene)}>${scene}</button>`,
               )}
             </div>
           </div>
