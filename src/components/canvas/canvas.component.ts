@@ -32,7 +32,9 @@ import {
   getModifierKeys,
   isCanvasDirectClick,
   prepareDragData,
+  selectItemsInMarquee,
   updateDragPositions,
+  type MarqueeRect,
   type SelectionState,
 } from "./pointer";
 
@@ -99,6 +101,7 @@ export const CanvasComponent = createComponent(
     const openedCardId$ = new BehaviorSubject<string | null>(null);
     const isRegenerating$ = new BehaviorSubject<boolean>(false);
     const regenerate$ = new Subject<{ cardId: string; prompt: string }>();
+    const marquee$ = new BehaviorSubject<MarqueeRect | null>(null);
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
@@ -332,16 +335,48 @@ export const CanvasComponent = createComponent(
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    // Handle canvas click to deselect all
-    const handleCanvasClick = (e: MouseEvent) => {
-      // Only deselect if clicking directly on canvas (not on an image)
-      if (isCanvasDirectClick(e)) {
-        const currentState: SelectionState = {
-          items: props.items$.value,
-        };
-        const selectionUpdate = deselectAll(currentState);
-        props.items$.next(selectionUpdate.items);
-      }
+    // Handle canvas mousedown: start marquee selection or deselect all on direct click
+    const handleCanvasMouseDown = (e: MouseEvent) => {
+      if (!isCanvasDirectClick(e)) return;
+
+      const { isCtrl, isShift } = getModifierKeys(e);
+      const canvasEl = e.currentTarget as HTMLElement;
+      const canvasRect = canvasEl.getBoundingClientRect();
+      const startX = e.clientX - canvasRect.left;
+      const startY = e.clientY - canvasRect.top;
+
+      let hasMoved = false;
+
+      props.interaction$?.next("start");
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        hasMoved = true;
+        const currentX = moveEvent.clientX - canvasRect.left;
+        const currentY = moveEvent.clientY - canvasRect.top;
+        marquee$.next({
+          x: Math.min(startX, currentX),
+          y: Math.min(startY, currentY),
+          width: Math.abs(currentX - startX),
+          height: Math.abs(currentY - startY),
+        });
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        props.interaction$?.next("end");
+
+        const marquee = marquee$.value;
+        if (hasMoved && marquee) {
+          props.items$.next(selectItemsInMarquee(props.items$.value, marquee, isCtrl || isShift));
+        } else {
+          props.items$.next(deselectAll({ items: props.items$.value }).items);
+        }
+        marquee$.next(null);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
     };
 
     // Clipboard: copy
@@ -480,7 +515,7 @@ export const CanvasComponent = createComponent(
             @paste=${handlePaste}
             @copy=${handleCopy}
             @cut=${handleCut}
-            @click=${handleCanvasClick}
+            @mousedown=${handleCanvasMouseDown}
             @keydown=${handleKeyDown}
           >
             ${repeat(
@@ -495,6 +530,18 @@ export const CanvasComponent = createComponent(
                   onOpen: handleCardOpen,
                   onMouseDown: handleCardMouseDown,
                 }),
+            )}
+            ${observe(
+              marquee$.pipe(
+                map((r) =>
+                  r
+                    ? html`<div
+                        class="canvas-marquee"
+                        style="left:${r.x}px;top:${r.y}px;width:${r.width}px;height:${r.height}px;"
+                      ></div>`
+                    : html``,
+                ),
+              ),
             )}
           </div>
           <dialog id="card-detail-dialog" @click=${handleDialogClick} @close=${() => openedCardId$.next(null)}>

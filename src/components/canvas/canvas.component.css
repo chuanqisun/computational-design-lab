@@ -122,6 +122,13 @@
   }
 }
 
+.canvas-marquee {
+  position: absolute;
+  border: 1px dashed var(--color-selection-outline);
+  background: rgba(41, 94, 160, 0.08);
+  pointer-events: none;
+}
+
 #card-detail-dialog {
   .card-dialog-body {
     height: 100%;
