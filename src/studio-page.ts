@@ -195,6 +195,10 @@ if (fromCanvasBlob) {
         await response.json();
 
       clearInputs();
+      synthesisOutput$.next("");
+      isSynthesizing$.next(false);
+      conversationHistory$.next([]);
+      photoScene$.next("Product stand by itself");
 
       for (const item of items) {
         if (!item.imageSrc) continue;
