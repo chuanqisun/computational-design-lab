@@ -1,0 +1,115 @@
+import { html } from "lit-html";
+import {
+  BehaviorSubject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  ignoreElements,
+  map,
+  mergeWith,
+  of,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
+import { createComponent } from "../../sdk/create-component";
+import type { ApiKeys } from "../connections/storage";
+import { fillCard } from "./ai-helpers";
+import type { CanvasItem } from "./canvas.component";
+
+export const CardComponent = createComponent(
+  (props: {
+    id: string;
+    items$: BehaviorSubject<CanvasItem[]>;
+    apiKeys$: BehaviorSubject<ApiKeys>;
+    onUpdate: (updates: Partial<CanvasItem>) => void;
+    onOpen: () => void;
+    onMouseDown: (e: MouseEvent) => void;
+  }) => {
+    const item$ = props.items$.pipe(
+      map((items) => items.find((i) => i.id === props.id)),
+      filter((item): item is CanvasItem => item !== undefined),
+      distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
+    );
+
+    // Effects
+    const autoGenerateEffect$ = item$.pipe(
+      withLatestFrom(props.apiKeys$),
+      filter(([item, apiKeys]) => {
+        const apiKey = apiKeys.gemini;
+        if (!apiKey) return false;
+
+        const hasContent = !!(item.title || item.body || item.imageSrc || item.imagePrompt);
+        const missingFields = !item.title || !item.body || (!item.imagePrompt && !item.imageSrc);
+
+        return hasContent && missingFields;
+      }),
+      debounceTime(2000),
+      switchMap(([item, apiKeys]) => {
+        const content = {
+          title: item.title,
+          body: item.body,
+          imagePrompt: item.imagePrompt,
+          imageSrc: item.imageSrc,
+        };
+
+        return fillCard(content, apiKeys.gemini!).pipe(
+          tap((updates) => {
+            if (Object.keys(updates).length > 0) {
+              props.onUpdate(updates);
+            }
+          }),
+          catchError((err) => {
+            console.error("Auto-generate failed", err);
+            return of(null);
+          }),
+        );
+      }),
+      ignoreElements(),
+    );
+
+    const template$ = item$.pipe(
+      map(
+        (item) => html`
+          <div
+            class="canvas-card ${item.isSelected ? "selected" : ""}"
+            data-id="${item.id}"
+            style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
+            0};"
+            @mousedown=${props.onMouseDown}
+          >
+            <div class="card-image-area">
+              ${item.imageSrc
+                ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
+                : item.imagePrompt
+                  ? html`<generative-image
+                      prompt="${item.imagePrompt}"
+                      width="${item.width}"
+                      height="${item.width}"
+                      @image-loaded=${(e: CustomEvent) => props.onUpdate({ imageSrc: e.detail.url })}
+                    ></generative-image>`
+                  : html``}
+            </div>
+            <div class="card-text-area">
+              ${item.title ? html`<div class="card-title">${item.title}</div>` : html``}
+              ${item.body ? html`<div class="card-body">${item.body}</div>` : html``}
+            </div>
+            <button
+              class="card-open-button"
+              @mousedown=${(e: MouseEvent) => e.stopPropagation()}
+              @click=${(e: MouseEvent) => {
+                e.stopPropagation();
+                props.onOpen();
+              }}
+            >
+              Open
+            </button>
+          </div>
+        `,
+      ),
+    );
+
+    return template$.pipe(mergeWith(autoGenerateEffect$));
+  },
+);

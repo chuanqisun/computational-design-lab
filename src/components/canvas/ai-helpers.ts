@@ -97,3 +97,73 @@ export function enhancePrompt(originalPrompt: string, cardContext: string, apiKe
     })(),
   );
 }
+
+export interface CardContent {
+  title?: string;
+  body?: string;
+  imagePrompt?: string;
+  imageSrc?: string;
+}
+
+export function fillCard(content: CardContent, apiKey: string): Observable<Partial<CardContent>> {
+  return from(
+    (async () => {
+      const parts: any[] = [];
+      let prompt = `I have a card with the following content:
+Title: ${content.title || "(missing)"}
+Body: ${content.body || "(missing)"}
+Image Prompt: ${content.imagePrompt || "(missing)"}
+
+Please generate the missing fields based on the available information.
+- If title is missing, generate a short, catchy title (max 3 words).
+- If body is missing, generate a concise description (max 2 sentences).
+- If image prompt is missing and no image is provided, generate a detailed image generation prompt.
+- If image is provided, use it to generate the missing text fields.
+
+Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
+Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
+
+      parts.push({ text: prompt });
+
+      if (content.imageSrc) {
+        try {
+          const dataUrl = await urlToBase64(content.imageSrc);
+          const { mimeType, data } = extractDataFromDataUrl(dataUrl);
+          parts.push({
+            inlineData: {
+              mimeType,
+              data,
+            },
+          });
+        } catch (e) {
+          console.error("Failed to process image for AI", e);
+          // Continue without image if failed
+        }
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        config: {
+          responseMimeType: "application/json",
+        },
+        contents: [
+          {
+            role: "user",
+            parts,
+          },
+        ],
+      });
+
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return {};
+
+      try {
+        return JSON.parse(text) as Partial<CardContent>;
+      } catch (e) {
+        console.error("Failed to parse JSON response from AI", text);
+        return {};
+      }
+    })(),
+  );
+}

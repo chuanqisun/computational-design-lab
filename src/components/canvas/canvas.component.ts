@@ -17,11 +17,11 @@ import {
 import { createComponent } from "../../sdk/create-component";
 import { observe } from "../../sdk/observe-directive";
 import type { ApiKeys } from "../connections/storage";
-import { generateTitle$ } from "../context-tray/llm/generate-title-gemini";
 import { submitTask } from "../context-tray/tasks";
 import { generateImage, type GeminiConnection } from "../design/generate-image-gemini";
-import { enhancePrompt, getCaption } from "./ai-helpers";
+import { enhancePrompt } from "./ai-helpers";
 import "./canvas.component.css";
+import { CardComponent } from "./card.component";
 import { copyItemsToClipboard, processClipboardPaste } from "./clipboard";
 import { getViewportCenter } from "./layout";
 import {
@@ -115,14 +115,6 @@ export const CanvasComponent = createComponent(
           zIndex: getNextZIndex(),
         };
         props.items$.next([...props.items$.value, card]);
-
-        // Generate caption
-        const apiKey = props.apiKeys$.value.gemini;
-        if (apiKey) {
-          getCaption(src, apiKey)
-            .pipe(catchError(() => of("Image")))
-            .subscribe((caption) => updateCard$.next({ id: cardId, updates: { title: caption, body: caption } }));
-        }
       }),
     );
 
@@ -134,9 +126,7 @@ export const CanvasComponent = createComponent(
 
         const card: CanvasItem = {
           id: cardId,
-          title: "Text",
           body: text,
-          imagePrompt: text, // Initial prompt
           x: center.x - 100,
           y: center.y - 150,
           width: 200,
@@ -144,19 +134,6 @@ export const CanvasComponent = createComponent(
           zIndex: getNextZIndex(),
         };
         props.items$.next([...props.items$.value, card]);
-
-        const apiKey = props.apiKeys$.value.gemini;
-        if (apiKey) {
-          // Generate title
-          generateTitle$({ text, apiKey })
-            .pipe(catchError(() => of("Text")))
-            .subscribe((title) => updateCard$.next({ id: cardId, updates: { title } }));
-
-          // Enhance prompt for image generation
-          enhancePrompt(text, `Title: Text. Body: ${text}`, apiKey)
-            .pipe(catchError(() => of(text)))
-            .subscribe((enhancedPrompt) => updateCard$.next({ id: cardId, updates: { imagePrompt: enhancedPrompt } }));
-        }
       }),
     );
 
@@ -456,43 +433,15 @@ export const CanvasComponent = createComponent(
             ${repeat(
               items,
               (item) => item.id,
-              (item) => html`
-                <div
-                  class="canvas-card ${item.isSelected ? "selected" : ""}"
-                  data-id="${item.id}"
-                  style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
-                  0};"
-                  @mousedown=${(e: MouseEvent) => handleMouseDown(item, e)}
-                >
-                  <div class="card-image-area">
-                    ${item.imageSrc
-                      ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
-                      : item.imagePrompt
-                        ? html`<generative-image
-                            prompt="${item.imagePrompt}"
-                            width="${item.width}"
-                            height="${item.width}"
-                            @image-loaded=${(e: CustomEvent) =>
-                              updateCard$.next({ id: item.id, updates: { imageSrc: e.detail.url } })}
-                          ></generative-image>`
-                        : html``}
-                  </div>
-                  <div class="card-text-area">
-                    ${item.title ? html`<div class="card-title">${item.title}</div>` : html``}
-                    ${item.body ? html`<div class="card-body">${item.body}</div>` : html``}
-                  </div>
-                  <button
-                    class="card-open-button"
-                    @mousedown=${(e: MouseEvent) => e.stopPropagation()}
-                    @click=${(e: MouseEvent) => {
-                      e.stopPropagation();
-                      openCard(item);
-                    }}
-                  >
-                    Open
-                  </button>
-                </div>
-              `,
+              (item) =>
+                CardComponent({
+                  id: item.id,
+                  items$: props.items$,
+                  apiKeys$: props.apiKeys$,
+                  onUpdate: (updates) => updateCard$.next({ id: item.id, updates }),
+                  onOpen: () => openCard(item),
+                  onMouseDown: (e) => handleMouseDown(item, e),
+                }),
             )}
           </div>
           <dialog id="card-detail-dialog" @close=${() => openedCardId$.next(null)}>${observe(cardDialog$)}</dialog>
