@@ -260,17 +260,19 @@ export const CanvasComponent = createComponent(
         isShift,
         analysis.shouldDeferSingleSelect,
       );
-      props.items$.next(selectionUpdate.items);
+      const selectedItems = selectionUpdate.items;
 
       // Check if the clicked item is selected after update
-      const updatedItem = selectionUpdate.items.find((i) => i.id === item.id);
+      const updatedItem = selectedItems.find((i) => i.id === item.id);
 
-      if (!updatedItem?.isSelected) return;
+      if (!updatedItem?.isSelected) {
+        props.items$.next(selectedItems);
+        return;
+      }
 
       // Bring the clicked item to the top (highest z-index)
-      const currentItems = props.items$.value;
-      const nextZ = getNextZIndex();
-      const updatedItems = currentItems.map((i) => (i.id === item.id ? { ...i, zIndex: nextZ } : i));
+      const nextZ = selectedItems.reduce((max, i) => Math.max(max, i.zIndex || 0), 0) + 1;
+      const updatedItems = selectedItems.map((i) => (i.id === item.id ? { ...i, zIndex: nextZ } : i));
       props.items$.next(updatedItems);
 
       // Get all selected items to drag (sorted by z-index for proper visual stacking)

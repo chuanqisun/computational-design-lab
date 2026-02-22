@@ -19,6 +19,22 @@ import { progress$ } from "../progress/progress";
 import { fillCard } from "./ai-helpers";
 import type { CanvasItem } from "./canvas.component";
 
+function isSameRenderableItem(prev: CanvasItem, curr: CanvasItem): boolean {
+  return (
+    prev.id === curr.id &&
+    prev.x === curr.x &&
+    prev.y === curr.y &&
+    prev.width === curr.width &&
+    prev.height === curr.height &&
+    prev.zIndex === curr.zIndex &&
+    prev.isSelected === curr.isSelected &&
+    prev.title === curr.title &&
+    prev.body === curr.body &&
+    prev.imageSrc === curr.imageSrc &&
+    prev.imagePrompt === curr.imagePrompt
+  );
+}
+
 export const CardComponent = createComponent(
   (props: {
     id: string;
@@ -31,7 +47,7 @@ export const CardComponent = createComponent(
     const item$ = props.items$.pipe(
       map((items) => items.find((i) => i.id === props.id)),
       filter((item): item is CanvasItem => item !== undefined),
-      distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
+      distinctUntilChanged(isSameRenderableItem),
     );
 
     const isGenerating$ = new BehaviorSubject(false);
@@ -110,10 +126,16 @@ export const CardComponent = createComponent(
                 ? html`<div class="card-body">${item.body}</div>`
                 : html`<div class="card-body placeholder">No description</div>`}
             </div>
-            <button class="card-open-button" data-card-open @click=${(e: MouseEvent) => {
-              e.stopPropagation();
-              props.onOpen();
-            }}>Open</button>
+            <button
+              class="card-open-button"
+              data-card-open
+              @click=${(e: MouseEvent) => {
+                e.stopPropagation();
+                props.onOpen();
+              }}
+            >
+              Open
+            </button>
           </div>
         `,
       ),
