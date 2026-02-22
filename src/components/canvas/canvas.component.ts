@@ -44,14 +44,15 @@ export function hasText(item: CanvasItem): boolean {
 }
 
 /** Migrate legacy items from IndexedDB */
-export function migrateItem(item: any): CanvasItem {
-  if (item.type === "image") {
-    return { ...item, imageSrc: item.imageSrc ?? item.src, type: undefined, src: undefined };
+export function migrateItem(raw: any): CanvasItem {
+  const { type: _type, src: _src, content: _content, ...rest } = raw;
+  if (raw.type === "image") {
+    return { ...rest, imageSrc: rest.imageSrc ?? raw.src };
   }
-  if (item.type === "text") {
-    return { ...item, body: item.body ?? item.content, type: undefined, content: undefined };
+  if (raw.type === "text") {
+    return { ...rest, body: rest.body ?? raw.content };
   }
-  return item;
+  return rest;
 }
 
 export const CanvasComponent = createComponent(
@@ -279,7 +280,7 @@ export const CanvasComponent = createComponent(
                     ${item.imageSrc
                       ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
                       : item.imagePrompt
-                        ? html`<generative-image prompt="${item.imagePrompt}" width="200" height="200"></generative-image>`
+                        ? html`<generative-image prompt="${item.imagePrompt}" width="${item.width}" height="${item.width}"></generative-image>`
                         : html``}
                   </div>
                   <div class="card-text-area">
