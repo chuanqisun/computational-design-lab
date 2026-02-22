@@ -5,7 +5,6 @@ import {
   Subject,
   catchError,
   combineLatest,
-  filter,
   ignoreElements,
   map,
   mergeWith,
@@ -94,9 +93,8 @@ export const CanvasComponent = createComponent(
 
     // Card dialog state
     const openedCardId$ = new BehaviorSubject<string | null>(null);
-    const dialogPrompt$ = new BehaviorSubject<string>("");
     const isRegenerating$ = new BehaviorSubject<boolean>(false);
-    const regenerate$ = new BehaviorSubject<boolean>(false);
+    const regenerate$ = new Subject<{ cardId: string; prompt: string }>();
 
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
@@ -191,26 +189,21 @@ export const CanvasComponent = createComponent(
       }),
     );
 
+    // Regenerate runs independently of dialog — user can close dialog and it still works
     const regenerateEffect$ = regenerate$.pipe(
-      filter((v) => v === true),
-      withLatestFrom(openedCardId$, dialogPrompt$, props.apiKeys$),
-      tap(([_, cardId, prompt, apiKeys]) => {
-        regenerate$.next(false);
-        if (!cardId || !prompt.trim() || !apiKeys.gemini) return;
+      withLatestFrom(props.apiKeys$),
+      tap(([{ cardId, prompt }, apiKeys]) => {
+        if (!prompt.trim() || !apiKeys.gemini) return;
 
         isRegenerating$.next(true);
         const connection: GeminiConnection = { apiKey: apiKeys.gemini };
 
-        // First enhance the prompt, then generate image
         const task$ = enhancePrompt(prompt, "User regeneration request", apiKeys.gemini).pipe(
-          catchError(() => of(prompt)), // Fallback to original prompt if enhancement fails
+          catchError(() => of(prompt)),
           switchMap((enhancedPrompt) =>
             generateImage(connection, { prompt: enhancedPrompt, width: 512, height: 512 }).pipe(
               tap((result) => {
                 updateCard$.next({ id: cardId, updates: { imageSrc: result.url, imagePrompt: enhancedPrompt } });
-                // Update the dialog prompt to match the enhanced one so user sees what was used?
-                // Or keep user input? User input is safer for editing.
-                // But we update the card state.
                 isRegenerating$.next(false);
               }),
               tap({ error: () => isRegenerating$.next(false) }),
@@ -226,9 +219,8 @@ export const CanvasComponent = createComponent(
     // Card dialog actions
     const openCard = (item: CanvasItem) => {
       openedCardId$.next(item.id);
-      dialogPrompt$.next(item.imagePrompt || "");
       const dialog = document.getElementById("card-detail-dialog") as HTMLDialogElement | null;
-      dialog?.showModal();
+      if (dialog && !dialog.open) dialog.show();
     };
 
     const closeCardDialog = () => {
@@ -247,8 +239,10 @@ export const CanvasComponent = createComponent(
       document.body.removeChild(link);
     };
 
+    // Drag handling — ignore clicks originating from the Open button
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
-      e.stopPropagation(); // Prevent canvas click when clicking on item
+      if ((e.target as HTMLElement).closest("[data-card-open]")) return;
+      e.stopPropagation();
 
       const { isCtrl, isShift } = getModifierKeys(e);
       const currentState: SelectionState = {
@@ -374,47 +368,85 @@ export const CanvasComponent = createComponent(
       }
     };
 
-    // Card dialog template
-    const cardDialog$ = combineLatest([openedCardId$, items$, dialogPrompt$, isRegenerating$]).pipe(
-      map(([cardId, items, prompt, isRegenerating]) => {
+    // Card dialog template — editable fields, image on left, text on right
+    const cardDialog$ = combineLatest([openedCardId$, items$, isRegenerating$]).pipe(
+      map(([cardId, items, isRegenerating]) => {
         const card = cardId ? items.find((i) => i.id === cardId) : null;
         if (!card) return html``;
 
+        const handleFieldUpdate = (field: keyof CanvasItem, value: string) => {
+          updateCard$.next({ id: card.id, updates: { [field]: value } });
+        };
+
         return html`
           <div class="card-dialog-body">
-            ${card.imageSrc
-              ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
-              : card.imagePrompt
-                ? html`<generative-image
-                    class="card-dialog-gen-image"
-                    prompt="${card.imagePrompt}"
-                    width="512"
-                    height="512"
-                    @image-loaded=${(e: CustomEvent) =>
-                      updateCard$.next({ id: card.id, updates: { imageSrc: e.detail.url } })}
-                  ></generative-image>`
-                : html``}
-            ${card.title ? html`<h3 class="card-dialog-title">${card.title}</h3>` : html``}
-            ${card.body ? html`<p class="card-dialog-text">${card.body}</p>` : html``}
-            <label>Image prompt</label>
-            <textarea
-              .value=${prompt}
-              @input=${(e: Event) => dialogPrompt$.next((e.target as HTMLTextAreaElement).value)}
-              placeholder="Describe image to generate..."
-            ></textarea>
-            <menu class="card-dialog-actions">
-              <button ?disabled=${isRegenerating || !prompt.trim()} @click=${() => regenerate$.next(true)}>
-                ${isRegenerating ? "Generating..." : "Regenerate"}
-              </button>
-              ${card.imageSrc
-                ? html`<button @click=${() => downloadImage(card.imageSrc!, card.title)}>Download</button>`
-                : html``}
-              <button @click=${closeCardDialog}>Close</button>
-            </menu>
+            <div class="card-dialog-layout">
+              <div class="card-dialog-image-col">
+                ${card.imageSrc
+                  ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
+                  : card.imagePrompt
+                    ? html`<generative-image
+                        class="card-dialog-gen-image"
+                        prompt="${card.imagePrompt}"
+                        width="512"
+                        height="512"
+                        @image-loaded=${(e: CustomEvent) =>
+                          updateCard$.next({ id: card.id, updates: { imageSrc: e.detail.url } })}
+                      ></generative-image>`
+                    : html`<div class="card-dialog-placeholder">No image</div>`}
+              </div>
+              <div class="card-dialog-info-col">
+                <label>Title</label>
+                <input
+                  type="text"
+                  .value=${card.title || ""}
+                  @input=${(e: Event) => handleFieldUpdate("title", (e.target as HTMLInputElement).value)}
+                  placeholder="Untitled"
+                />
+                <label>Body</label>
+                <textarea
+                  .value=${card.body || ""}
+                  @input=${(e: Event) => handleFieldUpdate("body", (e.target as HTMLTextAreaElement).value)}
+                  placeholder="No description"
+                ></textarea>
+                <label>Image prompt</label>
+                <textarea
+                  .value=${card.imagePrompt || ""}
+                  @input=${(e: Event) => handleFieldUpdate("imagePrompt", (e.target as HTMLTextAreaElement).value)}
+                  placeholder="Describe image to generate..."
+                ></textarea>
+                <menu class="card-dialog-actions">
+                  <button
+                    ?disabled=${isRegenerating || !(card.imagePrompt || "").trim()}
+                    @click=${() => regenerate$.next({ cardId: card.id, prompt: card.imagePrompt || "" })}
+                  >
+                    ${isRegenerating ? "Generating..." : "Regenerate"}
+                  </button>
+                  ${card.imageSrc
+                    ? html`<button @click=${() => downloadImage(card.imageSrc!, card.title)}>Download</button>`
+                    : html``}
+                  <button @click=${closeCardDialog}>Close</button>
+                </menu>
+              </div>
+            </div>
           </div>
         `;
       }),
     );
+
+    // Close dialog when clicking outside (non-modal behavior)
+    const handleDialogClick = (e: MouseEvent) => {
+      const dialog = e.currentTarget as HTMLDialogElement;
+      const rect = dialog.getBoundingClientRect();
+      if (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      ) {
+        closeCardDialog();
+      }
+    };
 
     // Template
     const template$ = items$.pipe(
@@ -444,7 +476,9 @@ export const CanvasComponent = createComponent(
                 }),
             )}
           </div>
-          <dialog id="card-detail-dialog" @close=${() => openedCardId$.next(null)}>${observe(cardDialog$)}</dialog>
+          <dialog id="card-detail-dialog" @click=${handleDialogClick} @close=${() => openedCardId$.next(null)}>
+            ${observe(cardDialog$)}
+          </dialog>
         `,
       ),
     );

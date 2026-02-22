@@ -15,6 +15,7 @@ import {
 } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
+import { progress$ } from "../progress/progress";
 import { fillCard } from "./ai-helpers";
 import type { CanvasItem } from "./canvas.component";
 
@@ -33,6 +34,8 @@ export const CardComponent = createComponent(
       distinctUntilChanged((prev, curr) => JSON.stringify(prev) === JSON.stringify(curr)),
     );
 
+    const isGenerating$ = new BehaviorSubject(false);
+
     // Effects
     const autoGenerateEffect$ = item$.pipe(
       withLatestFrom(props.apiKeys$),
@@ -46,6 +49,10 @@ export const CardComponent = createComponent(
         return hasContent && missingFields;
       }),
       debounceTime(2000),
+      tap(() => {
+        isGenerating$.next(true);
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+      }),
       switchMap(([item, apiKeys]) => {
         const content = {
           title: item.title,
@@ -56,12 +63,16 @@ export const CardComponent = createComponent(
 
         return fillCard(content, apiKeys.gemini!).pipe(
           tap((updates) => {
+            isGenerating$.next(false);
+            progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
             if (Object.keys(updates).length > 0) {
               props.onUpdate(updates);
             }
           }),
           catchError((err) => {
             console.error("Auto-generate failed", err);
+            isGenerating$.next(false);
+            progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
             return of(null);
           }),
         );
@@ -89,22 +100,20 @@ export const CardComponent = createComponent(
                       height="${item.width}"
                       @image-loaded=${(e: CustomEvent) => props.onUpdate({ imageSrc: e.detail.url })}
                     ></generative-image>`
-                  : html``}
+                  : html`<div class="card-placeholder-image">No image</div>`}
             </div>
             <div class="card-text-area">
-              ${item.title ? html`<div class="card-title">${item.title}</div>` : html``}
-              ${item.body ? html`<div class="card-body">${item.body}</div>` : html``}
+              ${item.title
+                ? html`<div class="card-title">${item.title}</div>`
+                : html`<div class="card-title placeholder">Untitled</div>`}
+              ${item.body
+                ? html`<div class="card-body">${item.body}</div>`
+                : html`<div class="card-body placeholder">No description</div>`}
             </div>
-            <button
-              class="card-open-button"
-              @mousedown=${(e: MouseEvent) => e.stopPropagation()}
-              @click=${(e: MouseEvent) => {
-                e.stopPropagation();
-                props.onOpen();
-              }}
-            >
-              Open
-            </button>
+            <button class="card-open-button" data-card-open @click=${(e: MouseEvent) => {
+              e.stopPropagation();
+              props.onOpen();
+            }}>Open</button>
           </div>
         `,
       ),
