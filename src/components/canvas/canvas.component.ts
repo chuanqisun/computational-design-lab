@@ -233,6 +233,24 @@ export const CanvasComponent = createComponent(
       openedCardId$.next(null);
     };
 
+    const findItemById = (id: string) => props.items$.value.find((item) => item.id === id);
+
+    const handleCardUpdate = (id: string, updates: Partial<CanvasItem>) => {
+      updateCard$.next({ id, updates });
+    };
+
+    const handleCardOpen = (id: string) => {
+      const item = findItemById(id);
+      if (!item) return;
+      openCard(item);
+    };
+
+    const handleCardMouseDown = (id: string, e: MouseEvent) => {
+      const item = findItemById(id);
+      if (!item) return;
+      handleMouseDown(item, e);
+    };
+
     const downloadImage = (src: string, title?: string) => {
       const name = (title || "canvas-image").replace(/[^a-zA-Z0-9-_ ]/g, "").trim();
       const link = document.createElement("a");
@@ -473,9 +491,9 @@ export const CanvasComponent = createComponent(
                   id: item.id,
                   items$: props.items$,
                   apiKeys$: props.apiKeys$,
-                  onUpdate: (updates) => updateCard$.next({ id: item.id, updates }),
-                  onOpen: () => openCard(item),
-                  onMouseDown: (e) => handleMouseDown(item, e),
+                  onUpdate: handleCardUpdate,
+                  onOpen: handleCardOpen,
+                  onMouseDown: handleCardMouseDown,
                 }),
             )}
           </div>

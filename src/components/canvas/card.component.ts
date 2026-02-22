@@ -4,12 +4,13 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  exhaustMap,
   filter,
+  finalize,
   ignoreElements,
   map,
   mergeWith,
   of,
-  switchMap,
   tap,
   withLatestFrom,
 } from "rxjs";
@@ -40,9 +41,9 @@ export const CardComponent = createComponent(
     id: string;
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
-    onUpdate: (updates: Partial<CanvasItem>) => void;
-    onOpen: () => void;
-    onMouseDown: (e: MouseEvent) => void;
+    onUpdate: (id: string, updates: Partial<CanvasItem>) => void;
+    onOpen: (id: string) => void;
+    onMouseDown: (id: string, e: MouseEvent) => void;
   }) => {
     const item$ = props.items$.pipe(
       map((items) => items.find((i) => i.id === props.id)),
@@ -51,12 +52,25 @@ export const CardComponent = createComponent(
     );
 
     const isGenerating$ = new BehaviorSubject(false);
+    const generatedSignatures$ = new BehaviorSubject<Set<string>>(new Set());
+
+    const getGenerationSignature = (item: CanvasItem): string => {
+      const title = item.title?.trim() || "";
+      const body = item.body?.trim() || "";
+      const imagePrompt = item.imagePrompt?.trim() || "";
+      const imageSrc = item.imageSrc?.trim() || "";
+      return `${title}||${body}||${imagePrompt}||${imageSrc}`;
+    };
 
     // Effects
     const autoGenerateEffect$ = item$.pipe(
       withLatestFrom(props.apiKeys$),
-      filter(([item, apiKeys]) => {
-        const apiKey = apiKeys.gemini;
+      map(([item, apiKeys]) => ({
+        item,
+        apiKey: apiKeys.gemini,
+        signature: getGenerationSignature(item),
+      })),
+      filter(({ item, apiKey }) => {
         if (!apiKey) return false;
 
         const hasContent = !!(item.title || item.body || item.imageSrc || item.imagePrompt);
@@ -64,12 +78,10 @@ export const CardComponent = createComponent(
 
         return hasContent && missingFields;
       }),
-      debounceTime(2000),
-      tap(() => {
-        isGenerating$.next(true);
-        progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
-      }),
-      switchMap(([item, apiKeys]) => {
+      distinctUntilChanged((prev, curr) => prev.signature === curr.signature && prev.apiKey === curr.apiKey),
+      filter(({ signature }) => !generatedSignatures$.value.has(signature)),
+      debounceTime(100),
+      exhaustMap(({ item, apiKey, signature }) => {
         const content = {
           title: item.title,
           body: item.body,
@@ -77,19 +89,23 @@ export const CardComponent = createComponent(
           imageSrc: item.imageSrc,
         };
 
-        return fillCard(content, apiKeys.gemini!).pipe(
+        isGenerating$.next(true);
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+
+        return fillCard(content, apiKey!).pipe(
           tap((updates) => {
-            isGenerating$.next(false);
-            progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+            generatedSignatures$.next(new Set(generatedSignatures$.value).add(signature));
             if (Object.keys(updates).length > 0) {
-              props.onUpdate(updates);
+              props.onUpdate(item.id, updates);
             }
           }),
           catchError((err) => {
             console.error("Auto-generate failed", err);
+            return of(null);
+          }),
+          finalize(() => {
             isGenerating$.next(false);
             progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
-            return of(null);
           }),
         );
       }),
@@ -104,7 +120,7 @@ export const CardComponent = createComponent(
             data-id="${item.id}"
             style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${item.zIndex ||
             0};"
-            @mousedown=${props.onMouseDown}
+            @mousedown=${(e: MouseEvent) => props.onMouseDown(item.id, e)}
           >
             <div class="card-image-area">
               ${item.imageSrc
@@ -114,7 +130,7 @@ export const CardComponent = createComponent(
                       prompt="${item.imagePrompt}"
                       width="${item.width}"
                       height="${item.width}"
-                      @image-loaded=${(e: CustomEvent) => props.onUpdate({ imageSrc: e.detail.url })}
+                      @image-loaded=${(e: CustomEvent) => props.onUpdate(item.id, { imageSrc: e.detail.url })}
                     ></generative-image>`
                   : html`<div class="card-placeholder-image">No image</div>`}
             </div>
@@ -131,7 +147,7 @@ export const CardComponent = createComponent(
               data-card-open
               @click=${(e: MouseEvent) => {
                 e.stopPropagation();
-                props.onOpen();
+                props.onOpen(item.id);
               }}
             >
               Open
