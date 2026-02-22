@@ -2,12 +2,12 @@ import { html } from "lit-html";
 import { repeat } from "lit-html/directives/repeat.js";
 import { BehaviorSubject, map, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { CanvasItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import "./text-content.tool.css";
 
 export const TextContentTool = createComponent(
-  ({ selectedTexts$, items$ }: { selectedTexts$: Observable<TextItem[]>; items$: BehaviorSubject<CanvasItem[]> }) => {
-    const updateItem = (id: string, updates: Partial<TextItem>) => {
+  ({ selected$, items$ }: { selected$: Observable<CanvasItem[]>; items$: BehaviorSubject<CanvasItem[]> }) => {
+    const updateItem = (id: string, updates: Partial<CanvasItem>) => {
       const currentItems = items$.value;
       const nextItems = currentItems.map((item) => {
         if (item.id === id) {
@@ -18,36 +18,36 @@ export const TextContentTool = createComponent(
       items$.next(nextItems);
     };
 
-    return selectedTexts$.pipe(
-      map((selectedTexts) => {
-        if (selectedTexts.length === 0) return html``;
+    return selected$.pipe(
+      map((selected) => {
+        if (selected.length === 0) return html``;
         return html`
           <div class="text-content-tool">
             ${repeat(
-              selectedTexts,
-              (txt) => txt.id,
-              (txt) => html`
+              selected,
+              (card) => card.id,
+              (card) => html`
                 <div class="text-item-content">
                   <div class="input-group">
-                    <label for="title-${txt.id}">Title</label>
+                    <label for="title-${card.id}">Title</label>
                     <input
-                      id="title-${txt.id}"
+                      id="title-${card.id}"
                       type="text"
-                      .value=${txt.title}
+                      .value=${card.title || ""}
                       @input=${(e: Event) =>
-                        updateItem(txt.id, {
+                        updateItem(card.id, {
                           title: (e.target as HTMLInputElement).value,
                         })}
                     />
                   </div>
                   <div class="input-group">
-                    <label for="content-${txt.id}">Content</label>
+                    <label for="body-${card.id}">Body</label>
                     <textarea
-                      id="content-${txt.id}"
-                      .value=${txt.content}
+                      id="body-${card.id}"
+                      .value=${card.body || ""}
                       @input=${(e: Event) =>
-                        updateItem(txt.id, {
-                          content: (e.target as HTMLTextAreaElement).value,
+                        updateItem(card.id, {
+                          body: (e.target as HTMLTextAreaElement).value,
                         })}
                     ></textarea>
                   </div>

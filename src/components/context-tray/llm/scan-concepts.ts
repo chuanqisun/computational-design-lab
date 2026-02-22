@@ -1,10 +1,10 @@
 import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
-export type ConceptualScanInput = Pick<TextItem, "title" | "content"> | Pick<ImageItem, "src">;
+export type ConceptualScanInput = CanvasItem;
 
 export interface Concept {
   title: string;
@@ -57,12 +57,13 @@ export function scanConcepts$(inputs: {
         const parts: any[] = [{ text: inputs.instruction }];
 
         for (const item of inputs.items) {
-          if ("src" in item) {
-            const base64Data = item.src.replace(/^data:image\/\w+;base64,/, "");
-            const mimeType = item.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+          if (item.imageSrc) {
+            const base64Data = item.imageSrc.replace(/^data:image\/\w+;base64,/, "");
+            const mimeType = item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
             parts.push({ inlineData: { data: base64Data, mimeType } });
-          } else {
-            parts.push({ text: `${item.title}: ${item.content}` });
+          }
+          if (item.body) {
+            parts.push({ text: `${item.title || ""}: ${item.body}` });
           }
         }
 

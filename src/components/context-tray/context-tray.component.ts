@@ -1,7 +1,7 @@
 import { html, nothing } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
-import type { CanvasItem, ImageItem, TextItem } from "../canvas/canvas.component";
+import { hasImage, hasText, type CanvasItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
 import { BlendTool } from "./tools/blend.tool";
@@ -18,34 +18,25 @@ import { WriterTool } from "./tools/writer.tool";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
-    // Derive images and texts from unified items
-    const images$ = items$.pipe(
-      map((items) => items.filter((item): item is ImageItem => item.type === "image") as ImageItem[]),
-    );
+    const selected$ = items$.pipe(map((items) => items.filter((item) => item.isSelected)));
+    const selectedWithImage$ = selected$.pipe(map((items) => items.filter(hasImage)));
+    const selectedWithText$ = selected$.pipe(map((items) => items.filter(hasText)));
 
-    const texts$ = items$.pipe(
-      map((items) => items.filter((item): item is TextItem => item.type === "text") as TextItem[]),
-    );
-
-    // Create streams for selected items
-    const selectedImages$ = images$.pipe(map((images) => images.filter((img: ImageItem) => img.isSelected)));
-    const selectedTexts$ = texts$.pipe(map((texts) => texts.filter((txt: TextItem) => txt.isSelected)));
-
-    const conceptualScanUI = ConceptualScanTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
-    const designToolUI = DesignTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
-    const textContentUI = TextContentTool({ selectedTexts$, items$ });
-    const visualizeUI = VisualizeTool({ selectedTexts$, items$, apiKeys$ });
-    const blendToolUI = BlendTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
-    const userTestingUI = UserTestingTool({ selectedImages$, selectedTexts$, items$, apiKeys$ });
-    const downloadToolTUI = FileTool({ selectedImages$ });
-    const renderToolUI = RenderTool({ selectedTexts$, selectedImages$, items$, apiKeys$ });
+    const conceptualScanUI = ConceptualScanTool({ selected$, items$, apiKeys$ });
+    const designToolUI = DesignTool({ selected$, items$, apiKeys$ });
+    const textContentUI = TextContentTool({ selected$, items$ });
+    const visualizeUI = VisualizeTool({ selectedWithText$, items$, apiKeys$ });
+    const blendToolUI = BlendTool({ selected$, items$, apiKeys$ });
+    const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
+    const downloadToolTUI = FileTool({ selectedWithImage$ });
+    const renderToolUI = RenderTool({ selected$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
 
-    const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
-      map(([selectedImages, selectedTexts]) => {
-        const totalSelected = selectedImages.length + selectedTexts.length;
+    const template$ = combineLatest([selected$, selectedWithImage$, selectedWithText$]).pipe(
+      map(([selected, selectedWithImage, selectedWithText]) => {
+        const totalSelected = selected.length;
 
         return html`<aside class="context-tray">
           <p>${totalSelected} selected</p>
@@ -75,17 +66,19 @@ export const ContextTrayComponent = createComponent(
                 <div class="tool-body">${blendToolUI}</div>
               </details>`
             : nothing}
-          ${selectedTexts.length > 0
+          ${selectedWithText.length > 0
             ? html`<details class="tool-container" open>
-                  <summary>Text Content</summary>
-                  <div class="tool-body">${textContentUI}</div>
-                </details>
-                <details class="tool-container" open>
-                  <summary>Visualize</summary>
-                  <div class="tool-body">${visualizeUI}</div>
-                </details>`
+                <summary>Visualize</summary>
+                <div class="tool-body">${visualizeUI}</div>
+              </details>`
             : nothing}
-          ${selectedImages.length === 1
+          ${totalSelected > 0
+            ? html`<details class="tool-container" open>
+                <summary>Card Content</summary>
+                <div class="tool-body">${textContentUI}</div>
+              </details>`
+            : nothing}
+          ${selectedWithImage.length === 1
             ? html`<details class="tool-container" open>
                 <summary>File</summary>
                 <div class="tool-body">${downloadToolTUI}</div>

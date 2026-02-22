@@ -27,23 +27,22 @@ export const WriterTool = createComponent(
           map((caption) => {
             const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
             const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-
             const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
 
-            const newTextItem: CanvasItem = {
+            const card: CanvasItem = {
               id: `writer-${Date.now()}`,
-              type: "text",
               title: caption || "Text",
-              content: trimmed,
+              body: trimmed,
+              imagePrompt: trimmed,
               x: center.x - 100,
-              y: center.y - 100,
+              y: center.y - 150,
               width: 200,
-              height: 200,
+              height: 300,
               isSelected: false,
               zIndex: maxZ + 1,
             };
 
-            items$.next([...items$.value, newTextItem]);
+            items$.next([...items$.value, card]);
             inputText$.next("");
           }),
         );

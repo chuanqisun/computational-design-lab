@@ -145,12 +145,11 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
 
     const additions: CanvasItem[] = pending.map((photo, index) => ({
       id: `scan-photo-${Date.now()}-${index}`,
-      type: "image",
-      src: photo.fullDataUrl,
+      imageSrc: photo.fullDataUrl,
       x: center.x - 100 + index * 24,
-      y: center.y - 100 + index * 24,
+      y: center.y - 150 + index * 24,
       width: 200,
-      height: 200,
+      height: 300,
       isSelected: false,
       zIndex: maxZ + index + 1,
       metadata: {

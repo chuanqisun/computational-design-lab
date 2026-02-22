@@ -1,10 +1,10 @@
 import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
-export type DesignInput = Pick<TextItem, "title" | "content"> | Pick<ImageItem, "src">;
+export type DesignInput = CanvasItem;
 
 export type DesignRequirement = string;
 
@@ -57,13 +57,15 @@ export function designConcepts$(inputs: {
           required: ["designs"],
         };
 
-        const contents = inputs.items.map((item) => {
-          if ("src" in item && item.src) {
-            return { inlineData: { mimeType: "image/jpeg", data: item.src.split(",")[1] } };
-          } else if ("title" in item && "content" in item) {
-            return { text: `Title: ${item.title}\nContent: ${item.content}` };
+        const contents = inputs.items.flatMap((item) => {
+          const parts: any[] = [];
+          if (item.imageSrc) {
+            parts.push({ inlineData: { mimeType: "image/jpeg", data: item.imageSrc.split(",")[1] } });
           }
-          throw new Error("Invalid item type");
+          if (item.body) {
+            parts.push({ text: `Title: ${item.title || ""}\nContent: ${item.body}` });
+          }
+          return parts;
         });
 
         const requirementText = inputs.requirements || "Any";

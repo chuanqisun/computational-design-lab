@@ -11,7 +11,7 @@ import {
   type Observable,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
@@ -19,14 +19,12 @@ import { submitTask } from "../tasks";
 
 export const RenderTool = createComponent(
   ({
-    selectedTexts$,
-    selectedImages$,
+    selected$,
     items$,
     apiKeys$,
   }: {
-    selectedTexts$: Observable<TextItem[]>;
+    selected$: Observable<CanvasItem[]>;
     items$: BehaviorSubject<CanvasItem[]>;
-    selectedImages$: Observable<ImageItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const prompt$ = new BehaviorSubject<string>("");
@@ -34,16 +32,16 @@ export const RenderTool = createComponent(
 
     const renderEffect$ = render$.pipe(
       filter((trigger) => trigger === true),
-      withLatestFrom(prompt$, selectedTexts$, selectedImages$, apiKeys$),
-      tap(([_, prompt, selectedTexts, selectedImages, apiKeys]) => {
+      withLatestFrom(prompt$, selected$, apiKeys$),
+      tap(([_, prompt, selected, apiKeys]) => {
         render$.next(false);
 
         if (!prompt.trim() || !apiKeys.gemini) {
           return;
         }
 
-        const fullPrompt = [prompt, ...selectedTexts.map((txt) => txt.content)].join(" ");
-        const images = selectedImages.map((img) => img.src);
+        const fullPrompt = [prompt, ...selected.filter((c) => c.body).map((c) => c.body)].join(" ");
+        const images = selected.filter((c) => c.imageSrc).map((c) => c.imageSrc!);
         const connection: GeminiConnection = { apiKey: apiKeys.gemini };
 
         const task$ = generateImage(connection, {
@@ -56,17 +54,16 @@ export const RenderTool = createComponent(
             const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
             const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
 
-            const newImage: CanvasItem = {
+            const card: CanvasItem = {
               id: `rendered-${Date.now()}`,
-              type: "image",
-              src: result.url,
+              imageSrc: result.url,
               x: center.x - 100,
-              y: center.y - 100,
+              y: center.y - 150,
               width: 200,
-              height: 200,
+              height: 300,
               isSelected: false,
             };
-            items$.next([...items$.value, newImage]);
+            items$.next([...items$.value, card]);
           }),
         );
 

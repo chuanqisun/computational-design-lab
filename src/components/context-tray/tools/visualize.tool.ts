@@ -1,7 +1,7 @@
 import { html } from "lit-html";
 import { BehaviorSubject, filter, ignoreElements, map, mergeWith, Observable, tap, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { visualizeConcept$ } from "../llm/visualize-concept";
@@ -10,11 +10,11 @@ import "./visualize.tool.css";
 
 export const VisualizeTool = createComponent(
   ({
-    selectedTexts$,
+    selectedWithText$,
     items$,
     apiKeys$,
   }: {
-    selectedTexts$: Observable<TextItem[]>;
+    selectedWithText$: Observable<CanvasItem[]>;
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
@@ -37,9 +37,9 @@ export const VisualizeTool = createComponent(
 
     const visualizeEffect$ = visualize$.pipe(
       filter((vizType): vizType is (typeof visualizationTypes)[number] => vizType !== null),
-      withLatestFrom(selectedTexts$, apiKeys$),
-      tap(([vizType, selectedTexts, apiKeys]) => {
-        if (selectedTexts.length === 0) {
+      withLatestFrom(selectedWithText$, apiKeys$),
+      tap(([vizType, selectedWithText, apiKeys]) => {
+        if (selectedWithText.length === 0) {
           return;
         }
 
@@ -49,7 +49,7 @@ export const VisualizeTool = createComponent(
         }
 
         const title = "Selected Concept";
-        const description = selectedTexts.map((txt) => txt.content).join(" ");
+        const description = selectedWithText.map((c) => c.body).join(" ");
         const concept = { title, description };
 
         const positionGenerator = getNextPositions(items$.value.filter((item) => item.isSelected));
@@ -61,18 +61,17 @@ export const VisualizeTool = createComponent(
         }).pipe(
           tap((url) => {
             const { x, y, z } = positionGenerator.next().value;
-            const newImage: ImageItem = {
-              id: `img-${crypto.randomUUID()}`,
-              type: "image",
-              src: url,
+            const card: CanvasItem = {
+              id: `viz-${crypto.randomUUID()}`,
+              imageSrc: url,
               x,
               y,
               width: 200,
-              height: 200,
+              height: 300,
               isSelected: false,
               zIndex: z,
             };
-            items$.next([...items$.value, newImage]);
+            items$.next([...items$.value, card]);
           }),
         );
 
@@ -81,9 +80,9 @@ export const VisualizeTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = selectedTexts$.pipe(
-      map((selectedTexts) => {
-        if (selectedTexts.length === 0) return html``;
+    const template$ = selectedWithText$.pipe(
+      map((selectedWithText) => {
+        if (selectedWithText.length === 0) return html``;
 
         return html`
           <div class="visualize-section">

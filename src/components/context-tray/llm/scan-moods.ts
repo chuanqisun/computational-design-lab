@@ -1,7 +1,7 @@
 import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
-import type { ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 export interface MoodResult {
@@ -9,7 +9,7 @@ export interface MoodResult {
   moods: Array<{ mood: string; arousal: number }>;
 }
 
-export function scanMoods$(inputs: { item: ImageItem | TextItem; apiKey: string }): Observable<MoodResult> {
+export function scanMoods$(inputs: { item: CanvasItem; apiKey: string }): Observable<MoodResult> {
   return new Observable<MoodResult>((subscriber) => {
     const ai = new GoogleGenAI({ apiKey: inputs.apiKey });
     const parser = new JSONParser();
@@ -52,12 +52,13 @@ export function scanMoods$(inputs: { item: ImageItem | TextItem; apiKey: string 
 
         const parts: any[] = [{ text: "Analyze this item for moods and arousal levels." }];
 
-        if (inputs.item.type === "image") {
-          const base64Data = inputs.item.src.replace(/^data:image\/\w+;base64,/, "");
-          const mimeType = inputs.item.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+        if (inputs.item.imageSrc) {
+          const base64Data = inputs.item.imageSrc.replace(/^data:image\/\w+;base64,/, "");
+          const mimeType = inputs.item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
           parts.push({ inlineData: { data: base64Data, mimeType } });
-        } else if (inputs.item.type === "text") {
-          parts.push({ text: `Title: ${inputs.item.title}\nContent: ${inputs.item.content}` });
+        }
+        if (inputs.item.body) {
+          parts.push({ text: `Title: ${inputs.item.title || ""}\nContent: ${inputs.item.body}` });
         }
 
         const response = await ai.models.generateContentStream({
@@ -98,7 +99,7 @@ export function scanMoods$(inputs: { item: ImageItem | TextItem; apiKey: string 
 }
 
 export function scanMoodsSupervised$(inputs: {
-  item: ImageItem | TextItem;
+  item: CanvasItem;
   apiKey: string;
   requiredList?: string[];
 }): Observable<MoodResult> {
@@ -161,12 +162,13 @@ export function scanMoodsSupervised$(inputs: {
 
         const parts: any[] = [{ text: "Analyze this item for moods and arousal levels." }];
 
-        if (inputs.item.type === "image") {
-          const base64Data = inputs.item.src.replace(/^data:image\/\w+;base64,/, "");
-          const mimeType = inputs.item.src.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+        if (inputs.item.imageSrc) {
+          const base64Data = inputs.item.imageSrc.replace(/^data:image\/\w+;base64,/, "");
+          const mimeType = inputs.item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
           parts.push({ inlineData: { data: base64Data, mimeType } });
-        } else if (inputs.item.type === "text") {
-          parts.push({ text: `Title: ${inputs.item.title}\nContent: ${inputs.item.content}` });
+        }
+        if (inputs.item.body) {
+          parts.push({ text: `Title: ${inputs.item.title || ""}\nContent: ${inputs.item.body}` });
         }
 
         const response = await ai.models.generateContentStream({

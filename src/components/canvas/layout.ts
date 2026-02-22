@@ -239,33 +239,6 @@ export function focusSelectedItems(
   return moves;
 }
 
-export interface ConceptPosition {
-  text: Position;
-  image: Position;
-}
-
-export function* getConceptLayout(anchorItems: CanvasItem[]): Generator<ConceptPosition> {
-  const center = calculateAnchorPoint(anchorItems);
-  // Start a bit below and to the right of the center of selection/anchors
-  const startX = center.x + 50;
-  const startY = center.y + 50;
-
-  const gap = 20;
-  const textWidth = 200;
-  const conceptGap = 40; // Gap between different concepts
-
-  for (let i = 0; ; i++) {
-    const conceptX = startX;
-    const conceptY = startY + i * (350 + conceptGap); // 350 approx height of concept
-    const z = center.z + i + 1;
-
-    yield {
-      text: { x: conceptX, y: conceptY, z },
-      image: { x: conceptX + textWidth + gap, y: conceptY, z },
-    };
-  }
-}
-
 function calculateAnchorPoint(items: CanvasItem[]): Position {
   if (items.length === 0) {
     return { x: 400, y: 300, z: 1 }; // Default center if no items

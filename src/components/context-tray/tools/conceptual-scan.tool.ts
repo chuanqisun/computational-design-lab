@@ -1,7 +1,6 @@
 import { html } from "lit-html";
 import {
   BehaviorSubject,
-  combineLatest,
   filter,
   ignoreElements,
   map,
@@ -11,22 +10,20 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import type { CanvasItem, ImageItem, TextItem } from "../../canvas/canvas.component";
+import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { scanConcepts$, type ConceptualScanInput } from "../llm/scan-concepts";
+import { scanConcepts$ } from "../llm/scan-concepts";
 import { submitTask } from "../tasks";
 import "./conceptual-scan.tool.css";
 
 export const ConceptualScanTool = createComponent(
   ({
-    selectedImages$,
-    selectedTexts$,
+    selected$,
     items$,
     apiKeys$,
   }: {
-    selectedImages$: Observable<ImageItem[]>;
-    selectedTexts$: Observable<TextItem[]>;
+    selected$: Observable<CanvasItem[]>;
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
@@ -96,44 +93,33 @@ export const ConceptualScanTool = createComponent(
 
     const scanEffect$ = scan$.pipe(
       filter((scanType): scanType is (typeof scanTypes)[number] => scanType !== null),
-      withLatestFrom(selectedImages$, selectedTexts$, apiKeys$),
-      tap(([scanType, selectedImages, selectedTexts, apiKeys]) => {
-        const selectedItems = [...selectedImages, ...selectedTexts];
-
-        if (selectedItems.length === 0 || !apiKeys.gemini) {
+      withLatestFrom(selected$, apiKeys$),
+      tap(([scanType, selected, apiKeys]) => {
+        if (selected.length === 0 || !apiKeys.gemini) {
           return;
         }
 
-        const scanInputs: ConceptualScanInput[] = selectedItems.map((item) => {
-          if ("src" in item && item.src) {
-            return { src: item.src } as ConceptualScanInput;
-          } else if ("title" in item && "content" in item) {
-            return { title: item.title, content: item.content } as ConceptualScanInput;
-          }
-          throw new Error("Invalid item type");
-        });
-
-        const positionGenerator = getNextPositions(selectedItems);
+        const positionGenerator = getNextPositions(selected);
         const task$ = scanConcepts$({
-          items: scanInputs,
+          items: selected,
           instruction: scanType.instruction,
           apiKey: apiKeys.gemini,
         }).pipe(
           tap((concept) => {
             const { x, y, z } = positionGenerator.next().value;
-            const newText: CanvasItem = {
-              id: `text-${Date.now()}`,
-              type: "text",
+            const card: CanvasItem = {
+              id: `scan-${Date.now()}`,
               title: concept.title,
-              content: concept.description,
+              body: concept.description,
+              imagePrompt: concept.description,
               x,
               y,
               width: 200,
-              height: 200,
+              height: 300,
               isSelected: false,
               zIndex: z,
             };
-            items$.next([...items$.value, newText]);
+            items$.next([...items$.value, card]);
           }),
         );
 
@@ -142,10 +128,9 @@ export const ConceptualScanTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = combineLatest([selectedImages$, selectedTexts$]).pipe(
-      map(([selectedImages, selectedTexts]) => {
-        const selectedItemsCount = selectedImages.length + selectedTexts.length;
-        if (selectedItemsCount === 0) return html``;
+    const template$ = selected$.pipe(
+      map((selected) => {
+        if (selected.length === 0) return html``;
 
         return html`
           <div class="conceptual-scan-section">
