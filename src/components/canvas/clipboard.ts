@@ -4,6 +4,10 @@ import type { CanvasItem } from "./canvas.component";
 
 export type PasteAction = { type: "image"; src: string } | { type: "text"; content: string };
 
+interface ProcessClipboardPasteOptions {
+  includeImages?: boolean;
+}
+
 export function copyItemsToClipboard(event: ClipboardEvent, items: CanvasItem[]): void {
   const serialized = items.map(({ isSelected: _, zIndex: _z, ...rest }) => rest);
   event.clipboardData?.setData("text/x-canvas-items", JSON.stringify(serialized));
@@ -14,29 +18,36 @@ export function copyItemsToClipboard(event: ClipboardEvent, items: CanvasItem[])
   event.clipboardData?.setData("text/plain", textContent || "canvas items");
 }
 
-export function processClipboardPaste(event: ClipboardEvent): Observable<PasteAction> {
+export function processClipboardPaste(
+  event: ClipboardEvent,
+  options: ProcessClipboardPasteOptions = {},
+): Observable<PasteAction> {
   const items = event.clipboardData?.items;
   if (!items) return of();
+
+  const { includeImages = true } = options;
 
   const observables: Observable<PasteAction>[] = [];
 
   // Handle images
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.type.indexOf("image") !== -1) {
-      const file = item.getAsFile();
-      if (file) {
-        const reader = new FileReader();
-        const obs = new Observable<string>((subscriber) => {
-          reader.onload = (e) => {
-            const src = e.target?.result as string;
-            subscriber.next(src);
-            subscriber.complete();
-          };
-          reader.onerror = () => subscriber.error(new Error("Failed to read image"));
-          reader.readAsDataURL(file);
-        }).pipe(map((src) => ({ type: "image" as const, src })));
-        observables.push(obs);
+  if (includeImages) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          const obs = new Observable<string>((subscriber) => {
+            reader.onload = (e) => {
+              const src = e.target?.result as string;
+              subscriber.next(src);
+              subscriber.complete();
+            };
+            reader.onerror = () => subscriber.error(new Error("Failed to read image"));
+            reader.readAsDataURL(file);
+          }).pipe(map((src) => ({ type: "image" as const, src })));
+          observables.push(obs);
+        }
       }
     }
   }

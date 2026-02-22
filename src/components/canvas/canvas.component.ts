@@ -5,6 +5,7 @@ import {
   Subject,
   catchError,
   combineLatest,
+  fromEvent,
   ignoreElements,
   map,
   mergeWith,
@@ -82,6 +83,11 @@ export const CanvasComponent = createComponent(
     // Internal state
     const items$ = props.items$;
 
+    const makeCardId = (prefix: string) => {
+      const uuid = globalThis.crypto?.randomUUID?.();
+      return uuid ? `${prefix}-${uuid}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    };
+
     // Helper: Get next z-index atomically
     const getNextZIndex = () => {
       const currentItems = props.items$.value;
@@ -91,6 +97,7 @@ export const CanvasComponent = createComponent(
 
     // Actions
     const pasteImage$ = new Subject<string>();
+    const pasteImageFile$ = new Subject<File>();
     const pasteText$ = new Subject<string>();
     const pasteItems$ = new Subject<CanvasItem[]>();
     const moveItems$ = new Subject<{ moves: { id: string; x: number; y: number }[] }>();
@@ -108,7 +115,7 @@ export const CanvasComponent = createComponent(
       tap((src) => {
         const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-        const cardId = `img-${Date.now()}`;
+        const cardId = makeCardId("img");
 
         const card: CanvasItem = {
           id: cardId,
@@ -127,7 +134,7 @@ export const CanvasComponent = createComponent(
       tap((text) => {
         const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
         const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-        const cardId = `text-${Date.now()}`;
+        const cardId = makeCardId("text");
 
         const card: CanvasItem = {
           id: cardId,
@@ -139,6 +146,33 @@ export const CanvasComponent = createComponent(
           zIndex: getNextZIndex(),
         };
         props.items$.next([...props.items$.value, card]);
+      }),
+    );
+
+    const pasteImageFileEffect$ = pasteImageFile$.pipe(
+      tap((file) => {
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+        const cardId = makeCardId("img");
+
+        const card: CanvasItem = {
+          id: cardId,
+          x: center.x - 100,
+          y: center.y - 150,
+          width: 200,
+          height: 300,
+          zIndex: getNextZIndex(),
+        };
+        props.items$.next([...props.items$.value, card]);
+
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+          const src = loadEvent.target?.result;
+          if (typeof src === "string") {
+            updateCard$.next({ id: cardId, updates: { imageSrc: src } });
+          }
+        };
+        reader.readAsDataURL(file);
       }),
     );
 
@@ -158,7 +192,7 @@ export const CanvasComponent = createComponent(
 
         const newItems: CanvasItem[] = pastedItems.map((item, index) => ({
           ...item,
-          id: `paste-${Date.now()}-${index}`,
+          id: makeCardId(`paste-${index}`),
           x: item.x + offsetX,
           y: item.y + offsetY,
           isSelected: true,
@@ -399,13 +433,24 @@ export const CanvasComponent = createComponent(
     };
 
     // Handle paste event
+    const isEditableTarget = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      return !!target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]');
+    };
+
     const handlePaste = (event: ClipboardEvent) => {
+      if (isEditableTarget(event.target)) return;
+
+      let handled = false;
+
       // Check for internal canvas items format first
       const canvasData = event.clipboardData?.getData("text/x-canvas-items");
       if (canvasData) {
         try {
           const items = JSON.parse(canvasData) as CanvasItem[];
           if (Array.isArray(items) && items.length > 0) {
+            event.preventDefault();
+            handled = true;
             pasteItems$.next(items);
             return;
           }
@@ -414,11 +459,35 @@ export const CanvasComponent = createComponent(
         }
       }
 
-      processClipboardPaste(event).subscribe((action) => {
+      const clipboardItems = event.clipboardData?.items;
+      if (clipboardItems) {
+        for (let i = 0; i < clipboardItems.length; i++) {
+          const clipboardItem = clipboardItems[i];
+          if (clipboardItem.type.includes("image")) {
+            const file = clipboardItem.getAsFile();
+            if (file) {
+              if (!handled) event.preventDefault();
+              handled = true;
+              pasteImageFile$.next(file);
+            }
+          }
+        }
+      }
+
+      processClipboardPaste(event, { includeImages: false }).subscribe((action) => {
+        if (!handled) {
+          event.preventDefault();
+          handled = true;
+        }
         if (action.type === "image") pasteImage$.next(action.src);
         else pasteText$.next(action.content);
       });
     };
+
+    const globalPasteEffect$ = fromEvent<ClipboardEvent>(document, "paste").pipe(
+      tap((event) => handlePaste(event)),
+      ignoreElements(),
+    );
 
     // Handle keydown event for delete/backspace
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -514,7 +583,6 @@ export const CanvasComponent = createComponent(
             class="canvas"
             data-canvas
             tabindex="0"
-            @paste=${handlePaste}
             @copy=${handleCopy}
             @cut=${handleCut}
             @mousedown=${handleCanvasMouseDown}
@@ -557,12 +625,14 @@ export const CanvasComponent = createComponent(
     return template$.pipe(
       mergeWith(
         pasteEffect$.pipe(ignoreElements()),
+        pasteImageFileEffect$.pipe(ignoreElements()),
         pasteTextEffect$.pipe(ignoreElements()),
         pasteItemsEffect$.pipe(ignoreElements()),
         moveEffect$.pipe(ignoreElements()),
         deleteEffect$.pipe(ignoreElements()),
         updateCardEffect$.pipe(ignoreElements()),
         regenerateEffect$,
+        globalPasteEffect$,
       ),
     );
   },
