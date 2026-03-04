@@ -38,10 +38,9 @@ dialog:open {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  max-width: 40rem;
+  width: calc(100vw - 4rem);
+  max-width: 80rem;
   max-height: calc(100% - 4rem);
-  width: 100%;
-  height: auto;
 }
 
 dialog:not(:open) {
