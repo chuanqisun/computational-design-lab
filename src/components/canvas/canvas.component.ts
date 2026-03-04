@@ -115,6 +115,45 @@ export const CanvasComponent = createComponent(
     const regenerate$ = new Subject<{ cardId: string; prompt: string }>();
     const marquee$ = new BehaviorSubject<MarqueeRect | null>(null);
 
+    // Pan state
+    let isSpaceHeld = false;
+
+    const setPanMode = (active: boolean) => {
+      isSpaceHeld = active;
+      const canvasEl = document.querySelector("[data-canvas]") as HTMLElement;
+      if (canvasEl) canvasEl.classList.toggle("panning", active);
+    };
+
+    const startPanning = (e: MouseEvent) => {
+      const scrollContainer = document.querySelector(".canvas-area") as HTMLElement;
+      if (!scrollContainer) return;
+
+      const canvasEl = document.querySelector("[data-canvas]") as HTMLElement;
+      canvasEl?.classList.add("panning-active");
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startScrollLeft = scrollContainer.scrollLeft;
+      const startScrollTop = scrollContainer.scrollTop;
+
+      props.interaction$?.next("start");
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        scrollContainer.scrollLeft = startScrollLeft - (moveEvent.clientX - startX);
+        scrollContainer.scrollTop = startScrollTop - (moveEvent.clientY - startY);
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        canvasEl?.classList.remove("panning-active");
+        props.interaction$?.next("end");
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    };
+
     // Effects
     const pasteEffect$ = pasteImage$.pipe(
       tap((src) => {
@@ -306,6 +345,13 @@ export const CanvasComponent = createComponent(
     // Drag handling — ignore clicks originating from the Open button
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
       if (e.button !== 0) return;
+
+      if (isSpaceHeld) {
+        e.stopPropagation();
+        startPanning(e);
+        return;
+      }
+
       if ((e.target as HTMLElement).closest("[data-card-open]")) return;
       e.stopPropagation();
       props.interaction$?.next("start");
@@ -375,9 +421,15 @@ export const CanvasComponent = createComponent(
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    // Handle canvas mousedown: start marquee selection or deselect all on direct click
+    // Handle canvas mousedown: panning (space held) or marquee selection
     const handleCanvasMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+
+      if (isSpaceHeld) {
+        startPanning(e);
+        return;
+      }
+
       if (!isCanvasDirectClick(e)) return;
 
       const { isCtrl, isShift } = getModifierKeys(e);
@@ -530,8 +582,14 @@ export const CanvasComponent = createComponent(
       ignoreElements(),
     );
 
-    // Handle keydown event for delete/backspace
+    // Handle keydown event for delete/backspace and space (pan mode)
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === " " && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        if (!event.repeat) setPanMode(true);
+        return;
+      }
+
       const isMod = event.ctrlKey || event.metaKey;
 
       if (isMod && !isEditableTarget(event.target)) {
@@ -581,6 +639,18 @@ export const CanvasComponent = createComponent(
 
     const globalKeydownEffect$ = fromEvent<KeyboardEvent>(document, "keydown").pipe(
       tap((event) => handleKeyDown(event)),
+      ignoreElements(),
+    );
+
+    const globalKeyupEffect$ = fromEvent<KeyboardEvent>(document, "keyup").pipe(
+      tap((event) => {
+        if (event.key === " ") setPanMode(false);
+      }),
+      ignoreElements(),
+    );
+
+    const globalBlurEffect$ = fromEvent(window, "blur").pipe(
+      tap(() => setPanMode(false)),
       ignoreElements(),
     );
 
@@ -717,6 +787,8 @@ export const CanvasComponent = createComponent(
         regenerateEffect$,
         globalPasteEffect$,
         globalKeydownEffect$,
+        globalKeyupEffect$,
+        globalBlurEffect$,
       ),
     );
   },

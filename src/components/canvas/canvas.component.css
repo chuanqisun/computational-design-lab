@@ -122,6 +122,22 @@
   }
 }
 
+.canvas.panning {
+  cursor: grab;
+
+  .canvas-card {
+    cursor: grab;
+  }
+}
+
+.canvas.panning-active {
+  cursor: grabbing;
+
+  .canvas-card {
+    cursor: grabbing;
+  }
+}
+
 .canvas-marquee {
   position: absolute;
   border: 1px dashed var(--color-selection-outline);
