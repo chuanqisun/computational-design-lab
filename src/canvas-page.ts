@@ -4,6 +4,7 @@ import {
   debounceTime,
   distinctUntilChanged,
   filter,
+  fromEvent,
   ignoreElements,
   map,
   merge,
@@ -16,11 +17,19 @@ import {
   Subject,
   switchMap,
   take,
+  tap,
 } from "rxjs";
 import "./canvas-page.css";
 import { CanvasComponent, type CanvasItem } from "./components/canvas/canvas.component";
 import { ConnectionsComponent } from "./components/connections/connections.component";
-import { loadApiKeys, loadCanvasItems, saveCanvasItems, type ApiKeys } from "./components/connections/storage";
+import {
+  loadApiKeys,
+  loadCanvasItems,
+  loadViewportCenter,
+  saveCanvasItems,
+  saveViewportCenter,
+  type ApiKeys,
+} from "./components/connections/storage";
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
@@ -41,8 +50,25 @@ GenerativeVideoElement.define(() => ({
 
 // Initialize items from IndexedDB (with migration)
 const items$ = new BehaviorSubject<CanvasItem[]>([]);
-loadCanvasItems().then((loadedItems) => items$.next(loadedItems));
 const canvasInteraction$ = new Subject<"start" | "end">();
+
+const CANVAS_CENTER = { centerX: 4000, centerY: 4000 };
+
+function restoreViewport(canvasArea: HTMLElement, hasItems: boolean) {
+  const saved = loadViewportCenter();
+  const center = saved ?? (hasItems ? null : CANVAS_CENTER);
+  if (!center) return;
+  canvasArea.scrollLeft = center.centerX - canvasArea.clientWidth / 2;
+  canvasArea.scrollTop = center.centerY - canvasArea.clientHeight / 2;
+}
+
+loadCanvasItems().then((loadedItems) => {
+  items$.next(loadedItems);
+  requestAnimationFrame(() => {
+    const canvasArea = document.querySelector(".canvas-area") as HTMLElement;
+    if (canvasArea) restoreViewport(canvasArea, loadedItems.length > 0);
+  });
+});
 
 type PersistedCanvasItem = Omit<CanvasItem, "isSelected">;
 
@@ -123,7 +149,20 @@ const Main = createComponent(() => {
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$ });
 
-  const effects$ = merge(taskRunner$, autoSave$).pipe(ignoreElements());
+  const saveViewport$ = fromEvent(document, "scroll", { capture: true }).pipe(
+    filter((e) => (e.target as HTMLElement).classList?.contains("canvas-area")),
+    debounceTime(300),
+    tap((e) => {
+      const el = e.target as HTMLElement;
+      saveViewportCenter({
+        centerX: el.scrollLeft + el.clientWidth / 2,
+        centerY: el.scrollTop + el.clientHeight / 2,
+      });
+    }),
+    ignoreElements(),
+  );
+
+  const effects$ = merge(taskRunner$, autoSave$, saveViewport$).pipe(ignoreElements());
 
   const template$ = of(html`
     <header class="app-header">

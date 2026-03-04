@@ -7,6 +7,7 @@ export interface ApiKeys {
 }
 
 const STORAGE_KEY = "moodboard-ai-api-keys";
+const VIEWPORT_KEY = "moodboard-viewport-center";
 
 export function saveApiKeys(keys: ApiKeys): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
@@ -19,6 +20,25 @@ export function loadApiKeys(): ApiKeys {
 
 export function clearApiKeys(): void {
   localStorage.removeItem(STORAGE_KEY);
+}
+
+export interface ViewportCenter {
+  centerX: number;
+  centerY: number;
+}
+
+export function saveViewportCenter(center: ViewportCenter): void {
+  localStorage.setItem(VIEWPORT_KEY, JSON.stringify(center));
+}
+
+export function loadViewportCenter(): ViewportCenter | null {
+  const stored = localStorage.getItem(VIEWPORT_KEY);
+  if (!stored) return null;
+  try {
+    const parsed = JSON.parse(stored);
+    if (typeof parsed.centerX === "number" && typeof parsed.centerY === "number") return parsed;
+  } catch {}
+  return null;
 }
 
 // IndexedDB schema
