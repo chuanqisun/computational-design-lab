@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playground - Computational Design Lab</title>
+  </head>
+  <body>
+    <header id="page-header">
+      <h1>Playground</h1>
+      <div class="header-actions">
+        <button id="tasks-button">Tasks</button>
+        <button id="setup-button" commandfor="setup-dialog" command="show-modal">Setup</button>
+      </div>
+    </header>
+    <div id="app"></div>
+    <div id="toast-container"></div>
+
+    <dialog id="task-hub-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <dialog id="setup-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <dialog id="scan-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <dialog id="animation-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <dialog id="edit-dialog">
+      <div class="dialog-content"></div>
+    </dialog>
+
+    <script type="module" src="/src/playground.ts"></script>
+  </body>
+</html>
