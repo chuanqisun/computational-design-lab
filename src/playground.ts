@@ -1,7 +1,7 @@
-import { GoogleGenAI, type Content } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { html, render } from "lit-html";
 import { BehaviorSubject, combineLatest, firstValueFrom, map, skip } from "rxjs";
-import { CanvasComponent } from "./components/canvas/canvas.component";
+import { CanvasComponent, type CanvasItem } from "./components/canvas/canvas.component";
 import { loadApiKeys, type ApiKeys } from "./components/connections/storage";
 import { useSetupDialog } from "./components/connections/use-setup-dialog";
 import { generateImage } from "./components/design/generate-image-gemini";
@@ -43,7 +43,7 @@ const activeTaskId$ = new BehaviorSubject<string | null>(null);
 const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
 const toast$ = new BehaviorSubject<{ id: string; tone: "info" | "error"; message: string } | null>(null);
 const taskHubMode$ = new BehaviorSubject<"create" | "switch" | "handoff">("create");
-const activeBoardCards$ = new BehaviorSubject<PlaygroundCard[]>([]);
+const activeBoardCards$ = new BehaviorSubject<CanvasItem[]>([]);
 const boardApiKeys$ = new BehaviorSubject<ApiKeys>({});
 
 const persistenceReady = Promise.all([
@@ -62,7 +62,7 @@ let syncingBoardCards = false;
 combineLatest([tasks$, activeTaskId$]).subscribe(([tasks, activeTaskId]) => {
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
   syncingBoardCards = true;
-  activeBoardCards$.next(activeTask?.cards.map(normalizeCard) ?? []);
+  activeBoardCards$.next(activeTask?.cards.map(toCanvasItem) ?? []);
   syncingBoardCards = false;
 
   if (!activeTask && tasks.length > 0) {
@@ -79,7 +79,7 @@ activeBoardCards$.pipe(skip(1)).subscribe((cards) => {
 
   updateTask(activeTaskId, (task) => ({
     ...task,
-    cards: cards.map(normalizeCard),
+    cards: cards.map(fromCanvasItem),
     selectionIds: cards.filter((card) => card.isSelected).map((card) => card.id),
   }));
 });
@@ -191,15 +191,6 @@ function handOffSelectionToTask(targetTaskId: string) {
   closeTaskHub();
 }
 
-function createTaskFromSelection(taskTypeId: PlaygroundTaskTypeId) {
-  const activeTask = getActiveTask();
-  const selectedCards = activeTask ? getSelectedCards(activeTask) : [];
-  createTaskAndSwitch(
-    taskTypeId,
-    activeTask ? cloneCardsForTask(selectedCards, activeTask.id, "pending-target") : selectedCards,
-  );
-}
-
 function renderTaskHubDialog() {
   const activeTask = getActiveTask();
   const selectedCards = activeTask ? getSelectedCards(activeTask) : [];
@@ -234,7 +225,7 @@ function renderTaskHubDialog() {
               class="hub-card"
               @click=${() =>
                 mode === "handoff" && selectedCards.length > 0
-                  ? createTaskAndSwitch(template.id, cloneCardsForTask(selectedCards, activeTask!.id, "pending-target"))
+                  ? createTaskAndSwitch(template.id, selectedCards)
                   : createTaskAndSwitch(template.id)}
             >
               <strong>${template.label}</strong>
@@ -355,6 +346,33 @@ function nextCardPosition(cards: PlaygroundCard[]) {
     height: 280,
     zIndex: count + 1,
   };
+}
+
+function toCanvasItem(card: PlaygroundCard): CanvasItem {
+  return {
+    ...card,
+    body: card.description,
+    imageSrc: card.image,
+  };
+}
+
+function fromCanvasItem(card: CanvasItem): PlaygroundCard {
+  return normalizeCard({
+    id: card.id,
+    title: card.title || "Untitled",
+    description: card.body || "",
+    imagePrompt: card.imagePrompt || "",
+    image: card.imageSrc || "",
+    metadata: card.metadata ?? {},
+    x: card.x,
+    y: card.y,
+    width: card.width,
+    height: card.height,
+    zIndex: card.zIndex || 0,
+    isSelected: card.isSelected,
+    body: card.body,
+    imageSrc: card.imageSrc,
+  });
 }
 
 function buildCard(
@@ -640,11 +658,13 @@ async function runSingleScan(sourceCardId: string, image: string) {
 
 function getSelectedPromptSource(task: PlaygroundTask) {
   const selected = getSelectedCards(task);
+  const lastScene = [...task.cards].reverse().find((card) => card.metadata.cardType === "scene") ?? null;
+  const lastPrompt = [...task.cards].reverse().find((card) => card.metadata.cardType === "prompt") ?? null;
   return (
     selected.find((card) => card.metadata.cardType === "scene") ??
     selected.find((card) => card.metadata.cardType === "prompt") ??
-    task.cards.findLast((card) => card.metadata.cardType === "scene") ??
-    task.cards.findLast((card) => card.metadata.cardType === "prompt") ??
+    lastScene ??
+    lastPrompt ??
     null
   );
 }

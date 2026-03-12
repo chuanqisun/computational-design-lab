@@ -173,7 +173,7 @@ export function createTask(
       isSelected: false,
       metadata: {
         ...card.metadata,
-        importedFromTaskId: card.metadata.originatingTaskId ?? card.metadata.sourceTaskId ?? null,
+        importedFromTaskId: card.metadata.importedFromTaskId ?? card.metadata.sourceTaskId ?? null,
         originatingTaskId: id,
       },
     }),
