@@ -1,6 +1,11 @@
 import Handlebars from "handlebars";
 
+let helpersRegistered = false;
+
 export function registerHelpers() {
+  if (helpersRegistered) return;
+  helpersRegistered = true;
+
   Handlebars.registerHelper("inlineList", (items: unknown) => {
     if (!Array.isArray(items) || items.length === 0) return "";
     const strings = items.map(String);
@@ -21,6 +26,7 @@ export function registerHelpers() {
 }
 
 export function renderTemplate(templateSource: string, variables: Record<string, unknown>): string {
+  registerHelpers();
   const compiled = Handlebars.compile(templateSource, { noEscape: true });
   return compiled(variables);
 }
