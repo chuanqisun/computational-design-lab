@@ -759,7 +759,4 @@ async function init() {
   }
 }
 
-// Expose toast for error handling
-(window as any).__playgroundToast = showToast;
-
 init();
