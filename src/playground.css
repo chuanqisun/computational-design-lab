@@ -1,3 +1,337 @@
 :root {
-  /* To be implemented */
+  font-family: monospace;
+  font-size: 14px;
+  --color-text: #222;
+  --color-text-secondary: #666;
+  --color-text-active: #000;
+  --color-border: #ccc;
+  --color-surface: #f8f8f8;
+  --color-surface-active: #f1f1f1;
+  --color-toast-error: #f7dddd;
+  --color-toast-info: #efefef;
+  --page-background: #fff;
+  --spacing-unit: 1ch;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  color: var(--color-text);
+  background: var(--page-background);
+  line-height: 1.4;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+.button-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1ch;
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  cursor: pointer;
+  padding-inline: 1.5ch;
+}
+
+button:hover,
+.button-like:hover {
+  background: var(--color-surface-active);
+}
+
+button:disabled {
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  padding: 1ch;
+}
+
+textarea {
+  min-height: 2lh;
+  resize: none;
+  field-sizing: content;
+}
+
+.button-like input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#app {
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+.playground-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 4ch;
+  padding: 3ch 2ch 6ch;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 2ch;
+}
+
+.section-header,
+.subsection-header,
+.dialog-heading,
+.task-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+h1,
+h2,
+h3,
+strong {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+p,
+small,
+.secondary {
+  color: var(--color-text-secondary);
+}
+
+menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+}
+
+.task-header {
+  gap: 2ch;
+}
+
+.task-actions {
+  align-self: flex-start;
+}
+
+.subsection-grid {
+  display: grid;
+  gap: 2ch;
+  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
+}
+
+.subsection,
+.inspection,
+.output-card,
+.hub-card,
+.task-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+  border: 1px solid #eee;
+  background: #fff;
+  padding: 2ch;
+}
+
+.board-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2ch;
+  color: var(--color-text-secondary);
+}
+
+.canvas-area {
+  overflow: auto;
+  border: 1px solid #eee;
+  background: var(--color-surface);
+  min-height: 72ch;
+  max-height: 72ch;
+}
+
+.canvas-area .canvas {
+  width: 120rem;
+  height: 90rem;
+}
+
+.pending-grid {
+  display: grid;
+  gap: 1ch;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.pending-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+}
+
+.pending-card img,
+.output-preview img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  aspect-ratio: 1;
+}
+
+.inspection textarea,
+.output-card textarea {
+  min-height: 10lh;
+}
+
+.chip-grid,
+.suggestion-list,
+.hub-grid,
+.hub-list,
+.output-grid {
+  display: grid;
+  gap: 1ch;
+}
+
+.chip-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.chip-button {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.chip-button.selected {
+  border-color: var(--color-text-active);
+  color: var(--color-text-active);
+}
+
+.chip-button.dimmed {
+  color: var(--color-text-secondary);
+}
+
+.swatch {
+  width: 1.5ch;
+  height: 1.5ch;
+  border: 1px solid var(--color-border);
+  flex: none;
+}
+
+.suggestion-list {
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.suggestion-button {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.inspection-header,
+.dialog-header,
+.task-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.output-grid {
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+}
+
+.output-preview {
+  background: var(--color-surface);
+}
+
+.output-placeholder {
+  min-height: 28ch;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+}
+
+.error-text {
+  color: #8c1d1d;
+}
+
+.toast {
+  position: sticky;
+  top: 1ch;
+  z-index: 20;
+  padding: 1.5ch 2ch;
+  border: 1px solid var(--color-border);
+}
+
+.toast.info {
+  background: var(--color-toast-info);
+}
+
+.toast.error {
+  background: var(--color-toast-error);
+}
+
+dialog {
+  max-width: min(90rem, calc(100vw - 4ch));
+  max-height: 85vh;
+  border: 1px solid var(--color-border);
+  margin: auto;
+  padding: 0;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+dialog .dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2ch;
+  padding: 2ch;
+}
+
+.hub-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.hub-card {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.hub-card span {
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.task-row.active {
+  border-color: var(--color-text-active);
+}
+
+.task-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5ch;
 }
