@@ -1,3 +1,153 @@
 :root {
-  /* To be implemented */
+  font-family: monospace;
+  font-size: 14px;
+  --color-text: #222;
+  --color-text-secondary: #666;
+  --color-text-active: #000;
+  --page-background: white;
+  --spacing-unit: 1ch;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  color: var(--color-text);
+  background: var(--page-background);
+  line-height: 1.4;
+}
+
+#app {
+  max-width: 90rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: calc(4 * var(--spacing-unit));
+  padding: calc(4 * var(--spacing-unit));
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--spacing-unit);
+}
+
+h1 {
+  font-weight: bold;
+}
+
+p {
+  color: var(--color-text-secondary);
+}
+
+label {
+  color: var(--color-text-secondary);
+}
+
+button {
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+  border: 1px solid #ccc;
+  background-color: white;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #f5f5f5;
+}
+
+button:active {
+  background-color: #eee;
+  color: var(--color-text-active);
+}
+
+select {
+  padding: var(--spacing-unit);
+  border: 1px solid #ccc;
+  background-color: white;
+  color: var(--color-text);
+  width: 100%;
+}
+
+textarea {
+  resize: none;
+  field-sizing: content;
+  width: 100%;
+  padding: var(--spacing-unit);
+  border: 1px solid #ccc;
+}
+
+textarea:focus {
+  outline: 2px solid var(--color-text-active);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.section-label {
+  color: var(--color-text-secondary);
+}
+
+.editors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(2 * var(--spacing-unit));
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.text-editor {
+  border: 1px solid #ccc;
+}
+
+.text-editor .cm-editor {
+  max-height: 40ch;
+  overflow-y: auto;
+}
+
+.text-editor .cm-editor.cm-focused {
+  outline: 2px solid var(--color-text-active);
+}
+
+.output-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.output-text {
+  white-space: pre-wrap;
+  border: 1px solid #ccc;
+  padding: var(--spacing-unit);
+  min-height: 6ch;
+  background: #fafafa;
+}
+
+.output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.copied-msg {
+  color: var(--color-text-secondary);
 }
