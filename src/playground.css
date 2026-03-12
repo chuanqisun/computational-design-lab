@@ -1,3 +1,393 @@
 :root {
-  /* To be implemented */
+  --playground-text: #171717;
+  --playground-text-muted: #5a5a5a;
+  --playground-surface: #ffffff;
+  --playground-surface-alt: #f5f5f5;
+  --playground-border: #d4d4d4;
+  --playground-shadow: rgba(0, 0, 0, 0.04);
+}
+
+body {
+  margin: 0;
+  background: var(--playground-surface);
+  color: var(--playground-text);
+  font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+button,
+input,
+textarea,
+dialog {
+  font: inherit;
+}
+
+button,
+input,
+textarea {
+  border: 1px solid var(--playground-border);
+  background: var(--playground-surface);
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+textarea {
+  min-height: 6lh;
+  resize: none;
+  field-sizing: content;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.playground {
+  max-width: min(90rem, calc(100vw - 6ch));
+  margin: 0 auto;
+  padding: 3ch;
+  display: grid;
+  gap: 2ch;
+}
+
+.playground-shell-header,
+.task-section,
+.hub-existing-card,
+.hub-task-button,
+.board-card,
+.generated-card,
+.pending-card,
+.toast,
+.inspect-metadata,
+.task-meta {
+  box-sizing: border-box;
+}
+
+.playground-shell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 2ch;
+}
+
+.playground-shell-header h1,
+.task-header-row h2,
+.section-header h2,
+.library-group h3,
+.dialog-header h2 {
+  margin: 0;
+}
+
+.playground-shell-header p,
+.task-header-row p,
+.dialog-header p,
+.section-note,
+.empty-state,
+.selection-summary,
+.paste-hint,
+.hub-meta-line,
+.board-card p,
+.generated-card p,
+.inspect-metadata span,
+.inspect-metadata strong,
+.task-meta span,
+.task-meta strong {
+  color: var(--playground-text-muted);
+}
+
+.shell-actions,
+.section-actions,
+.action-group,
+.import-actions,
+.card-header-row,
+.task-header-row,
+.dialog-header,
+.hub-card-actions {
+  display: flex;
+  gap: 1ch;
+  flex-wrap: wrap;
+}
+
+.task-page,
+.inspect-stack,
+.library-group-list,
+.hub-section,
+.generated-output-list {
+  display: grid;
+  gap: 1.5ch;
+}
+
+.task-section {
+  display: grid;
+  gap: 1ch;
+}
+
+.task-header-row {
+  justify-content: space-between;
+  align-items: start;
+}
+
+.task-meta,
+.inspect-metadata {
+  display: grid;
+  gap: 0.75ch;
+  min-width: 24ch;
+}
+
+.task-meta div,
+.inspect-metadata div {
+  display: grid;
+  gap: 0.25ch;
+}
+
+.task-title-input {
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+  width: min(48ch, 100%);
+}
+
+.eyebrow,
+.card-category {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--playground-text-muted);
+}
+
+.import-actions {
+  align-items: center;
+}
+
+.import-actions label {
+  display: grid;
+  gap: 0.5ch;
+}
+
+.pending-grid,
+.generated-output-list,
+.card-board,
+.library-option-list,
+.hub-existing-list,
+.hub-task-list {
+  display: grid;
+  gap: 1ch;
+}
+
+.card-board {
+  grid-template-columns: repeat(auto-fill, minmax(20ch, 1fr));
+  align-items: start;
+}
+
+.pending-grid,
+.generated-output-list {
+  grid-template-columns: repeat(auto-fill, minmax(24ch, 1fr));
+}
+
+.library-option-list,
+.hub-task-list {
+  grid-template-columns: repeat(auto-fill, minmax(24ch, 1fr));
+}
+
+.board-card,
+.generated-card,
+.pending-card,
+.hub-existing-card,
+.hub-task-button,
+.inspect-metadata,
+.task-meta,
+dialog {
+  border: 1px solid var(--playground-border);
+}
+
+.board-card,
+.generated-card,
+.pending-card,
+.hub-existing-card,
+.hub-task-button,
+.inspect-metadata,
+.task-meta,
+.inspect-image,
+dialog {
+  background: var(--playground-surface);
+}
+
+.board-card,
+.generated-card,
+.pending-card,
+.hub-existing-card,
+.hub-task-button,
+.inspect-metadata,
+.task-meta,
+dialog,
+textarea,
+input,
+button,
+.generated-image,
+.card-image,
+.inspect-image {
+  border-radius: 0;
+}
+
+.board-card,
+.generated-card,
+.pending-card,
+.hub-existing-card,
+.hub-task-button,
+.inspect-metadata,
+.task-meta,
+dialog,
+textarea,
+input,
+button {
+  padding: 1ch;
+}
+
+.board-card,
+.generated-card,
+.pending-card,
+.hub-task-button {
+  display: grid;
+  gap: 1ch;
+  text-align: left;
+}
+
+.board-card.selected,
+.hub-existing-card.active {
+  border-color: #000;
+}
+
+.library-option {
+  display: grid;
+  gap: 0.5ch;
+  text-align: left;
+}
+
+.library-option.active {
+  border-color: #000;
+  color: #000;
+}
+
+.library-option.dimmed {
+  color: var(--playground-text-muted);
+  opacity: 0.7;
+}
+
+.generated-card pre,
+.board-card small,
+.pending-card small,
+.hub-task-button small {
+  color: var(--playground-text-muted);
+}
+
+.card-header-row {
+  justify-content: space-between;
+  align-items: start;
+}
+
+.card-image,
+.generated-image,
+.inspect-image {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: var(--playground-surface-alt);
+}
+
+.generated-card.image .generated-image,
+.inspect-image {
+  aspect-ratio: 9 / 16;
+}
+
+.inspect-stack textarea {
+  min-height: 18lh;
+}
+
+.suggestion-list {
+  display: flex;
+  gap: 1ch;
+  flex-wrap: wrap;
+}
+
+.dialog-header {
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1ch;
+}
+
+.hub-existing-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1ch;
+}
+
+.hub-meta-line {
+  margin-top: 0.5ch;
+}
+
+.hub-task-button strong,
+.hub-existing-card strong {
+  color: var(--playground-text);
+}
+
+.hub-task-button span {
+  color: var(--playground-text-muted);
+}
+
+.toast {
+  position: sticky;
+  top: 1ch;
+  z-index: 10;
+  max-width: 48ch;
+  box-shadow: 0 0.5ch 2ch var(--playground-shadow);
+}
+
+.toast.error {
+  border-color: #000;
+}
+
+.task-empty-state {
+  display: grid;
+  gap: 1ch;
+  justify-items: start;
+}
+
+.connections-form {
+  display: grid;
+  gap: 1ch;
+}
+
+.connections-form .form-field {
+  display: grid;
+  gap: 0.5ch;
+}
+
+dialog {
+  max-width: min(72rem, calc(100vw - 6ch));
+  width: 100%;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 60rem) {
+  .playground {
+    padding: 2ch;
+  }
+
+  .playground-shell-header,
+  .task-header-row,
+  .hub-existing-card {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
 }
