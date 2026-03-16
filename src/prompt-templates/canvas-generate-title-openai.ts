@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasGenerateTitleOpenAIVars {
-  fullText: string;
+  fullText: string | string[];
 }
 
 const template: PromptTemplateModule<CanvasGenerateTitleOpenAIVars, "fullText"> = {
@@ -20,9 +21,9 @@ const template: PromptTemplateModule<CanvasGenerateTitleOpenAIVars, "fullText"> 
       },
     },
   },
-  template: ({ fullText = "" }) => ({
+  template: ({ fullText }) => ({
     developer: "Summarize user provided content into one word or short phrase",
-    user: fullText,
+    user: toTextBlock(fullText),
   }),
 };
 

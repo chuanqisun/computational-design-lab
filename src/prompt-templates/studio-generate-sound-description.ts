@@ -1,8 +1,9 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioGenerateSoundDescriptionVars {
   sceneXml: string;
-  animationPrompt: string;
+  animationPrompt: string | string[];
 }
 
 const template: PromptTemplateModule<StudioGenerateSoundDescriptionVars, "sceneXml" | "animationPrompt"> = {
@@ -27,13 +28,13 @@ const template: PromptTemplateModule<StudioGenerateSoundDescriptionVars, "sceneX
       },
     },
   },
-  template: ({ sceneXml = "", animationPrompt = "" }) => ({
+  template: ({ sceneXml = "", animationPrompt }) => ({
     user: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
 
 Scene XML:
 ${sceneXml}
 
-Animation prompt: ${animationPrompt}`,
+Animation prompt: ${toTextBlock(animationPrompt)}`,
   }),
 };
 

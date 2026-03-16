@@ -1,9 +1,10 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasVisualizeConceptVars {
   conceptTitle: string;
-  conceptDescription: string;
-  instruction: string;
+  conceptDescription: string | string[];
+  instruction: string | string[];
   maxPrompts: number;
 }
 
@@ -44,12 +45,12 @@ const template: PromptTemplateModule<
       },
     },
   },
-  template: ({ conceptTitle = "", conceptDescription = "", instruction = "", maxPrompts = 3 }) => ({
+  template: ({ conceptTitle = "", conceptDescription, instruction, maxPrompts = 3 }) => ({
     user: `Create detailed prompts for image generation based on the following concept and instruction.
 
 Concept: ${conceptTitle}
-Description: ${conceptDescription}
-Instruction: ${instruction}
+Description: ${toTextBlock(conceptDescription)}
+Instruction: ${toTextBlock(instruction)}
 
 Generate up to ${maxPrompts} vivid, detailed descriptions suitable for an AI image generator. Capture diverse elements of the concept following the instruction. Each prompt covers subject, scene, style.
 

@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasGenerateDefinitionVars {
-  text: string;
+  text: string | string[];
 }
 
 const template: PromptTemplateModule<CanvasGenerateDefinitionVars, "text"> = {
@@ -20,10 +21,10 @@ const template: PromptTemplateModule<CanvasGenerateDefinitionVars, "text"> = {
       },
     },
   },
-  template: ({ text = "" }) => ({
+  template: ({ text }) => ({
     user: `Define this term or phrase in 2-3 sentences. Return text directly, no quotes.
 
-${text}`,
+${toTextBlock(text)}`,
   }),
 };
 

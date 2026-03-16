@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasBlendImagesVars {
-  instruction: string;
+  instruction: string | string[];
   itemNotes: string[];
 }
 
@@ -27,8 +28,8 @@ const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "ite
       },
     },
   },
-  template: ({ instruction = "", itemNotes = [] }) => ({
-    user: `${instruction}${
+  template: ({ instruction, itemNotes = [] }) => ({
+    user: `${toTextBlock(instruction)}${
       itemNotes.length > 0
         ? `
 

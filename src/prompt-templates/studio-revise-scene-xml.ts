@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioReviseSceneXmlVars {
-  editInstructions: string;
+  editInstructions: string | string[];
 }
 
 const template: PromptTemplateModule<StudioReviseSceneXmlVars, "editInstructions"> = {
@@ -20,10 +21,10 @@ const template: PromptTemplateModule<StudioReviseSceneXmlVars, "editInstructions
       },
     },
   },
-  template: ({ editInstructions = "" }) => ({
+  template: ({ editInstructions }) => ({
     user: `Revise the XML based on these instructions. Output only the updated XML, nothing else.
 
-${editInstructions}`,
+${toTextBlock(editInstructions)}`,
   }),
 };
 

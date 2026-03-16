@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasScanConceptsVars {
-  instruction: string;
+  instruction: string | string[];
 }
 
 const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
@@ -23,7 +24,7 @@ const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
   template: ({ instruction }) => ({
     developer:
       "Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear title and one short sentence description.",
-    user: (instruction || "Distill key concepts from the provided references.").trim(),
+    user: toTextBlock(instruction, "Distill key concepts from the provided references."),
   }),
 };
 

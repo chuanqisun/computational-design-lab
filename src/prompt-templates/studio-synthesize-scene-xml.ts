@@ -1,9 +1,10 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioSynthesizeSceneXmlVars {
   selectionJson: string;
   photoCount: number;
-  customInstructions: string;
+  customInstructions: string | string[];
 }
 
 const system = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
@@ -73,11 +74,11 @@ ${selectionJson}${
 Note: The user has scanned ${photoCount} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.`
         : ""
     }${
-      customInstructions
+      toTextBlock(customInstructions)
         ? `
 
 Additional instructions:
-${customInstructions}`
+${toTextBlock(customInstructions)}`
         : ""
     }`,
   }),

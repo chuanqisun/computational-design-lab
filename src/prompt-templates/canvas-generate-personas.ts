@@ -1,8 +1,9 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toInlineText } from "./prompt-template.utils";
 
 export interface CanvasGeneratePersonasVars {
   trait: string;
-  segment: string;
+  segment: string | string[];
   numUsers: number;
 }
 
@@ -34,9 +35,13 @@ const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segm
       },
     },
   },
-  template: ({ trait = "", segment, numUsers = 3 }) => ({
-    user: `Generate ${numUsers} synthetic user personas${segment && segment !== "All" ? ` in the segment: ${segment}` : ""}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`,
-  }),
+  template: ({ trait = "", segment, numUsers = 3 }) => {
+    const segmentText = toInlineText(segment);
+
+    return {
+      user: `Generate ${numUsers} synthetic user personas${segmentText && segmentText !== "All" ? ` in the segment: ${segmentText}` : ""}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`,
+    };
+  },
 };
 
 export default template;

@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasScanMoodsSupervisedVars {
-  instruction: string;
+  instruction: string | string[];
   requiredList: string[];
 }
 
@@ -39,7 +40,7 @@ For each mood, provide a single English word with first letter Capitalized and a
 
     return {
       developer,
-      user: (instruction || "Analyze this item for moods and arousal levels.").trim(),
+      user: toTextBlock(instruction, "Analyze this item for moods and arousal levels."),
     };
   },
 };

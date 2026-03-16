@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasCaptionFromImageVars {
   instruction: string;
@@ -21,7 +22,7 @@ const template: PromptTemplateModule<CanvasCaptionFromImageVars, "instruction"> 
     },
   },
   template: ({ instruction }) => ({
-    user: (instruction || "Describe this image in a short caption.").trim(),
+    user: toTextBlock(instruction, "Describe this image in a short caption."),
   }),
 };
 

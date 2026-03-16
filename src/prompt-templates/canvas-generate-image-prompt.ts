@@ -1,8 +1,9 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasGenerateImagePromptVars {
-  text: string;
-  guidance: string;
+  text: string | string[];
+  guidance: string | string[];
 }
 
 const template: PromptTemplateModule<CanvasGenerateImagePromptVars, "text" | "guidance"> = {
@@ -27,15 +28,15 @@ const template: PromptTemplateModule<CanvasGenerateImagePromptVars, "text" | "gu
       },
     },
   },
-  template: ({ text = "", guidance }) => ({
+  template: ({ text, guidance }) => ({
     user: `Create a detailed image generation prompt for the following text. The prompt should be descriptive, visual, and suitable for a text-to-image model. Return only the prompt.
 
-${text}${
-      guidance
+${toTextBlock(text)}${
+      toTextBlock(guidance)
         ? `
 
 Additional guidance:
-${guidance}`
+${toTextBlock(guidance)}`
         : ""
     }`,
   }),

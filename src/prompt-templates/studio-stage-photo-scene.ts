@@ -1,8 +1,9 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioStagePhotoSceneVars {
   currentXml: string;
-  scene: string;
+  scene: string | string[];
 }
 
 const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "scene"> = {
@@ -27,13 +28,13 @@ const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "
       },
     },
   },
-  template: ({ currentXml = "", scene = "" }) => ({
+  template: ({ currentXml = "", scene }) => ({
     user: `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. In the <subject>, make sure <product> and <hand> and their relationship is clearly specified. Output only the updated XML, nothing else.
 
 Current XML:
 ${currentXml}
 
-Photo scene: ${scene}`,
+Photo scene: ${toTextBlock(scene)}`,
   }),
 };
 

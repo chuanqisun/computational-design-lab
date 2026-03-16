@@ -1,7 +1,8 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasScanMoodsVars {
-  instruction: string;
+  instruction: string | string[];
   outputCount: number;
 }
 
@@ -29,7 +30,7 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outpu
   },
   template: ({ instruction, outputCount = 5 }) => ({
     developer: `Analyze the provided item and identify 3-${Math.max(3, outputCount)} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.`,
-    user: (instruction || "Analyze this item for moods and arousal levels.").trim(),
+    user: toTextBlock(instruction, "Analyze this item for moods and arousal levels."),
   }),
 };
 

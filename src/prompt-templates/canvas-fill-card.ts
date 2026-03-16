@@ -1,11 +1,12 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasFillCardVars {
   title: string;
-  body: string;
-  imagePrompt: string;
+  body: string | string[];
+  imagePrompt: string | string[];
   imageStatus: string;
-  guidance: string;
+  guidance: string | string[];
 }
 
 const template: PromptTemplateModule<
@@ -54,8 +55,8 @@ const template: PromptTemplateModule<
   template: ({ title, body, imagePrompt, imageStatus, guidance }) => ({
     user: `I have a card with the following content:
 Title: ${title || "(missing)"}
-Body: ${body || "(missing)"}
-Image Prompt: ${imagePrompt || "(missing)"}
+Body: ${toTextBlock(body, "(missing)")}
+Image Prompt: ${toTextBlock(imagePrompt, "(missing)")}
 Image Status: ${imageStatus || "(unknown)"}
 
 Please generate the missing fields based on the available information.
@@ -63,7 +64,7 @@ Please generate the missing fields based on the available information.
 - If body is missing, generate a concise description (max 2 sentences).
 - If image prompt is missing and no image is provided, generate a detailed image generation prompt.
 - If image is provided, use it to generate the missing text fields.
-${guidance ? `- Additional guidance: ${guidance}` : ""}
+${toTextBlock(guidance) ? `- Additional guidance: ${toTextBlock(guidance)}` : ""}
 
 Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
 Example: {"title": "...", "body": "...", "imagePrompt": "..."}`,

@@ -1,9 +1,10 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasEnhanceImagePromptVars {
   originalPrompt: string;
-  cardContext: string;
-  qualityGoal: string;
+  cardContext: string | string[];
+  qualityGoal: string | string[];
 }
 
 const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalPrompt" | "cardContext" | "qualityGoal"> = {
@@ -38,8 +39,8 @@ const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalProm
     user: `You are an expert prompt engineer. Improve this prompt for an image generator to create a high quality image.
 
 Original prompt: '${originalPrompt}'
-Context from card: '${cardContext || "General design exploration"}'
-Quality goal: '${qualityGoal || "Keep it descriptive but concise"}'
+Context from card: '${toTextBlock(cardContext, "General design exploration")}'
+Quality goal: '${toTextBlock(qualityGoal, "Keep it descriptive but concise")}'
 
 Keep it descriptive but concise. Return ONLY the enhanced prompt.`,
   }),
