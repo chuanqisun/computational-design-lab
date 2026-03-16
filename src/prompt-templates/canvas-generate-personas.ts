@@ -1,0 +1,42 @@
+import type { PromptTemplateModule } from "./prompt-template.types";
+
+export interface CanvasGeneratePersonasVars {
+  trait: string;
+  segment: string;
+  numUsers: number;
+}
+
+const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segment" | "numUsers"> = {
+  metadata: {
+    title: "Generate Personas",
+    sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
+    categories: ["canvas", "text-to-json", "persona-generation"],
+    inputType: "text",
+    outputType: "json",
+    slots: {
+      trait: {
+        description: "Trait to vary across personas.",
+        required: true,
+        multiple: false,
+        type: "text",
+      },
+      segment: {
+        description: "Optional market or demographic segment.",
+        required: false,
+        multiple: true,
+        type: "text",
+      },
+      numUsers: {
+        description: "How many personas to generate.",
+        required: true,
+        multiple: false,
+        type: "number",
+      },
+    },
+  },
+  template: ({ trait = "", segment, numUsers = 3 }) => ({
+    user: `Generate ${numUsers} synthetic user personas${segment && segment !== "All" ? ` in the segment: ${segment}` : ""}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`,
+  }),
+};
+
+export default template;
