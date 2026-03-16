@@ -175,7 +175,7 @@ p {
 
 .editor-grid {
   display: grid;
-  grid-template-columns: minmax(28ch, 36ch) minmax(0, 1fr);
+  grid-template-columns: minmax(30ch, 42ch) minmax(0, 1fr);
   gap: calc(3 * var(--spacing-unit));
   align-items: start;
 }
@@ -204,9 +204,13 @@ p {
   gap: calc(2 * var(--spacing-unit));
 }
 
-.preset-list {
-  display: flex;
-  flex-direction: column;
+.section-block--presets {
+  gap: calc(1.5 * var(--spacing-unit));
+}
+
+.preset-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24ch, 1fr));
   gap: var(--spacing-unit);
 }
 
@@ -217,6 +221,7 @@ p {
   gap: 0.5ch;
   padding: calc(1.5 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
   text-align: left;
+  min-width: 0;
 }
 
 .preset-item__title {
@@ -229,11 +234,45 @@ p {
   gap: var(--spacing-unit);
 }
 
+.attachment-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5ch;
+  padding: calc(1.5 * var(--spacing-unit));
+  background: var(--panel-muted);
+  border: 1px solid var(--panel-border);
+}
+
 .field__label-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: var(--spacing-unit);
+}
+
+.list-field,
+.list-field__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.list-field__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--spacing-unit);
+  align-items: start;
+}
+
+.list-field__item button,
+.list-field__add,
+.section-block__header menu button {
+  white-space: nowrap;
+}
+
+.section-block--input,
+.section-block--output {
+  min-width: 0;
 }
 
 .field__name,
@@ -286,16 +325,22 @@ pre {
   gap: var(--spacing-unit);
 }
 
-@media (max-width: 90ch) {
-  .prompt-library-page,
-  .editor-grid,
-  .meta-grid {
+@media (max-width: 110ch) {
+  .prompt-library-page {
     grid-template-columns: 1fr;
   }
 
   .panel-list {
     border-right: 0;
     border-bottom: 1px solid var(--panel-border);
+  }
+}
+
+@media (max-width: 90ch) {
+  .prompt-library-page,
+  .editor-grid,
+  .meta-grid {
+    grid-template-columns: 1fr;
   }
 
   .section-header,
@@ -306,5 +351,25 @@ pre {
 
   .template-summary {
     white-space: normal;
+  }
+
+  .list-field__item {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 60ch) {
+  .panel-editor,
+  .section-header {
+    padding: calc(2 * var(--spacing-unit));
+  }
+
+  .template-list {
+    padding-inline: calc(1.5 * var(--spacing-unit));
+  }
+
+  .preset-row,
+  .meta-grid {
+    grid-template-columns: 1fr;
   }
 }

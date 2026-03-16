@@ -115,8 +115,50 @@ function isTextArea(slot: PromptSlotMetadata): boolean {
   return slot.multiple || slot.type === "xml" || slot.type === "json" || slot.type === "mixed" || slot.type === "text";
 }
 
+function isStructuredTextArea(slot: PromptSlotMetadata): boolean {
+  return slot.type === "xml" || slot.type === "json" || slot.type === "mixed" || slot.type === "text";
+}
+
+function itemInputLabel(slot: PromptSlotMetadata): string {
+  if (slot.type === "image") return "Image note";
+  if (slot.type === "audio") return "Audio note";
+  if (slot.type === "video") return "Video note";
+  return "Item";
+}
+
 function contentTypeLabel(type: PromptContentType | "number" | "boolean"): string {
   return type.toUpperCase();
+}
+
+function updateListSlotItem(slotName: string, index: number, nextValue: string) {
+  const currentValue = templateValues$.value[slotName];
+  const nextItems = Array.isArray(currentValue) ? [...currentValue] : [];
+  nextItems[index] = nextValue;
+  templateValues$.next({
+    ...templateValues$.value,
+    [slotName]: nextItems,
+  });
+  copyStatus$.next("");
+}
+
+function addListSlotItem(slotName: string) {
+  const currentValue = templateValues$.value[slotName];
+  const nextItems = Array.isArray(currentValue) ? [...currentValue, ""] : [""];
+  templateValues$.next({
+    ...templateValues$.value,
+    [slotName]: nextItems,
+  });
+  copyStatus$.next("");
+}
+
+function removeListSlotItem(slotName: string, index: number) {
+  const currentValue = templateValues$.value[slotName];
+  const nextItems = Array.isArray(currentValue) ? currentValue.filter((_, itemIndex) => itemIndex !== index) : [];
+  templateValues$.next({
+    ...templateValues$.value,
+    [slotName]: nextItems,
+  });
+  copyStatus$.next("");
 }
 
 function updateSelectedTemplate(templateId: string) {
@@ -220,30 +262,30 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
             </div>
           </header>
 
-          <div class="editor-grid">
-            <section class="section-block">
-              <section class="section-block section-block--presets">
-                <header class="section-block__header">
-                  <h3>Presets</h3>
-                  <p>Pre-filled examples based on canvas and studio workflows.</p>
-                </header>
-                <div class="preset-list">
-                  ${repeat(
-                    presets,
-                    (preset) => preset.title,
-                    (preset) => html`
-                      <button class="preset-item" @click=${() => applyPreset(selectedTemplate.id, preset)}>
-                        <span class="preset-item__title">${preset.title}</span>
-                        <span class="preset-item__description">${preset.description || ""}</span>
-                      </button>
-                    `,
-                  )}
-                </div>
-              </section>
+          <section class="section-block section-block--presets">
+            <header class="section-block__header">
+              <h3>Presets</h3>
+              <p>Pre-filled examples based on canvas and studio workflows.</p>
+            </header>
+            <div class="preset-row" role="list">
+              ${repeat(
+                presets,
+                (preset) => preset.title,
+                (preset) => html`
+                  <button class="preset-item" @click=${() => applyPreset(selectedTemplate.id, preset)}>
+                    <span class="preset-item__title">${preset.title}</span>
+                    <span class="preset-item__description">${preset.description || ""}</span>
+                  </button>
+                `,
+              )}
+            </div>
+          </section>
 
+          <div class="editor-grid">
+            <section class="section-block section-block--input">
               <header class="section-block__header">
-                <h3>Variables</h3>
-                <p>Template slots with live rendering.</p>
+                <h3>Template Inputs</h3>
+                <p>Fill each slot and keep external attachments ready for use when running the prompt.</p>
               </header>
               <div class="field-list">
                 ${repeat(
@@ -260,14 +302,104 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
                         >
                       </span>
                       <span class="field__description">${slot.description}</span>
-                      ${slot.type === "boolean"
+                      ${slot.type === "image"
+                        ? html`
+                            <div class="attachment-note" role="note">
+                              <p>This prompt expects an image attachment outside this form.</p>
+                              <p>Add the image separately in the chat or tool where you use the prompt.</p>
+                            </div>
+                            ${slot.multiple
+                              ? html`
+                                  <div class="list-field">
+                                    <div class="list-field__items">
+                                      ${repeat(
+                                        Array.isArray(templateValues[slotName]) ? (templateValues[slotName] as string[]) : [],
+                                        (_, index) => `${slotName}-${index}`,
+                                        (item, index) => html`
+                                          <div class="list-field__item">
+                                            <input
+                                              type="text"
+                                              placeholder="Describe the image you will attach separately"
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLInputElement).value,
+                                                )}
+                                            />
+                                            <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
+                                              Remove
+                                            </button>
+                                          </div>
+                                        `,
+                                      )}
+                                    </div>
+                                    <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
+                                      Add image reference
+                                    </button>
+                                  </div>
+                                `
+                              : html`<input
+                                  type="text"
+                                  placeholder="Optional note about the image you will attach separately"
+                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                  @input=${(event: Event) =>
+                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
+                                />`}
+                          `
+                        : slot.type === "boolean"
                         ? html`<input
                             type="checkbox"
                             .checked=${Boolean(templateValues[slotName])}
                             @change=${(event: Event) =>
                               updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).checked)}
                           />`
-                        : isTextArea(slot)
+                        : slot.multiple
+                          ? html`
+                              <div class="list-field">
+                                <div class="list-field__items">
+                                  ${repeat(
+                                    Array.isArray(templateValues[slotName]) ? (templateValues[slotName] as string[]) : [],
+                                    (_, index) => `${slotName}-${index}`,
+                                    (item, index) => html`
+                                      <div class="list-field__item">
+                                        ${isStructuredTextArea(slot)
+                                          ? html`<textarea
+                                              rows=${Math.max(2, slot.type === "xml" || slot.type === "json" ? 8 : 4)}
+                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLTextAreaElement).value,
+                                                )}
+                                            ></textarea>`
+                                          : html`<input
+                                              type=${slot.type === "number" ? "number" : "text"}
+                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLInputElement).value,
+                                                )}
+                                            />`}
+                                        <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
+                                          Remove
+                                        </button>
+                                      </div>
+                                    `,
+                                  )}
+                                </div>
+                                <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
+                                  Add item
+                                </button>
+                              </div>
+                            `
+                          : isTextArea(slot)
                           ? html`<textarea
                               rows=${Math.max(2, slot.multiple || slot.type === "xml" || slot.type === "json" ? 8 : 4)}
                               .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
@@ -286,11 +418,11 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
               </div>
             </section>
 
-            <section class="section-block">
+            <section class="section-block section-block--output">
               <header class="section-block__header section-block__header--split">
                 <div>
-                  <h3>Preview</h3>
-                  <p>Rendered system, developer, and user messages.</p>
+                  <h3>Rendered Output</h3>
+                  <p>Rendered system, developer, and user messages ready to copy.</p>
                 </div>
                 <menu>
                   <button @click=${() => copyPreview(previewText)}>Copy Output</button>
