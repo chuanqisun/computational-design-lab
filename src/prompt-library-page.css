@@ -21,10 +21,12 @@
 }
 
 html {
+  height: 100%;
   scrollbar-gutter: stable;
 }
 
 body {
+  min-height: 100%;
   color: var(--color-text);
   background: var(--page-background);
   line-height: 1.4;
@@ -87,15 +89,15 @@ p {
 }
 
 #app {
-  max-width: 90rem;
+  max-width: none;
   min-height: 100vh;
-  margin: 0 auto;
 }
 
 .prompt-library-page {
   display: grid;
   grid-template-columns: minmax(28ch, 34ch) minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .panel {
@@ -107,11 +109,14 @@ p {
 .panel-list {
   border-right: 1px solid var(--panel-border);
   background: var(--panel-background);
+  min-height: 0;
 }
 
 .panel-editor {
   gap: calc(3 * var(--spacing-unit));
   padding: calc(3 * var(--spacing-unit));
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .section-header {
@@ -120,6 +125,10 @@ p {
   align-items: flex-start;
   gap: calc(2 * var(--spacing-unit));
   padding: calc(3 * var(--spacing-unit));
+}
+
+.section-header--editor {
+  padding: 0;
 }
 
 .template-summary {
@@ -135,6 +144,7 @@ p {
   gap: 1px;
   padding: 0 calc(2 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
   overflow-y: auto;
+  min-height: 0;
 }
 
 .template-item {
@@ -206,6 +216,7 @@ p {
 
 .section-block--presets {
   gap: calc(1.5 * var(--spacing-unit));
+  min-width: 0;
 }
 
 .preset-row {
@@ -328,11 +339,18 @@ pre {
 @media (max-width: 110ch) {
   .prompt-library-page {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
 
   .panel-list {
     border-right: 0;
     border-bottom: 1px solid var(--panel-border);
+  }
+
+  .panel-editor,
+  .template-list {
+    overflow: visible;
   }
 }
 
