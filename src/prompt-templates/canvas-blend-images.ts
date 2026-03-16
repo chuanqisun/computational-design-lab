@@ -28,10 +28,14 @@ const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "ite
     },
   },
   template: ({ instruction = "", itemNotes = [] }) => ({
-    user: `${instruction}${itemNotes.length > 0 ? `
+    user: `${instruction}${
+      itemNotes.length > 0
+        ? `
 
 Reference notes:
-${itemNotes.join("\n")}` : ""}`,
+${itemNotes.join("\n")}`
+        : ""
+    }`,
   }),
 };
 

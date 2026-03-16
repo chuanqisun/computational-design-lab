@@ -30,10 +30,14 @@ const template: PromptTemplateModule<CanvasGenerateImagePromptVars, "text" | "gu
   template: ({ text = "", guidance }) => ({
     user: `Create a detailed image generation prompt for the following text. The prompt should be descriptive, visual, and suitable for a text-to-image model. Return only the prompt.
 
-${text}${guidance ? `
+${text}${
+      guidance
+        ? `
 
 Additional guidance:
-${guidance}` : ""}`,
+${guidance}`
+        : ""
+    }`,
   }),
 };
 

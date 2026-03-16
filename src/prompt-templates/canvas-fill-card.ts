@@ -8,7 +8,10 @@ export interface CanvasFillCardVars {
   guidance: string;
 }
 
-const template: PromptTemplateModule<CanvasFillCardVars, "title" | "body" | "imagePrompt" | "imageStatus" | "guidance"> = {
+const template: PromptTemplateModule<
+  CanvasFillCardVars,
+  "title" | "body" | "imagePrompt" | "imageStatus" | "guidance"
+> = {
   metadata: {
     title: "Fill Card Fields",
     sourceFiles: ["src/components/canvas/ai-helpers.ts"],

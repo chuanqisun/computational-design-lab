@@ -31,7 +31,10 @@ For picked materials: infer the most appropriate surface options and color optio
 For picked surface options: use the specified surface finishes in the scene. If surface options conflict with chosen materials, prefer the user-specified surface options.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
 
-const template: PromptTemplateModule<StudioSynthesizeSceneXmlVars, "selectionJson" | "photoCount" | "customInstructions"> = {
+const template: PromptTemplateModule<
+  StudioSynthesizeSceneXmlVars,
+  "selectionJson" | "photoCount" | "customInstructions"
+> = {
   metadata: {
     title: "Synthesize Scene XML",
     sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
@@ -63,12 +66,20 @@ const template: PromptTemplateModule<StudioSynthesizeSceneXmlVars, "selectionJso
     system,
     user: `Given the following design selections, generate the scene XML.
 
-${selectionJson}${photoCount > 0 ? `
+${selectionJson}${
+      photoCount > 0
+        ? `
 
-Note: The user has scanned ${photoCount} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.` : ""}${customInstructions ? `
+Note: The user has scanned ${photoCount} conceptual prototype photo(s). These photos show a rough reference for the product shape, proportion, geometry, and potential interactions. Use the photos only as general visual inspiration. The picked features from the library above are the source of truth for XML generation.`
+        : ""
+    }${
+      customInstructions
+        ? `
 
 Additional instructions:
-${customInstructions}` : ""}`,
+${customInstructions}`
+        : ""
+    }`,
   }),
 };
 

@@ -28,11 +28,12 @@ const template: PromptTemplateModule<CanvasScanMoodsSupervisedVars, "instruction
     },
   },
   template: ({ instruction, requiredList = [] }) => {
-    const developer = requiredList.length > 0
-      ? `Analyze the provided item and assign an arousal level to each of the following moods: ${requiredList.map((m) => `"${m}"`).join(", ")}.
+    const developer =
+      requiredList.length > 0
+        ? `Analyze the provided item and assign an arousal level to each of the following moods: ${requiredList.map((m) => `"${m}"`).join(", ")}.
 
 For each mood in the list, provide the exact mood string and an arousal level from 1 to 10, where 1 means the item has very low intensity of that mood and 10 means the item has very high intensity of that mood.`
-      : `Analyze the provided item and identify 3-5 moods it evokes.
+        : `Analyze the provided item and identify 3-5 moods it evokes.
 
 For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.`;
 

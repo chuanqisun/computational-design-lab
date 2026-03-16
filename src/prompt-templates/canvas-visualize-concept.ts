@@ -7,7 +7,10 @@ export interface CanvasVisualizeConceptVars {
   maxPrompts: number;
 }
 
-const template: PromptTemplateModule<CanvasVisualizeConceptVars, "conceptTitle" | "conceptDescription" | "instruction" | "maxPrompts"> = {
+const template: PromptTemplateModule<
+  CanvasVisualizeConceptVars,
+  "conceptTitle" | "conceptDescription" | "instruction" | "maxPrompts"
+> = {
   metadata: {
     title: "Visualize Concept",
     sourceFiles: ["src/components/context-tray/llm/visualize-concept.ts"],

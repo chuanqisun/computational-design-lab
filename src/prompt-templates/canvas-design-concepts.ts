@@ -39,10 +39,14 @@ const template: PromptTemplateModule<CanvasDesignConceptsVars, "numDesigns" | "r
 ${requirements.length > 0 ? requirements.join("\n") : "Any"}
 
 CRITICAL: Every design concept MUST explicitly draw inspiration from ALL provided reference items (both images and texts). You must synthesise ideas from all inputs, but you can interpret them differently to create variety across the designs.
-${referenceSummary.length > 0 ? `
+${
+  referenceSummary.length > 0
+    ? `
 
 Reference summary:
-${referenceSummary.join("\n")}` : ""}
+${referenceSummary.join("\n")}`
+    : ""
+}
 
 For each design, provide:
 1. A highly detailed text description (title and description). The description must:

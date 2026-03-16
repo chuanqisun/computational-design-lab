@@ -7,7 +7,10 @@ export interface CanvasRankDesignsVars {
   designSummaries: string[];
 }
 
-const template: PromptTemplateModule<CanvasRankDesignsVars, "personaSummary" | "trait" | "designCount" | "designSummaries"> = {
+const template: PromptTemplateModule<
+  CanvasRankDesignsVars,
+  "personaSummary" | "trait" | "designCount" | "designSummaries"
+> = {
   metadata: {
     title: "Rank Designs As Persona",
     sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
