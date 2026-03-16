@@ -1,5 +1,5 @@
-import type { PromptTemplateModule } from "./prompt-template.types";
 import { canvasCaptionFromImagePresets } from "./prompt-template.presets";
+import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasCaptionFromImageVars {

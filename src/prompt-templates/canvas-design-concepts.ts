@@ -1,5 +1,5 @@
-import type { PromptTemplateModule } from "./prompt-template.types";
 import { canvasDesignConceptsPresets } from "./prompt-template.presets";
+import type { PromptTemplateModule } from "./prompt-template.types";
 
 export interface CanvasDesignConceptsVars {
   numDesigns: number;

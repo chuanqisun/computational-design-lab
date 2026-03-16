@@ -19,9 +19,9 @@ import canvasScanMoodsSupervisedTemplate from "./prompt-templates/canvas-scan-mo
 import canvasVisualizeConceptTemplate from "./prompt-templates/canvas-visualize-concept";
 import type {
   PromptContentType,
-  PromptTemplatePreset,
   PromptSlotMetadata,
   PromptTemplateModule,
+  PromptTemplatePreset,
   RenderedPrompt,
 } from "./prompt-templates/prompt-template.types";
 import studioGenerateSoundDescriptionTemplate from "./prompt-templates/studio-generate-sound-description";

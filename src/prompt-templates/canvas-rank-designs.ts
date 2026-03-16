@@ -1,5 +1,5 @@
-import type { PromptTemplateModule } from "./prompt-template.types";
 import { canvasRankDesignsPresets } from "./prompt-template.presets";
+import type { PromptTemplateModule } from "./prompt-template.types";
 
 export interface CanvasRankDesignsVars {
   personaSummary: string;

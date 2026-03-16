@@ -1,5 +1,5 @@
-import type { PromptTemplateModule } from "./prompt-template.types";
 import { canvasGeneratePersonasPresets } from "./prompt-template.presets";
+import type { PromptTemplateModule } from "./prompt-template.types";
 import { toInlineText } from "./prompt-template.utils";
 
 export interface CanvasGeneratePersonasVars {

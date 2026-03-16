@@ -185,7 +185,10 @@ export const canvasEnhanceImagePromptPresets = [
         "Rounded botanical repair shampoo bottle with matte warm white body and eucalyptus green cap.",
         "The brand should feel premium, calm, and naturally science-backed.",
       ],
-      qualityGoal: ["Push toward premium beauty advertising quality.", "Keep the prompt concise and image-model friendly."],
+      qualityGoal: [
+        "Push toward premium beauty advertising quality.",
+        "Keep the prompt concise and image-model friendly.",
+      ],
     },
   },
   {
@@ -482,7 +485,9 @@ export const canvasScanMoodsPresets = [
     title: "Calm Botanical Moods",
     description: "Analyze a shampoo concept for soft restorative moods.",
     values: {
-      instruction: ["Analyze this shampoo packaging concept for moods and arousal levels with a focus on restorative botanical care."],
+      instruction: [
+        "Analyze this shampoo packaging concept for moods and arousal levels with a focus on restorative botanical care.",
+      ],
       outputCount: 5,
     },
   },
@@ -490,7 +495,9 @@ export const canvasScanMoodsPresets = [
     title: "Clinical Fresh Moods",
     description: "Analyze a mouthwash design for crisp oral care moods.",
     values: {
-      instruction: ["Analyze this mouthwash concept for moods and arousal levels with attention to freshness, trust, and cleanliness."],
+      instruction: [
+        "Analyze this mouthwash concept for moods and arousal levels with attention to freshness, trust, and cleanliness.",
+      ],
       outputCount: 4,
     },
   },
@@ -498,7 +505,9 @@ export const canvasScanMoodsPresets = [
     title: "Editorial Sustainable Moods",
     description: "Analyze a refill concept for quieter emotional tones.",
     values: {
-      instruction: ["Analyze this refill packaging concept for moods and arousal levels, emphasizing sustainability and calm ritual."],
+      instruction: [
+        "Analyze this refill packaging concept for moods and arousal levels, emphasizing sustainability and calm ritual.",
+      ],
       outputCount: 5,
     },
   },
@@ -579,7 +588,9 @@ export const studioGenerateSoundDescriptionPresets = [
     description: "Describe sound for a shampoo product interaction.",
     values: {
       sceneXml: shampooSceneXml,
-      animationPrompt: ["The hand flips open the cap, squeezes a small ribbon of shampoo, and closes the bottle with a soft snap."],
+      animationPrompt: [
+        "The hand flips open the cap, squeezes a small ribbon of shampoo, and closes the bottle with a soft snap.",
+      ],
     },
   },
   {
@@ -587,7 +598,9 @@ export const studioGenerateSoundDescriptionPresets = [
     description: "Describe sound for a mouthwash dosage motion.",
     values: {
       sceneXml: mouthwashSceneXml,
-      animationPrompt: ["The bottle tilts into the dosage cap, the liquid glugs once, then the cap clicks back onto the bottle."],
+      animationPrompt: [
+        "The bottle tilts into the dosage cap, the liquid glugs once, then the cap clicks back onto the bottle.",
+      ],
     },
   },
   {
@@ -595,7 +608,9 @@ export const studioGenerateSoundDescriptionPresets = [
     description: "Describe sound for a refill pouch transfer.",
     values: {
       sceneXml: refillSceneXml,
-      animationPrompt: ["A refill pouch unscrews, softly flexes, and pours product into a reusable bottle before being sealed again."],
+      animationPrompt: [
+        "A refill pouch unscrews, softly flexes, and pours product into a reusable bottle before being sealed again.",
+      ],
     },
   },
 ];
@@ -705,7 +720,9 @@ export const studioStagePhotoScenePresets = [
     description: "Place the shampoo bottle in a calm bathroom shelf scene.",
     values: {
       currentXml: shampooSceneXml,
-      scene: ["Stage the bottle on a premium bathroom shelf with folded towels, pale stone, and diffused morning light."],
+      scene: [
+        "Stage the bottle on a premium bathroom shelf with folded towels, pale stone, and diffused morning light.",
+      ],
     },
   },
   {
@@ -713,7 +730,9 @@ export const studioStagePhotoScenePresets = [
     description: "Place the mouthwash bottle near a sink for a usage-oriented photo scene.",
     values: {
       currentXml: mouthwashSceneXml,
-      scene: ["Place the bottle beside a clean sink with white tile, chrome reflections, and a subtle dental-care context."],
+      scene: [
+        "Place the bottle beside a clean sink with white tile, chrome reflections, and a subtle dental-care context.",
+      ],
     },
   },
   {
