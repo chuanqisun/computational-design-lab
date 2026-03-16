@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasScanMoodsSupervisedPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasScanMoodsSupervisedVars {
@@ -28,6 +29,7 @@ const template: PromptTemplateModule<CanvasScanMoodsSupervisedVars, "instruction
       },
     },
   },
+  presets: canvasScanMoodsSupervisedPresets,
   template: ({ instruction, requiredList = [] }) => {
     const developer =
       requiredList.length > 0

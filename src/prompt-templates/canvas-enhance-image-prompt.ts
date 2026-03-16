@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasEnhanceImagePromptPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasEnhanceImagePromptVars {
@@ -35,6 +36,7 @@ const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalProm
       },
     },
   },
+  presets: canvasEnhanceImagePromptPresets,
   template: ({ originalPrompt = "", cardContext, qualityGoal }) => ({
     user: `You are an expert prompt engineer. Improve this prompt for an image generator to create a high quality image.
 

@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { studioImportCanvasInstructionsPresets } from "./prompt-template.presets";
 
 export interface StudioImportCanvasInstructionsVars {
   cardDescriptions: string[];
@@ -20,6 +21,7 @@ const template: PromptTemplateModule<StudioImportCanvasInstructionsVars, "cardDe
       },
     },
   },
+  presets: studioImportCanvasInstructionsPresets,
   template: ({ cardDescriptions = [] }) => ({
     user: `Design a bottle inspired by the following design concept(s):
 

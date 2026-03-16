@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasRankDesignsPresets } from "./prompt-template.presets";
 
 export interface CanvasRankDesignsVars {
   personaSummary: string;
@@ -44,6 +45,7 @@ const template: PromptTemplateModule<
       },
     },
   },
+  presets: canvasRankDesignsPresets,
   template: ({ personaSummary = "", trait = "", designCount = 0, designSummaries = [] }) => ({
     system: personaSummary,
     user: `Here are ${designCount} design concepts:

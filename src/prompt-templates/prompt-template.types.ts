@@ -22,7 +22,14 @@ export interface RenderedPrompt {
   user: string;
 }
 
+export interface PromptTemplatePreset<Vars extends object> {
+  title: string;
+  description?: string;
+  values: Partial<Vars>;
+}
+
 export interface PromptTemplateModule<Vars extends object, Slots extends keyof Vars & string> {
   metadata: PromptTemplateMetadata<Slots>;
+  presets: PromptTemplatePreset<Vars>[];
   template: (vars: Partial<Vars>) => RenderedPrompt;
 }

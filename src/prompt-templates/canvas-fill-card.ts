@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasFillCardPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasFillCardVars {
@@ -52,6 +53,7 @@ const template: PromptTemplateModule<
       },
     },
   },
+  presets: canvasFillCardPresets,
   template: ({ title, body, imagePrompt, imageStatus, guidance }) => ({
     user: `I have a card with the following content:
 Title: ${title || "(missing)"}

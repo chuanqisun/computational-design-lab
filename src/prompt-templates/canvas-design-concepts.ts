@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasDesignConceptsPresets } from "./prompt-template.presets";
 
 export interface CanvasDesignConceptsVars {
   numDesigns: number;
@@ -34,6 +35,7 @@ const template: PromptTemplateModule<CanvasDesignConceptsVars, "numDesigns" | "r
       },
     },
   },
+  presets: canvasDesignConceptsPresets,
   template: ({ numDesigns = 3, requirements = [], referenceSummary = [] }) => ({
     user: `Generate ${numDesigns} unique design concepts based on the provided inputs (images and texts) and the following requirements:
 ${requirements.length > 0 ? requirements.join("\n") : "Any"}

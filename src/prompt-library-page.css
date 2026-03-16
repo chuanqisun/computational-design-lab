@@ -163,6 +163,7 @@ p {
 }
 
 .template-item__meta,
+.preset-item__description,
 .field__description,
 .copy-status,
 .section-header p,
@@ -201,6 +202,25 @@ p {
   display: flex;
   flex-direction: column;
   gap: calc(2 * var(--spacing-unit));
+}
+
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit);
+}
+
+.preset-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5ch;
+  padding: calc(1.5 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
+  text-align: left;
+}
+
+.preset-item__title {
+  font-weight: bold;
 }
 
 .field {

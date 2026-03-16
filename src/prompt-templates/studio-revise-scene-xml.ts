@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { studioReviseSceneXmlPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioReviseSceneXmlVars {
@@ -21,6 +22,7 @@ const template: PromptTemplateModule<StudioReviseSceneXmlVars, "editInstructions
       },
     },
   },
+  presets: studioReviseSceneXmlPresets,
   template: ({ editInstructions }) => ({
     user: `Revise the XML based on these instructions. Output only the updated XML, nothing else.
 

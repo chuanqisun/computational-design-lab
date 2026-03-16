@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasGeneratePersonasPresets } from "./prompt-template.presets";
 import { toInlineText } from "./prompt-template.utils";
 
 export interface CanvasGeneratePersonasVars {
@@ -35,6 +36,7 @@ const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segm
       },
     },
   },
+  presets: canvasGeneratePersonasPresets,
   template: ({ trait = "", segment, numUsers = 3 }) => {
     const segmentText = toInlineText(segment);
 

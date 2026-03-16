@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasVisualizeConceptPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasVisualizeConceptVars {
@@ -45,6 +46,7 @@ const template: PromptTemplateModule<
       },
     },
   },
+  presets: canvasVisualizeConceptPresets,
   template: ({ conceptTitle = "", conceptDescription, instruction, maxPrompts = 3 }) => ({
     user: `Create detailed prompts for image generation based on the following concept and instruction.
 

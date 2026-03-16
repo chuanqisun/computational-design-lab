@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { studioSynthesizeSceneXmlPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioSynthesizeSceneXmlVars {
@@ -63,6 +64,7 @@ const template: PromptTemplateModule<
       },
     },
   },
+  presets: studioSynthesizeSceneXmlPresets,
   template: ({ selectionJson = "{}", photoCount = 0, customInstructions }) => ({
     system,
     user: `Given the following design selections, generate the scene XML.

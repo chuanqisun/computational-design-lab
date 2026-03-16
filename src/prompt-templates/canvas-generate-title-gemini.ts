@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { canvasGenerateTitleGeminiPresets } from "./prompt-template.presets";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasGenerateTitleGeminiVars {
@@ -21,6 +22,7 @@ const template: PromptTemplateModule<CanvasGenerateTitleGeminiVars, "text"> = {
       },
     },
   },
+  presets: canvasGenerateTitleGeminiPresets,
   template: ({ text }) => ({
     user: `One word/short phrase summary of text. Return text directly, no quotes.
 

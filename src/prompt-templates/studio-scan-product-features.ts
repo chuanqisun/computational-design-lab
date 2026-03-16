@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { studioScanProductFeaturesPresets } from "./prompt-template.presets";
 
 export interface StudioScanProductFeaturesVars {
   shapes: string[];
@@ -42,6 +43,7 @@ const template: PromptTemplateModule<StudioScanProductFeaturesVars, "shapes" | "
         },
       },
     },
+    presets: studioScanProductFeaturesPresets,
     template: ({ shapes = [], materials = [], mechanisms = [], colors = [] }) => ({
       user: `Analyze this photo of a product. Ignore any text labels, background elements, hands, and other non-product objects. Focus only on the product itself. Identify the following features from the provided library options ONLY. Pick the closest matches.
 

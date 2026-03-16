@@ -19,6 +19,7 @@ import canvasScanMoodsSupervisedTemplate from "./prompt-templates/canvas-scan-mo
 import canvasVisualizeConceptTemplate from "./prompt-templates/canvas-visualize-concept";
 import type {
   PromptContentType,
+  PromptTemplatePreset,
   PromptSlotMetadata,
   PromptTemplateModule,
   RenderedPrompt,
@@ -67,8 +68,18 @@ const templateValues$ = new BehaviorSubject<Record<string, SlotValue>>({});
 const copyStatus$ = new BehaviorSubject<string>("");
 
 function createInitialValues(template: TemplateRecord): Record<string, SlotValue> {
+  return buildTemplateValues(template);
+}
+
+function buildTemplateValues(
+  template: TemplateRecord,
+  presetValues: Partial<Record<string, unknown>> = {},
+): Record<string, SlotValue> {
   return Object.fromEntries(
-    Object.entries(template.metadata.slots).map(([slotName, slot]) => [slotName, defaultSlotValue(slot)]),
+    Object.entries(template.metadata.slots).map(([slotName, slot]) => [
+      slotName,
+      presetValues[slotName] === undefined ? defaultSlotValue(slot) : (presetValues[slotName] as SlotValue),
+    ]),
   );
 }
 
@@ -116,6 +127,14 @@ function updateSelectedTemplate(templateId: string) {
   copyStatus$.next("");
 }
 
+function applyPreset(templateId: string, preset: PromptTemplatePreset<Record<string, unknown>>) {
+  const template = templates.find((item) => item.id === templateId);
+  if (!template) return;
+  selectedTemplateId$.next(templateId);
+  templateValues$.next(buildTemplateValues(template.module, preset.values));
+  copyStatus$.next("");
+}
+
 function updateSlotValue(slotName: string, slot: PromptSlotMetadata, rawValue: string | boolean) {
   templateValues$.next({
     ...templateValues$.value,
@@ -160,6 +179,7 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
     const renderedPrompt = selectedTemplate.module.template(templateValues);
     const previewText = buildPreviewText(renderedPrompt);
     const slotEntries = Object.entries(selectedTemplate.module.metadata.slots);
+    const presets = selectedTemplate.module.presets ?? [];
 
     return html`
       <main class="prompt-library-page">
@@ -202,6 +222,25 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
 
           <div class="editor-grid">
             <section class="section-block">
+              <section class="section-block section-block--presets">
+                <header class="section-block__header">
+                  <h3>Presets</h3>
+                  <p>Pre-filled examples based on canvas and studio workflows.</p>
+                </header>
+                <div class="preset-list">
+                  ${repeat(
+                    presets,
+                    (preset) => preset.title,
+                    (preset) => html`
+                      <button class="preset-item" @click=${() => applyPreset(selectedTemplate.id, preset)}>
+                        <span class="preset-item__title">${preset.title}</span>
+                        <span class="preset-item__description">${preset.description || ""}</span>
+                      </button>
+                    `,
+                  )}
+                </div>
+              </section>
+
               <header class="section-block__header">
                 <h3>Variables</h3>
                 <p>Template slots with live rendering.</p>
