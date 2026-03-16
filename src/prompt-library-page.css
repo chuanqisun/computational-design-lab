@@ -1,0 +1,28 @@
+:root {
+  font-family: monospace;
+  font-size: 14px;
+  --color-text: #222;
+  --color-text-secondary: #666;
+  --color-text-active: #000;
+  --section-header-background: #000;
+  --section-header-text-color: white;
+  --page-background: white;
+  --spacing-unit: 1ch;
+  --header-height: 5ch;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+body {
+  color: var(--color-text);
+  background: var(--page-background);
+  line-height: 1.4;
+}
