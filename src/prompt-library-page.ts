@@ -242,7 +242,6 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
                     @click=${() => updateSelectedTemplate(template.id)}
                   >
                     <span class="template-item__title">${template.module.metadata.title}</span>
-                    <span class="template-item__meta">${template.module.metadata.categories.join(" · ")}</span>
                   </button>
                 `;
               },
@@ -468,29 +467,6 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
               <p class="copy-status" aria-live="polite">${copyStatus || " "}</p>
             </section>
           </div>
-
-          <section class="section-block section-block--meta">
-            <header class="section-block__header">
-              <h3>Metadata</h3>
-              <p>Source files and categories for this template.</p>
-            </header>
-            <div class="meta-grid">
-              <div>
-                <h4>Categories</h4>
-                <p>${selectedTemplate.module.metadata.categories.join(" · ")}</p>
-              </div>
-              <div>
-                <h4>Source Files</h4>
-                <ul>
-                  ${repeat(
-                    selectedTemplate.module.metadata.sourceFiles,
-                    (sourceFile) => sourceFile,
-                    (sourceFile) => html`<li>${sourceFile}</li>`,
-                  )}
-                </ul>
-              </div>
-            </div>
-          </section>
         </section>
       </main>
     `;
