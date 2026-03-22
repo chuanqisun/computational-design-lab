@@ -7,11 +7,8 @@ import canvasCaptionFromImageTemplate from "./prompt-templates/canvas-caption-fr
 import canvasDesignConceptsTemplate from "./prompt-templates/canvas-design-concepts";
 import canvasEnhanceImagePromptTemplate from "./prompt-templates/canvas-enhance-image-prompt";
 import canvasFillCardTemplate from "./prompt-templates/canvas-fill-card";
-import canvasGenerateDefinitionTemplate from "./prompt-templates/canvas-generate-definition";
 import canvasGenerateImagePromptTemplate from "./prompt-templates/canvas-generate-image-prompt";
 import canvasGeneratePersonasTemplate from "./prompt-templates/canvas-generate-personas";
-import canvasGenerateTitleGeminiTemplate from "./prompt-templates/canvas-generate-title-gemini";
-import canvasGenerateTitleOpenaiTemplate from "./prompt-templates/canvas-generate-title-openai";
 import canvasRankDesignsTemplate from "./prompt-templates/canvas-rank-designs";
 import canvasScanConceptsTemplate from "./prompt-templates/canvas-scan-concepts";
 import canvasScanMoodsTemplate from "./prompt-templates/canvas-scan-moods";
@@ -43,23 +40,20 @@ const templates: TemplateItem[] = [
   { id: "canvas-design-concepts", module: canvasDesignConceptsTemplate as TemplateRecord },
   { id: "canvas-enhance-image-prompt", module: canvasEnhanceImagePromptTemplate as TemplateRecord },
   { id: "canvas-fill-card", module: canvasFillCardTemplate as TemplateRecord },
-  { id: "canvas-generate-definition", module: canvasGenerateDefinitionTemplate as TemplateRecord },
   { id: "canvas-generate-image-prompt", module: canvasGenerateImagePromptTemplate as TemplateRecord },
   { id: "canvas-generate-personas", module: canvasGeneratePersonasTemplate as TemplateRecord },
-  { id: "canvas-generate-title-gemini", module: canvasGenerateTitleGeminiTemplate as TemplateRecord },
-  { id: "canvas-generate-title-openai", module: canvasGenerateTitleOpenaiTemplate as TemplateRecord },
   { id: "canvas-rank-designs", module: canvasRankDesignsTemplate as TemplateRecord },
   { id: "canvas-scan-concepts", module: canvasScanConceptsTemplate as TemplateRecord },
   { id: "canvas-scan-moods-supervised", module: canvasScanMoodsSupervisedTemplate as TemplateRecord },
   { id: "canvas-scan-moods", module: canvasScanMoodsTemplate as TemplateRecord },
   { id: "canvas-visualize-concept", module: canvasVisualizeConceptTemplate as TemplateRecord },
+  { id: "canvas-to-studio-conversion", module: studioImportCanvasInstructionsTemplate as TemplateRecord },
   { id: "studio-generate-sound-description", module: studioGenerateSoundDescriptionTemplate as TemplateRecord },
-  { id: "studio-import-canvas-instructions", module: studioImportCanvasInstructionsTemplate as TemplateRecord },
   { id: "studio-revise-scene-xml", module: studioReviseSceneXmlTemplate as TemplateRecord },
   { id: "studio-scan-product-features", module: studioScanProductFeaturesTemplate as TemplateRecord },
   { id: "studio-stage-photo-scene", module: studioStagePhotoSceneTemplate as TemplateRecord },
   { id: "studio-synthesize-scene-xml", module: studioSynthesizeSceneXmlTemplate as TemplateRecord },
-].sort((left, right) => left.module.metadata.title.localeCompare(right.module.metadata.title));
+];
 
 const selectedTemplateId$ = new BehaviorSubject<string>(templates[0]?.id ?? "");
 const templateValues$ = new BehaviorSubject<Record<string, SlotValue>>({});
