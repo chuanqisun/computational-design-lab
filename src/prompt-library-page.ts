@@ -271,10 +271,6 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
           </section>
 
           <section class="section-block section-block--input">
-            <header class="section-block__header">
-              <h3>Template Inputs</h3>
-              <p>Fill each slot and keep external attachments ready for use when running the prompt.</p>
-            </header>
             <div class="field-list">
               ${repeat(
                 slotEntries,
