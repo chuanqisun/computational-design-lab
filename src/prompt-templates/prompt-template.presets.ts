@@ -656,6 +656,7 @@ export const studioReviseSceneXmlPresets = [
     title: "Revise For Softer Light",
     description: "Adjust a shampoo scene toward warmer, gentler presentation.",
     values: {
+      currentXml: shampooSceneXml,
       editInstructions: [
         "Keep the bottle geometry unchanged.",
         "Soften the lighting, warm the color temperature slightly, and make the label feel more tactile and premium.",
@@ -666,6 +667,7 @@ export const studioReviseSceneXmlPresets = [
     title: "Revise For Dosage Demo",
     description: "Revise a mouthwash scene for clearer cap interaction cues.",
     values: {
+      currentXml: mouthwashSceneXml,
       editInstructions: [
         "Update the subject description so the measured dosage cap reads more clearly in the scene.",
         "Preserve the clean studio environment and emphasize liquid visibility.",
@@ -676,6 +678,7 @@ export const studioReviseSceneXmlPresets = [
     title: "Revise For Sustainability",
     description: "Push a refill concept toward a more tactile sustainable mood.",
     values: {
+      currentXml: refillSceneXml,
       editInstructions: [
         "Make the refill pouch material feel more premium and mono-material.",
         "Introduce subtle cues that it belongs in a calm, sustainable bathroom ritual.",
