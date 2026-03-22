@@ -14,13 +14,21 @@ output_type: text
 ```
 
 ```handlebars role=user
-Here are {{designCount}} design concepts:
+Here are
+{{designCount}}
+design concepts:
 
 {{#each designSummaries}}
-{{this}}
+  {{this}}
 
 {{/each}}
-Rank these designs from least to most "{{trait}}" based on your personal perspective. Return all {{designCount}} item IDs in order from least {{trait}} (first) to most {{trait}} (last). Also write 1-2 sentences of feedback explaining your ranking.
+Rank these designs from least to most "{{trait}}" based on your personal perspective. Return all
+{{designCount}}
+item IDs in order from least
+{{trait}}
+(first) to most
+{{trait}}
+(last). Also write 1-2 sentences of feedback explaining your ranking.
 ```
 
 ```json type=schema

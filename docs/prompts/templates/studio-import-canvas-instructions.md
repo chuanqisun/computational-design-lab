@@ -12,7 +12,7 @@ output_type: text
 Design a bottle inspired by the following design concept(s):
 
 {{#each cardDescriptions}}
-{{this}}
+  {{this}}
 
 {{/each}}
 Use these concepts to guide the bottle's form, material, texture, color, and overall aesthetic.

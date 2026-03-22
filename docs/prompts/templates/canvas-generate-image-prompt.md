@@ -9,16 +9,17 @@ output_type: text
 ---
 
 ```handlebars role=user
-Create a detailed image generation prompt for the following text. The prompt should be descriptive, visual, and suitable for a text-to-image model. Return only the prompt.
+Create a detailed image generation prompt for the following text. The prompt should be descriptive, visual, and suitable
+for a text-to-image model. Return only the prompt.
 
 {{#each text}}
-{{this}}
+  {{this}}
 {{/each}}{{#if guidance}}
 
-Additional guidance:
-{{#each guidance}}
-{{this}}
-{{/each}}
+  Additional guidance:
+  {{#each guidance}}
+    {{this}}
+  {{/each}}
 {{/if}}
 ```
 
@@ -27,9 +28,6 @@ Additional guidance:
   "text": [
     "A rounded botanical repair shampoo bottle with a warm white body, eucalyptus green cap, and subtle recessed front label."
   ],
-  "guidance": [
-    "Use premium beauty-ad style lighting.",
-    "Keep the scene minimal and studio-based."
-  ]
+  "guidance": ["Use premium beauty-ad style lighting.", "Keep the scene minimal and studio-based."]
 }
 ```

@@ -9,7 +9,13 @@ output_type: text
 ---
 
 ```handlebars role=user
-Generate {{numUsers}} synthetic user personas{{#if segment}} in the segment: {{#each segment}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}. Each persona should have varying levels of "{{trait}}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "{{trait}}" manifests in their life.
+Generate
+{{numUsers}}
+synthetic user personas{{#if segment}}
+  in the segment:
+  {{#each segment}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}. Each persona should have varying levels of "{{trait}}".
+Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "{{trait}}"
+manifests in their life.
 ```
 
 ```json type=schema
@@ -37,10 +43,7 @@ Generate {{numUsers}} synthetic user personas{{#if segment}} in the segment: {{#
 ```json type=defaults
 {
   "trait": "ingredient consciousness",
-  "segment": [
-    "Premium shampoo shoppers",
-    "Urban professionals"
-  ],
+  "segment": ["Premium shampoo shoppers", "Urban professionals"],
   "numUsers": 3
 }
 ```

@@ -21,8 +21,6 @@ Photo scene: {{#each scene}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}
 ```json type=defaults
 {
   "currentXml": "<scene>\n  <subject>\n    <product category=\"shampoo bottle\">Tall rounded bottle with a soft shoulder, wide flip-top cap, and subtle front label recess.</product>\n    <finish>Warm white PET body with a satin eucalyptus green cap and soft-touch label.</finish>\n  </subject>\n  <setting>\n    <environment>White infinity cove studio</environment>\n    <background>Minimal, bright, and clean</background>\n  </setting>\n  <camera lens=\"85mm\" angle=\"three-quarter front\" distance=\"mid\" depth-of-field=\"shallow\" />\n  <lighting source=\"large softbox\" direction=\"front-left\" contrast=\"soft\" colorTemperature=\"neutral daylight\" />\n  <style medium=\"Studio keyshot\" grade=\"clean commercial product render\" />\n</scene>",
-  "scene": [
-    "Stage the bottle on a premium bathroom shelf with folded towels, pale stone, and diffused morning light."
-  ]
+  "scene": ["Stage the bottle on a premium bathroom shelf with folded towels, pale stone, and diffused morning light."]
 }
 ```

@@ -13,7 +13,7 @@ output_type: text
 Revise the XML based on these instructions. Output only the updated XML, nothing else.
 
 {{#each editInstructions}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 

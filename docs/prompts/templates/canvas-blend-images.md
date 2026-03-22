@@ -11,13 +11,13 @@ output_type: image
 
 ```handlebars role=user
 {{#each instruction}}
-{{this}}
+  {{this}}
 {{/each}}{{#if itemNotes}}
 
-Reference notes:
-{{#each itemNotes}}
-{{this}}
-{{/each}}
+  Reference notes:
+  {{#each itemNotes}}
+    {{this}}
+  {{/each}}
 {{/if}}
 ```
 

@@ -10,12 +10,14 @@ output_type: text
 ---
 
 ```handlebars role=system
-Analyze the provided item and identify 3-{{outputCount}} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.
+Analyze the provided item and identify 3-{{outputCount}}
+moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1
+to 10, where 1 is calm/low energy and 10 is intense/high energy.
 ```
 
 ```handlebars role=user
 {{#each instruction}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 

@@ -10,12 +10,13 @@ output_type: text
 ---
 
 ```handlebars role=system
-Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear title and one short sentence description.
+Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear
+title and one short sentence description.
 ```
 
 ```handlebars role=user
 {{#each instruction}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 
@@ -41,8 +42,6 @@ Analyze the provided input and distill 3-5 key concepts based on user instructio
 
 ```json type=defaults
 {
-  "instruction": [
-    "Distill the key bottle form, finish, and brand mood concepts from the provided shampoo references."
-  ]
+  "instruction": ["Distill the key bottle form, finish, and brand mood concepts from the provided shampoo references."]
 }
 ```

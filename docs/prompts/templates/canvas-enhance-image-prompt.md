@@ -10,13 +10,10 @@ output_type: text
 ---
 
 ```handlebars role=user
-You are an expert prompt engineer. Improve this prompt for an image generator to create a high quality image.
-
-Original prompt: '{{originalPrompt}}'
-Context from card: '{{#each cardContext}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}'
-Quality goal: '{{#each qualityGoal}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}'
-
-Keep it descriptive but concise. Return ONLY the enhanced prompt.
+You are an expert prompt engineer. Improve this prompt for an image generator to create a high quality image. Original
+prompt: '{{originalPrompt}}' Context from card: '{{#each cardContext}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}'
+Quality goal: '{{#each qualityGoal}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}' Keep it descriptive but concise.
+Return ONLY the enhanced prompt.
 ```
 
 ```json type=defaults

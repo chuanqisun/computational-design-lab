@@ -12,14 +12,12 @@ output_type: text
 Define this term or phrase in 2-3 sentences. Return text directly, no quotes.
 
 {{#each text}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 
 ```json type=defaults
 {
-  "text": [
-    "soft-touch matte finish"
-  ]
+  "text": ["soft-touch matte finish"]
 }
 ```

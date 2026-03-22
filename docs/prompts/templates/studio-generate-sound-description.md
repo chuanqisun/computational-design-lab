@@ -9,12 +9,13 @@ output_type: text
 ---
 
 ```handlebars role=user
-Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
-
-Scene XML:
+Given the following product scene XML and an animation prompt, generate a short sound description that would accompany
+this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY
+the sound description text, nothing else. Scene XML:
 {{sceneXml}}
 
-Animation prompt: {{#each animationPrompt}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}
+Animation prompt:
+{{#each animationPrompt}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}
 ```
 
 ```json type=defaults

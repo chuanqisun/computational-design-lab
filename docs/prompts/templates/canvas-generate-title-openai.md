@@ -14,7 +14,7 @@ Summarize user provided content into one word or short phrase
 
 ```handlebars role=user
 {{#each fullText}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 

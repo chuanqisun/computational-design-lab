@@ -12,7 +12,7 @@ output_type: text
 One word/short phrase summary of text. Return text directly, no quotes.
 
 {{#each text}}
-{{this}}
+  {{this}}
 {{/each}}
 ```
 
