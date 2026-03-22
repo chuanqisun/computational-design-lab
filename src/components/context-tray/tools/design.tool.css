@@ -5,6 +5,17 @@
   padding: 8px 0;
 }
 
+.design-tool .design-input,
+.design-tool .brand-guide-input {
+  field-sizing: content;
+  resize: none;
+}
+
+.design-tool .brand-guide-input {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
 .design-tool .generate-row {
   display: flex;
   gap: 8px;

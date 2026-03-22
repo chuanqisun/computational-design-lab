@@ -17,6 +17,7 @@ export interface DesignConcept {
 export function designConcepts$(inputs: {
   items: DesignInput[];
   requirements: DesignRequirement;
+  brandGuide?: string;
   numDesigns: number;
   apiKey: string;
 }): Observable<DesignConcept> {
@@ -69,8 +70,13 @@ export function designConcepts$(inputs: {
         });
 
         const requirementText = inputs.requirements || "Any";
+        const brandGuide = inputs.brandGuide?.trim() || "";
 
-        const prompt = `
+        const systemPrompt = brandGuide
+          ? `You generate design concepts from mixed visual and textual references. Follow the provided brand guide when making design decisions.\n\nBrand guide: ${brandGuide}`
+          : "You generate design concepts from mixed visual and textual references.";
+
+        const userPrompt = `
 Generate ${inputs.numDesigns} unique design concepts based on the provided inputs (images and texts) and the following requirements:
 ${requirementText}
 
@@ -83,12 +89,13 @@ For each design, provide:
 2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio look.
 `;
 
-        contents.push({ text: prompt });
+        contents.push({ text: userPrompt });
 
         const stream = await ai.models.generateContentStream({
           model: "gemini-3-flash-preview",
           contents: [{ role: "user", parts: contents }],
           config: {
+            systemInstruction: systemPrompt,
             responseMimeType: "application/json",
             responseSchema: schema,
             thinkingConfig: {

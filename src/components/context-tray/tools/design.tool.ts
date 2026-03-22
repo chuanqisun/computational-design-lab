@@ -29,6 +29,7 @@ export const DesignTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const inputText$ = new BehaviorSubject<string>("");
+    const brandGuide$ = new BehaviorSubject<string>("");
     const numDesigns$ = new BehaviorSubject<number>(1);
     const isGenerating$ = new BehaviorSubject(false);
     const performGenerate$ = new BehaviorSubject<boolean>(false);
@@ -36,9 +37,9 @@ export const DesignTool = createComponent(
     const effect$ = performGenerate$.pipe(
       filter((val) => val === true),
       tap(() => performGenerate$.next(false)),
-      withLatestFrom(selected$, inputText$, numDesigns$, apiKeys$),
+      withLatestFrom(selected$, inputText$, brandGuide$, numDesigns$, apiKeys$),
       filter(([_, selected]) => selected.length > 0),
-      tap(([_, selected, requirements, numDesigns, apiKeys]) => {
+      tap(([_, selected, requirements, brandGuide, numDesigns, apiKeys]) => {
         if (!apiKeys.gemini) return;
         isGenerating$.next(true);
 
@@ -48,6 +49,7 @@ export const DesignTool = createComponent(
         const task$ = designConcepts$({
           items: designInputs,
           requirements,
+          brandGuide,
           numDesigns,
           apiKey: apiKeys.gemini,
         }).pipe(
@@ -77,15 +79,24 @@ export const DesignTool = createComponent(
       ignoreElements(),
     );
 
-    return combineLatest([inputText$, numDesigns$, isGenerating$, apiKeys$]).pipe(
-      map(([inputText, numDesigns, isGenerating, apiKeys]) => {
+    return combineLatest([inputText$, brandGuide$, numDesigns$, isGenerating$, apiKeys$]).pipe(
+      map(([inputText, brandGuide, numDesigns, isGenerating, apiKeys]) => {
         return html`
           <div class="design-tool">
             <textarea
               class="design-input"
+              rows="3"
               placeholder="Describe your design requirements here..."
               .value=${inputText}
               @input=${(e: Event) => inputText$.next((e.target as HTMLTextAreaElement).value)}
+            ></textarea>
+
+            <textarea
+              class="brand-guide-input"
+              rows="4"
+              placeholder="Optional brand guide..."
+              .value=${brandGuide}
+              @input=${(e: Event) => brandGuide$.next((e.target as HTMLTextAreaElement).value)}
             ></textarea>
 
             <div class="generate-row">
