@@ -111,6 +111,11 @@ function formatSlotValue(value: SlotValue): string {
   return String(value ?? "");
 }
 
+function formatOutputSchema(template: TemplateRecord): string {
+  if (template.metadata.outputType !== "json" || !template.metadata.outputSchema) return "";
+  return JSON.stringify(template.metadata.outputSchema, null, 2);
+}
+
 function isTextArea(slot: PromptSlotMetadata): boolean {
   return slot.multiple || slot.type === "xml" || slot.type === "json" || slot.type === "mixed" || slot.type === "text";
 }
@@ -223,6 +228,7 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
     }
 
     const renderedPrompt = selectedTemplate.module.template(templateValues);
+    const outputSchema = formatOutputSchema(selectedTemplate.module);
     const slotEntries = Object.entries(selectedTemplate.module.metadata.slots);
     const presets = selectedTemplate.module.presets ?? [];
 
@@ -231,7 +237,6 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
         <aside class="panel panel-list">
           <header class="section-header">
             <h1>Prompt Library</h1>
-            <p>${templates.length} templates</p>
           </header>
           <div class="template-list" role="list">
             ${repeat(
@@ -252,18 +257,10 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
           </div>
         </aside>
 
-        <section class="panel panel-editor">
-          <header class="section-header section-header--editor">
-            <div>
-              <h2>${selectedTemplate.module.metadata.title}</h2>
-              <p>${selectedTemplate.id}</p>
-            </div>
-          </header>
-
+        <section class="panel panel-form">
           <section class="section-block section-block--presets">
             <header class="section-block__header">
               <h3>Presets</h3>
-              <p>Pre-filled examples based on canvas and studio workflows.</p>
             </header>
             <div class="preset-row" role="list">
               ${repeat(
@@ -279,85 +276,31 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
             </div>
           </section>
 
-          <div class="editor-grid">
-            <section class="section-block section-block--input">
-              <header class="section-block__header">
-                <h3>Template Inputs</h3>
-                <p>Fill each slot and keep external attachments ready for use when running the prompt.</p>
-              </header>
-              <div class="field-list">
-                ${repeat(
-                  slotEntries,
-                  ([slotName]) => slotName,
-                  ([slotName, slot]) => html`
-                    <label class="field">
-                      <span class="field__label-row">
-                        <span class="field__name">${slotName}</span>
-                        <span class="field__meta"
-                          >${slot.multiple ? "LIST" : ""}${slot.required ? " · REQUIRED" : ""}</span
-                        >
-                      </span>
-                      <span class="field__description">${slot.description}</span>
-                      ${slot.type === "image"
-                        ? html`
-                            <div class="attachment-note" role="note">
-                              <p>This prompt expects an image attachment outside this form.</p>
-                              <p>Add the image separately in the chat or tool where you use the prompt.</p>
-                            </div>
-                            ${slot.multiple
-                              ? html`
-                                  <div class="list-field">
-                                    <div class="list-field__items">
-                                      ${repeat(
-                                        Array.isArray(templateValues[slotName])
-                                          ? (templateValues[slotName] as string[])
-                                          : [],
-                                        (_, index) => `${slotName}-${index}`,
-                                        (item, index) => html`
-                                          <div class="list-field__item">
-                                            <input
-                                              type="text"
-                                              placeholder="Describe the image you will attach separately"
-                                              .value=${item}
-                                              @input=${(event: Event) =>
-                                                updateListSlotItem(
-                                                  slotName,
-                                                  index,
-                                                  (event.currentTarget as HTMLInputElement).value,
-                                                )}
-                                            />
-                                            <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
-                                              Remove
-                                            </button>
-                                          </div>
-                                        `,
-                                      )}
-                                    </div>
-                                    <button
-                                      type="button"
-                                      class="list-field__add"
-                                      @click=${() => addListSlotItem(slotName)}
-                                    >
-                                      Add image reference
-                                    </button>
-                                  </div>
-                                `
-                              : html`<input
-                                  type="text"
-                                  placeholder="Optional note about the image you will attach separately"
-                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                  @input=${(event: Event) =>
-                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
-                                />`}
-                          `
-                        : slot.type === "boolean"
-                          ? html`<input
-                              type="checkbox"
-                              .checked=${Boolean(templateValues[slotName])}
-                              @change=${(event: Event) =>
-                                updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).checked)}
-                            />`
-                          : slot.multiple
+          <section class="section-block section-block--input">
+            <header class="section-block__header">
+              <h3>Template Inputs</h3>
+              <p>Fill each slot and keep external attachments ready for use when running the prompt.</p>
+            </header>
+            <div class="field-list">
+              ${repeat(
+                slotEntries,
+                ([slotName]) => slotName,
+                ([slotName, slot]) => html`
+                  <label class="field">
+                    <span class="field__label-row">
+                      <span class="field__name">${slotName}</span>
+                      <span class="field__meta"
+                        >${slot.multiple ? "LIST" : ""}${slot.required ? " · REQUIRED" : ""}</span
+                      >
+                    </span>
+                    <span class="field__description">${slot.description}</span>
+                    ${slot.type === "image"
+                      ? html`
+                          <div class="attachment-note" role="note">
+                            <p>This prompt expects an image attachment outside this form.</p>
+                            <p>Add the image separately in the chat or tool where you use the prompt.</p>
+                          </div>
+                          ${slot.multiple
                             ? html`
                                 <div class="list-field">
                                   <div class="list-field__items">
@@ -368,29 +311,17 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                                       (_, index) => `${slotName}-${index}`,
                                       (item, index) => html`
                                         <div class="list-field__item">
-                                          ${isStructuredTextArea(slot)
-                                            ? html`<textarea
-                                                rows=${Math.max(2, slot.type === "xml" || slot.type === "json" ? 8 : 4)}
-                                                placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
-                                                .value=${item}
-                                                @input=${(event: Event) =>
-                                                  updateListSlotItem(
-                                                    slotName,
-                                                    index,
-                                                    (event.currentTarget as HTMLTextAreaElement).value,
-                                                  )}
-                                              ></textarea>`
-                                            : html`<input
-                                                type=${slot.type === "number" ? "number" : "text"}
-                                                placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
-                                                .value=${item}
-                                                @input=${(event: Event) =>
-                                                  updateListSlotItem(
-                                                    slotName,
-                                                    index,
-                                                    (event.currentTarget as HTMLInputElement).value,
-                                                  )}
-                                              />`}
+                                          <input
+                                            type="text"
+                                            placeholder="Describe the image you will attach separately"
+                                            .value=${item}
+                                            @input=${(event: Event) =>
+                                              updateListSlotItem(
+                                                slotName,
+                                                index,
+                                                (event.currentTarget as HTMLInputElement).value,
+                                              )}
+                                          />
                                           <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
                                             Remove
                                           </button>
@@ -403,81 +334,153 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                                     class="list-field__add"
                                     @click=${() => addListSlotItem(slotName)}
                                   >
-                                    Add item
+                                    Add image reference
                                   </button>
                                 </div>
                               `
-                            : isTextArea(slot)
-                              ? html`<textarea
-                                  rows=${Math.max(
-                                    2,
-                                    slot.multiple || slot.type === "xml" || slot.type === "json" ? 8 : 4,
+                            : html`<input
+                                type="text"
+                                placeholder="Optional note about the image you will attach separately"
+                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                @input=${(event: Event) =>
+                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
+                              />`}
+                        `
+                      : slot.type === "boolean"
+                        ? html`<input
+                            type="checkbox"
+                            .checked=${Boolean(templateValues[slotName])}
+                            @change=${(event: Event) =>
+                              updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).checked)}
+                          />`
+                        : slot.multiple
+                          ? html`
+                              <div class="list-field">
+                                <div class="list-field__items">
+                                  ${repeat(
+                                    Array.isArray(templateValues[slotName])
+                                      ? (templateValues[slotName] as string[])
+                                      : [],
+                                    (_, index) => `${slotName}-${index}`,
+                                    (item, index) => html`
+                                      <div class="list-field__item">
+                                        ${isStructuredTextArea(slot)
+                                          ? html`<textarea
+                                              rows=${Math.max(2, slot.type === "xml" || slot.type === "json" ? 8 : 4)}
+                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLTextAreaElement).value,
+                                                )}
+                                            ></textarea>`
+                                          : html`<input
+                                              type=${slot.type === "number" ? "number" : "text"}
+                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLInputElement).value,
+                                                )}
+                                            />`}
+                                        <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
+                                          Remove
+                                        </button>
+                                      </div>
+                                    `,
                                   )}
-                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                  @input=${(event: Event) =>
-                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLTextAreaElement).value)}
-                                ></textarea>`
-                              : html`<input
-                                  type=${slot.type === "number" ? "number" : "text"}
-                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                  @input=${(event: Event) =>
-                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
-                                />`}
-                    </label>
-                  `,
-                )}
-              </div>
-            </section>
+                                </div>
+                                <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
+                                  Add item
+                                </button>
+                              </div>
+                            `
+                          : isTextArea(slot)
+                            ? html`<textarea
+                                rows=${Math.max(
+                                  2,
+                                  slot.multiple || slot.type === "xml" || slot.type === "json" ? 8 : 4,
+                                )}
+                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                @input=${(event: Event) =>
+                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLTextAreaElement).value)}
+                              ></textarea>`
+                            : html`<input
+                                type=${slot.type === "number" ? "number" : "text"}
+                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                @input=${(event: Event) =>
+                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
+                              />`}
+                  </label>
+                `,
+              )}
+            </div>
+          </section>
+        </section>
 
-            <section class="section-block section-block--output">
-              <div class="prompt-preview">
-                ${renderedPrompt.system
-                  ? html`
-                      <section class="prompt-block">
-                        <header class="prompt-block__header">
-                          <span>System</span>
-                          <button
-                            @mousedown=${() => resetCopyButton("system")}
-                            @click=${() => copyPreview("system", renderedPrompt.system || "")}
-                          >
-                            ${copiedButtons.system ? "Copied" : "Copy"}
-                          </button>
-                        </header>
-                        <pre>${renderedPrompt.system}</pre>
-                      </section>
-                    `
-                  : ""}
-                ${renderedPrompt.developer
-                  ? html`
-                      <section class="prompt-block">
-                        <header class="prompt-block__header">
-                          <span>Developer</span>
-                          <button
-                            @mousedown=${() => resetCopyButton("developer")}
-                            @click=${() => copyPreview("developer", renderedPrompt.developer || "")}
-                          >
-                            ${copiedButtons.developer ? "Copied" : "Copy"}
-                          </button>
-                        </header>
-                        <pre>${renderedPrompt.developer}</pre>
-                      </section>
-                    `
-                  : ""}
-                <section class="prompt-block">
-                  <header class="prompt-block__header">
-                    <span>User</span>
-                    <button
-                      @mousedown=${() => resetCopyButton("user")}
-                      @click=${() => copyPreview("user", renderedPrompt.user)}
-                    >
-                      ${copiedButtons.user ? "Copied" : "Copy"}
-                    </button>
-                  </header>
-                  <pre>${renderedPrompt.user}</pre>
-                </section>
-              </div>
-            </section>
-          </div>
+        <section class="panel panel-output">
+          <section class="section-block section-block--output">
+            <div class="prompt-preview">
+              ${renderedPrompt.system
+                ? html`
+                    <section class="prompt-block">
+                      <header class="prompt-block__header">
+                        <span>System</span>
+                        <button
+                          @mousedown=${() => resetCopyButton("system")}
+                          @click=${() => copyPreview("system", renderedPrompt.system || "")}
+                        >
+                          ${copiedButtons.system ? "Copied" : "Copy"}
+                        </button>
+                      </header>
+                      <pre>${renderedPrompt.system}</pre>
+                    </section>
+                  `
+                : ""}
+              ${renderedPrompt.developer
+                ? html`
+                    <section class="prompt-block">
+                      <header class="prompt-block__header">
+                        <span>Developer</span>
+                        <button
+                          @mousedown=${() => resetCopyButton("developer")}
+                          @click=${() => copyPreview("developer", renderedPrompt.developer || "")}
+                        >
+                          ${copiedButtons.developer ? "Copied" : "Copy"}
+                        </button>
+                      </header>
+                      <pre>${renderedPrompt.developer}</pre>
+                    </section>
+                  `
+                : ""}
+              <section class="prompt-block">
+                <header class="prompt-block__header">
+                  <span>User</span>
+                  <button
+                    @mousedown=${() => resetCopyButton("user")}
+                    @click=${() => copyPreview("user", renderedPrompt.user)}
+                  >
+                    ${copiedButtons.user ? "Copied" : "Copy"}
+                  </button>
+                </header>
+                <pre>${renderedPrompt.user}</pre>
+              </section>
+              ${outputSchema
+                ? html`
+                    <section class="prompt-block">
+                      <header class="prompt-block__header">
+                        <span>Output schema</span>
+                      </header>
+                      <pre>${outputSchema}</pre>
+                    </section>
+                  `
+                : ""}
+            </div>
+          </section>
         </section>
       </main>
     `;

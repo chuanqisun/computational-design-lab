@@ -1,6 +1,60 @@
 import { studioScanProductFeaturesPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    shapes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" },
+        },
+        required: ["id", "name", "description"],
+      },
+    },
+    materials: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          visual: { type: "string" },
+        },
+        required: ["id", "name", "visual"],
+      },
+    },
+    mechanisms: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          interaction: { type: "string" },
+        },
+        required: ["id", "name", "interaction"],
+      },
+    },
+    colors: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          hex: { type: "string" },
+        },
+        required: ["name", "hex"],
+      },
+    },
+  },
+  required: ["shapes", "materials", "mechanisms", "colors"],
+} as const;
+
 export interface StudioScanProductFeaturesVars {
   shapes: string[];
   materials: string[];
@@ -16,6 +70,7 @@ const template: PromptTemplateModule<StudioScanProductFeaturesVars, "shapes" | "
       categories: ["studio", "image-to-json", "feature-extraction"],
       inputType: "image",
       outputType: "json",
+      outputSchema,
       slots: {
         shapes: {
           description: "Available shape library options.",
@@ -58,7 +113,10 @@ For each identified feature, return:
 - Mechanism: id, name, and interaction from library
 - Color: name and hex from library
 
-Pick only items that are visibly present on the product in the photo. Return empty arrays for categories not found.`,
+Pick only items that are visibly present on the product in the photo. Return empty arrays for categories not found.
+
+Return ONLY valid JSON matching this schema:
+${JSON.stringify(outputSchema, null, 2)}`,
     }),
   };
 

@@ -2,6 +2,25 @@ import { canvasDesignConceptsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    designs: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          description: { type: "string" },
+          imagePrompt: { type: "string" },
+        },
+        required: ["title", "description", "imagePrompt"],
+      },
+    },
+  },
+  required: ["designs"],
+} as const;
+
 export interface CanvasDesignConceptsVars {
   numDesigns: number;
   requirements: string[];
@@ -19,6 +38,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "concept-generation"],
     inputType: "mixed",
     outputType: "json",
+    outputSchema,
     slots: {
       numDesigns: {
         description: "How many concepts to produce.",
@@ -68,7 +88,10 @@ For each design, provide:
 1. A highly detailed text description (title and description). The description must:
    - Capture the conceptual vision and specific physical details (materials, form, finish, mechanism).
    - Explicitly rationalize how the reference texts and images influenced the design. Explain the connection between the input references and the resulting design choices.
-2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio look.`,
+2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio look.
+
+Return ONLY valid JSON matching this schema:
+${JSON.stringify(outputSchema, null, 2)}`,
   }),
 };
 

@@ -6,7 +6,7 @@ source_files:
   - src/studio-page.ts
 input_types:
   - image
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=user
@@ -23,7 +23,8 @@ Available colors:
 
 For each identified feature, return: - Shape: id, name, and description from library - Material: id, name, and visual
 from library - Mechanism: id, name, and interaction from library - Color: name and hex from library Pick only items that
-are visibly present on the product in the photo. Return empty arrays for categories not found.
+are visibly present on the product in the photo. Return empty arrays for categories not found. Return ONLY valid JSON
+matching this schema:
 ```
 
 ```json type=schema

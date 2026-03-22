@@ -2,6 +2,17 @@ import { canvasVisualizeConceptPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    prompts: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+  required: ["prompts"],
+} as const;
+
 export interface CanvasVisualizeConceptVars {
   conceptTitle: string;
   conceptDescription: string | string[];
@@ -19,6 +30,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "text-to-json", "image-prompt-generation"],
     inputType: "text",
     outputType: "json",
+    outputSchema,
     slots: {
       conceptTitle: {
         description: "Concept title.",
@@ -56,10 +68,8 @@ Instruction: ${toTextBlock(instruction)}
 
 Generate up to ${maxPrompts} vivid, detailed descriptions suitable for an AI image generator. Capture diverse elements of the concept following the instruction. Each prompt covers subject, scene, style.
 
-Respond in JSON format:
-{
-  "prompts": ["prompt1", "prompt2", "prompt3"]
-}`,
+Return ONLY valid JSON matching this schema:
+${JSON.stringify(outputSchema, null, 2)}`,
   }),
 };
 

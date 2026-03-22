@@ -7,7 +7,7 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: xml
 ---
 
 ```handlebars role=system

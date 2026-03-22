@@ -5,7 +5,7 @@ source_files:
   - src/components/context-tray/llm/visualize-concept.ts
 input_types:
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=user
@@ -19,8 +19,20 @@ Instruction:
 Generate up to
 {{maxPrompts}}
 vivid, detailed descriptions suitable for an AI image generator. Capture diverse elements of the concept following the
-instruction. Each prompt covers subject, scene, style. Respond in JSON format: { "prompts": ["prompt1", "prompt2",
-"prompt3"] }
+instruction. Each prompt covers subject, scene, style. Return ONLY valid JSON matching this schema:
+```
+
+```json type=schema
+{
+  "type": "object",
+  "properties": {
+    "prompts": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["prompts"]
+}
 ```
 
 ```json type=defaults

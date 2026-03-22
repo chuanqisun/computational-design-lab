@@ -6,7 +6,7 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=user
@@ -37,7 +37,7 @@ the conceptual vision and specific physical details (materials, form, finish, me
 the reference texts and images influenced the design. Explain the connection between the input references and the
 resulting design choices. 2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product
 rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio
-look.
+look. Return ONLY valid JSON matching this schema:
 ```
 
 ```json type=schema

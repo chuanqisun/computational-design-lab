@@ -6,13 +6,13 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=system
 Analyze the provided item and identify 3-{{outputCount}}
 moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1
-to 10, where 1 is calm/low energy and 10 is intense/high energy.
+to 10, where 1 is calm/low energy and 10 is intense/high energy. Return ONLY valid JSON matching this schema:
 ```
 
 ```handlebars role=user

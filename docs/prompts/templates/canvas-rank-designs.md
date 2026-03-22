@@ -6,7 +6,7 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=system
@@ -28,7 +28,7 @@ item IDs in order from least
 {{trait}}
 (first) to most
 {{trait}}
-(last). Also write 1-2 sentences of feedback explaining your ranking.
+(last). Also write 1-2 sentences of feedback explaining your ranking. Return ONLY valid JSON matching this schema:
 ```
 
 ```json type=schema

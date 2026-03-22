@@ -2,6 +2,16 @@ import { canvasFillCardPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    body: { type: "string" },
+    imagePrompt: { type: "string" },
+  },
+  additionalProperties: false,
+} as const;
+
 export interface CanvasFillCardVars {
   title: string;
   body: string | string[];
@@ -20,6 +30,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "field-completion"],
     inputType: "mixed",
     outputType: "json",
+    outputSchema,
     slots: {
       title: {
         description: "Existing card title, if any.",
@@ -68,8 +79,8 @@ Please generate the missing fields based on the available information.
 - If image is provided, use it to generate the missing text fields.
 ${toTextBlock(guidance) ? `- Additional guidance: ${toTextBlock(guidance)}` : ""}
 
-Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
-Example: {"title": "...", "body": "...", "imagePrompt": "..."}`,
+Return ONLY valid JSON matching this schema. Omit fields that were already present or cannot be generated.
+${JSON.stringify(outputSchema, null, 2)}`,
   }),
 };
 

@@ -6,7 +6,7 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=user
@@ -28,8 +28,19 @@ generate the missing text fields.
   {{#each guidance}}{{this}}{{#unless @last}}{{/unless}}{{/each}}
 {{/if}}
 
-Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be
-generated. Example: {"title": "...", "body": "...", "imagePrompt": "..."}
+Return ONLY valid JSON matching this schema. Omit fields that were already present or cannot be generated.
+```
+
+```json type=schema
+{
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "body": { "type": "string" },
+    "imagePrompt": { "type": "string" }
+  },
+  "additionalProperties": false
+}
 ```
 
 ```json type=defaults

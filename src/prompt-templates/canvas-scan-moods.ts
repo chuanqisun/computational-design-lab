@@ -2,6 +2,24 @@ import { canvasScanMoodsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    moods: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          mood: { type: "string" },
+          arousal: { type: "number" },
+        },
+        required: ["mood", "arousal"],
+      },
+    },
+  },
+  required: ["moods"],
+} as const;
+
 export interface CanvasScanMoodsVars {
   instruction: string | string[];
   outputCount: number;
@@ -14,6 +32,7 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outpu
     categories: ["canvas", "mixed-to-json", "mood-analysis"],
     inputType: "mixed",
     outputType: "json",
+    outputSchema,
     slots: {
       instruction: {
         description: "User-side task wording sent with the item payload.",
@@ -31,7 +50,10 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outpu
   },
   presets: canvasScanMoodsPresets,
   template: ({ instruction, outputCount = 5 }) => ({
-    developer: `Analyze the provided item and identify 3-${Math.max(3, outputCount)} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.`,
+    developer: `Analyze the provided item and identify 3-${Math.max(3, outputCount)} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.
+
+Return ONLY valid JSON matching this schema:
+${JSON.stringify(outputSchema, null, 2)}`,
     user: toTextBlock(instruction, "Analyze this item for moods and arousal levels."),
   }),
 };

@@ -6,7 +6,7 @@ source_files:
   - src/studio-page.ts
 input_types:
   - text
-output_type: text
+output_type: xml
 ---
 
 ```handlebars role=user

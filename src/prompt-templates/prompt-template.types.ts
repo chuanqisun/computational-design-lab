@@ -13,6 +13,7 @@ export interface PromptTemplateMetadata<Slots extends string> {
   categories: string[];
   inputType: PromptContentType;
   outputType: PromptContentType;
+  outputSchema?: Record<string, unknown>;
   slots: Record<Slots, PromptSlotMetadata>;
 }
 

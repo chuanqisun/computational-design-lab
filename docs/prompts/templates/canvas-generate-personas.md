@@ -5,7 +5,7 @@ source_files:
   - src/components/context-tray/llm/synthetic-users.ts
 input_types:
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=user
@@ -15,7 +15,7 @@ synthetic user personas{{#if segment}}
   in the segment:
   {{#each segment}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}. Each persona should have varying levels of "{{trait}}".
 Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "{{trait}}"
-manifests in their life.
+manifests in their life. Return ONLY valid JSON matching this schema:
 ```
 
 ```json type=schema

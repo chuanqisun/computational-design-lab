@@ -1,6 +1,18 @@
 import { canvasRankDesignsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 
+const outputSchema = {
+  type: "object",
+  properties: {
+    rankedItemIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    feedback: { type: "string" },
+  },
+  required: ["rankedItemIds", "feedback"],
+} as const;
+
 export interface CanvasRankDesignsVars {
   personaSummary: string;
   trait: string;
@@ -18,6 +30,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "ranking"],
     inputType: "mixed",
     outputType: "json",
+    outputSchema,
     slots: {
       personaSummary: {
         description: "Persona description used as the system instruction.",
@@ -52,7 +65,10 @@ const template: PromptTemplateModule<
 
 ${designSummaries.join("\n\n")}
 
-Rank these designs from least to most "${trait}" based on your personal perspective. Return all ${designCount} item IDs in order from least ${trait} (first) to most ${trait} (last). Also write 1-2 sentences of feedback explaining your ranking.`,
+Rank these designs from least to most "${trait}" based on your personal perspective. Return all ${designCount} item IDs in order from least ${trait} (first) to most ${trait} (last). Also write 1-2 sentences of feedback explaining your ranking.
+
+Return ONLY valid JSON matching this schema:
+${JSON.stringify(outputSchema, null, 2)}`,
   }),
 };
 

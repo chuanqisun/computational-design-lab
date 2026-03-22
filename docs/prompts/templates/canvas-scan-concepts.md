@@ -6,12 +6,12 @@ source_files:
 input_types:
   - image
   - text
-output_type: text
+output_type: json
 ---
 
 ```handlebars role=system
 Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear
-title and one short sentence description.
+title and one short sentence description. Return ONLY valid JSON matching this schema:
 ```
 
 ```handlebars role=user
