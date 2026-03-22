@@ -10,6 +10,12 @@
   --panel-border-strong: #d4d4d4;
   --panel-muted: #f4f4f4;
   --spacing-unit: 1ch;
+  --panel-gap: calc(3 * var(--spacing-unit));
+  --section-gap: calc(2 * var(--spacing-unit));
+  --panel-padding: calc(1 * var(--spacing-unit)) calc(2 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
+  --header-padding: calc(2 * var(--spacing-unit));
+  --header-line-height: 2;
+  --field-padding: calc(1.5 * var(--spacing-unit));
 }
 
 *,
@@ -108,6 +114,8 @@ p {
 }
 
 .panel-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   border-right: 1px solid var(--panel-border);
   background: var(--panel-background);
   min-height: 0;
@@ -122,8 +130,8 @@ p {
 .panel-output {
   display: grid;
   align-content: start;
-  gap: calc(3 * var(--spacing-unit));
-  padding: calc(1 * var(--spacing-unit)) calc(2 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
+  gap: var(--panel-gap);
+  padding: var(--panel-padding);
   overflow-y: auto;
 }
 
@@ -135,16 +143,9 @@ p {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  line-height: 2;
-  gap: calc(2 * var(--spacing-unit));
-  padding: calc(2 * var(--spacing-unit));
-}
-
-.template-summary {
-  display: flex;
-  gap: calc(2 * var(--spacing-unit));
-  color: var(--color-text-secondary);
-  white-space: nowrap;
+  gap: var(--section-gap);
+  padding: var(--header-padding);
+  line-height: var(--header-line-height);
 }
 
 .panel-list > .section-header {
@@ -193,9 +194,6 @@ p {
 
 .preset-item__description,
 .field__description,
-.copy-status,
-.section-header p,
-.section-block__header p,
 .field__meta {
   color: var(--color-text-secondary);
 }
@@ -203,26 +201,20 @@ p {
 .section-block {
   display: grid;
   align-content: start;
-  gap: calc(2 * var(--spacing-unit));
+  gap: var(--section-gap);
 }
 
 .section-block__header {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-unit);
-  line-height: 2;
-}
-
-.section-block__header--split {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
+  line-height: var(--header-line-height);
 }
 
 .field-list {
   display: flex;
   flex-direction: column;
-  gap: calc(2 * var(--spacing-unit));
+  gap: var(--section-gap);
 }
 
 .section-block--presets {
@@ -241,7 +233,7 @@ p {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5ch;
-  padding: calc(1.5 * var(--spacing-unit)) calc(2 * var(--spacing-unit));
+  padding: var(--field-padding) calc(2 * var(--spacing-unit));
   text-align: left;
   min-width: 0;
 }
@@ -260,7 +252,7 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.5ch;
-  padding: calc(1.5 * var(--spacing-unit));
+  padding: var(--field-padding);
   background: var(--panel-muted);
   border: 1px solid var(--panel-border);
 }
@@ -298,7 +290,6 @@ p {
 }
 
 .field__name,
-.prompt-block__header,
 h1,
 h2,
 h3,
@@ -308,7 +299,7 @@ h4 {
 
 .prompt-preview {
   display: grid;
-  gap: calc(2 * var(--spacing-unit));
+  gap: var(--section-gap);
 }
 
 .prompt-block {
@@ -317,20 +308,21 @@ h4 {
 }
 
 .prompt-block__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--section-gap);
   color: var(--color-text-active);
+  font-weight: bold;
 }
 
 pre {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  padding: calc(1.5 * var(--spacing-unit));
+  padding: var(--field-padding);
   background: var(--panel-muted);
   border: 1px solid var(--panel-border);
-}
-
-.copy-status {
-  min-height: 1lh;
 }
 
 @media (max-width: 110ch) {
@@ -365,13 +357,8 @@ pre {
   }
 
   .section-header,
-  .section-block__header--split,
   .field__label-row {
     flex-direction: column;
-  }
-
-  .template-summary {
-    white-space: normal;
   }
 
   .list-field__item {
@@ -383,14 +370,13 @@ pre {
   .panel-form,
   .panel-output,
   .section-header {
-    padding: calc(2 * var(--spacing-unit));
+    padding: var(--header-padding);
   }
 
   .template-list {
     padding-bottom: calc(1 * var(--spacing-unit));
   }
 
-  .preset-row,
   .preset-row {
     grid-template-columns: 1fr;
   }
