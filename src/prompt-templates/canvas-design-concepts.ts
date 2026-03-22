@@ -1,13 +1,18 @@
 import { canvasDesignConceptsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasDesignConceptsVars {
   numDesigns: number;
   requirements: string[];
   referenceSummary: string[];
+  brandGuide?: string | string[];
 }
 
-const template: PromptTemplateModule<CanvasDesignConceptsVars, "numDesigns" | "requirements" | "referenceSummary"> = {
+const template: PromptTemplateModule<
+  CanvasDesignConceptsVars,
+  "numDesigns" | "requirements" | "referenceSummary" | "brandGuide"
+> = {
   metadata: {
     title: "Generate Design Concepts",
     sourceFiles: ["src/components/context-tray/llm/design-concepts.ts"],
@@ -33,10 +38,19 @@ const template: PromptTemplateModule<CanvasDesignConceptsVars, "numDesigns" | "r
         multiple: true,
         type: "text",
       },
+      brandGuide: {
+        description: "Optional brand guide to shape design language and decision-making.",
+        required: false,
+        multiple: true,
+        type: "text",
+      },
     },
   },
   presets: canvasDesignConceptsPresets,
-  template: ({ numDesigns = 3, requirements = [], referenceSummary = [] }) => ({
+  template: ({ numDesigns = 3, requirements = [], referenceSummary = [], brandGuide }) => ({
+    system: toTextBlock(brandGuide)
+      ? `You generate design concepts from mixed visual and textual references. Follow the provided brand guide when making design decisions.\n\nBrand guide:\n${toTextBlock(brandGuide)}`
+      : undefined,
     user: `Generate ${numDesigns} unique design concepts based on the provided inputs (images and texts) and the following requirements:
 ${requirements.length > 0 ? requirements.join("\n") : "Any"}
 

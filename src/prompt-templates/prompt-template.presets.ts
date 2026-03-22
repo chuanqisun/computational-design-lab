@@ -133,6 +133,7 @@ export const canvasDesignConceptsPresets = [
     description: "Concept generation from a natural haircare board.",
     values: {
       numDesigns: 3,
+      brandGuide: ["Luma Vale: calm botanicals, matte restraint, soft green accents."],
       requirements: [
         "Design a premium shampoo bottle for a botanical repair line.",
         "Use a rounded bottle form, matte surfaces, and restrained green accents.",
@@ -148,6 +149,7 @@ export const canvasDesignConceptsPresets = [
     description: "Explore approachable but trustworthy oral care concepts.",
     values: {
       numDesigns: 4,
+      brandGuide: ["Northstar Care: clear, gentle, clinically calm, never flashy."],
       requirements: [
         "Create mouthwash packaging concepts that feel family-safe and clinically credible.",
         "Make dosage and clarity of use obvious from the form.",
@@ -163,6 +165,7 @@ export const canvasDesignConceptsPresets = [
     description: "Generate sustainable packaging concepts for refill-led haircare.",
     values: {
       numDesigns: 3,
+      brandGuide: ["Morrow Loop: premium sustainability, muted tones, visible utility."],
       requirements: [
         "Create refill-first shampoo packaging concepts for a premium sustainable line.",
         "Balance reduced plastic use with strong shelf presence.",
@@ -720,6 +723,7 @@ export const studioStagePhotoScenePresets = [
     description: "Place the shampoo bottle in a calm bathroom shelf scene.",
     values: {
       currentXml: shampooSceneXml,
+      brandGuide: ["Luma Vale: calm botanicals, matte restraint, soft green accents."],
       scene: [
         "Stage the bottle on a premium bathroom shelf with folded towels, pale stone, and diffused morning light.",
       ],
@@ -730,6 +734,7 @@ export const studioStagePhotoScenePresets = [
     description: "Place the mouthwash bottle near a sink for a usage-oriented photo scene.",
     values: {
       currentXml: mouthwashSceneXml,
+      brandGuide: ["Northstar Care: clear, gentle, clinically calm, never flashy."],
       scene: [
         "Place the bottle beside a clean sink with white tile, chrome reflections, and a subtle dental-care context.",
       ],
@@ -740,6 +745,7 @@ export const studioStagePhotoScenePresets = [
     description: "Stage a refill pouch in a restrained sustainable editorial environment.",
     values: {
       currentXml: refillSceneXml,
+      brandGuide: ["Morrow Loop: premium sustainability, muted tones, visible utility."],
       scene: ["Place the refill pouch on a pale stone counter with recycled paper props and soft side lighting."],
     },
   },
@@ -752,6 +758,7 @@ export const studioSynthesizeSceneXmlPresets = [
     values: {
       selectionJson: shampooSelectionJson,
       photoCount: 1,
+      brandGuide: ["Luma Vale: calm botanicals, matte restraint, soft green accents."],
       customInstructions: [
         "Design a bottle inspired by calm botanical repair rituals.",
         "Keep the presentation premium, tactile, and suitable for a beauty campaign render.",
@@ -764,6 +771,7 @@ export const studioSynthesizeSceneXmlPresets = [
     values: {
       selectionJson: mouthwashSelectionJson,
       photoCount: 0,
+      brandGuide: ["Northstar Care: clear, gentle, clinically calm, never flashy."],
       customInstructions: [
         "Create a premium mouthwash bottle scene that emphasizes trust, dosage clarity, and visible formula freshness.",
       ],
@@ -775,6 +783,7 @@ export const studioSynthesizeSceneXmlPresets = [
     values: {
       selectionJson: refillSelectionJson,
       photoCount: 2,
+      brandGuide: ["Morrow Loop: premium sustainability, muted tones, visible utility."],
       customInstructions: [
         "Treat the refill pouch as premium enough for countertop display.",
         "Balance sustainable cues with a refined editorial studio render.",
