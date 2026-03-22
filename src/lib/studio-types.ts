@@ -44,11 +44,13 @@ export interface StudioState {
   pickedShapes$: BehaviorSubject<string[]>;
   filterText$: BehaviorSubject<string>;
   customInstructions$: BehaviorSubject<string>;
+  synthesisBrandGuide$: BehaviorSubject<string>;
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
   editInstructions$: BehaviorSubject<string>;
   conversationHistory$: BehaviorSubject<Content[]>;
   photoScene$: BehaviorSubject<string>;
+  photoBrandGuide$: BehaviorSubject<string>;
   photoGallery$: BehaviorSubject<PhotoCard[]>;
   scannedPhotos$: BehaviorSubject<ScannedPhoto[]>;
   scanTrigger$: Subject<ScannedPhoto>;

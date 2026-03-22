@@ -9,7 +9,7 @@ import { shapes } from "../components/material-library/shapes";
 import type { PhotoCard, ScannedPhoto, ScanResult } from "./studio-types";
 import { colorsByName, materialsById, mechanismsById, shapesById } from "./studio-utils";
 
-const systemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
+const studioSystemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
 
 The XML must cover these scene slots:
 - Subject: identity, object class, pose, expression
@@ -33,6 +33,23 @@ XML format rules:
 For picked materials: infer the most appropriate surface options and color options based on the other picked items (colors, shapes, mechanisms). When there are multiple colors and multiple surface materials, pick the most straightforward assignment.
 For picked surface options: use the specified surface finishes in the scene. If surface options conflict with chosen materials, prefer the user-specified surface options.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
+
+const getStudioSystemPrompt = (brandGuide: string) => {
+  const trimmedBrandGuide = brandGuide.trim();
+  return trimmedBrandGuide
+    ? `${studioSystemPrompt}\n\nFollow this brand guide when making design, styling, material, color, and scene decisions:\n${trimmedBrandGuide}`
+    : studioSystemPrompt;
+};
+
+const photoStagePrompt =
+  "Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. In the <subject>, make sure <product> and <hand> and their relationship is clearly specified. Output only the updated XML, nothing else.";
+
+const getPhotoStageSystemPrompt = (brandGuide: string) => {
+  const trimmedBrandGuide = brandGuide.trim();
+  return trimmedBrandGuide
+    ? `You stage product photo scenes as XML. Follow the provided brand guide when choosing styling, materials, atmosphere, prop language, and visual tone. Output only XML, nothing else.\n\nBrand guide:\n${trimmedBrandGuide}`
+    : undefined;
+};
 
 export async function runScanAI(
   photo: ScannedPhoto,
@@ -175,6 +192,7 @@ export interface SynthesizeParams {
   pickedMechanisms: string[];
   pickedShapes: string[];
   customInstructions: string;
+  brandGuide: string;
   scannedPhotos: ScannedPhoto[];
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
@@ -189,6 +207,7 @@ export async function synthesize(params: SynthesizeParams) {
     pickedMechanisms,
     pickedShapes,
     customInstructions,
+    brandGuide,
     scannedPhotos,
     synthesisOutput$,
     isSynthesizing$,
@@ -269,7 +288,7 @@ export async function synthesize(params: SynthesizeParams) {
       model: "gemini-3-flash-preview",
       config: {
         thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: systemPrompt,
+        systemInstruction: getStudioSystemPrompt(brandGuide),
       },
       contents: [userMessage],
     });
@@ -290,6 +309,7 @@ export async function synthesize(params: SynthesizeParams) {
 
 export interface ReviseParams {
   editInstructions: string;
+  brandGuide: string;
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
   conversationHistory$: BehaviorSubject<Content[]>;
@@ -297,7 +317,8 @@ export interface ReviseParams {
 }
 
 export async function revise(params: ReviseParams) {
-  const { editInstructions, synthesisOutput$, isSynthesizing$, conversationHistory$, editInstructions$ } = params;
+  const { editInstructions, brandGuide, synthesisOutput$, isSynthesizing$, conversationHistory$, editInstructions$ } =
+    params;
 
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) {
@@ -328,7 +349,7 @@ export async function revise(params: ReviseParams) {
       model: "gemini-3-flash-preview",
       config: {
         thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: systemPrompt,
+        systemInstruction: getStudioSystemPrompt(brandGuide),
       },
       contents,
     });
@@ -351,11 +372,12 @@ export async function revise(params: ReviseParams) {
 export interface TakePhotoParams {
   synthesisOutput: string;
   photoScene: string;
+  brandGuide: string;
   photoGallery$: BehaviorSubject<PhotoCard[]>;
 }
 
 export async function takePhoto(params: TakePhotoParams) {
-  const { synthesisOutput, photoScene, photoGallery$ } = params;
+  const { synthesisOutput, photoScene, brandGuide, photoGallery$ } = params;
 
   const apiKey = loadApiKeys().gemini;
   if (!apiKey) {
@@ -393,7 +415,7 @@ export async function takePhoto(params: TakePhotoParams) {
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const promptText = `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. In the <subject>, make sure <product> and <hand> and their relationship is clearly specified. Output only the updated XML, nothing else.
+    const promptText = `${photoStagePrompt}
 
 Current XML:
 ${currentXml}
@@ -404,6 +426,7 @@ Photo scene: ${scene}`;
       model: "gemini-3-flash-preview",
       config: {
         thinkingConfig: { thinkingBudget: 0 },
+        systemInstruction: getPhotoStageSystemPrompt(brandGuide),
       },
       contents: [{ role: "user", parts: [{ text: promptText }] }],
     });

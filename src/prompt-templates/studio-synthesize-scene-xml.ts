@@ -6,6 +6,7 @@ export interface StudioSynthesizeSceneXmlVars {
   selectionJson: string;
   photoCount: number;
   customInstructions: string | string[];
+  brandGuide?: string | string[];
 }
 
 const system = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
@@ -35,7 +36,7 @@ For picked mechanisms: describe what the mechanism is, but do NOT render it in a
 
 const template: PromptTemplateModule<
   StudioSynthesizeSceneXmlVars,
-  "selectionJson" | "photoCount" | "customInstructions"
+  "selectionJson" | "photoCount" | "customInstructions" | "brandGuide"
 > = {
   metadata: {
     title: "Synthesize Scene XML",
@@ -62,11 +63,19 @@ const template: PromptTemplateModule<
         multiple: true,
         type: "text",
       },
+      brandGuide: {
+        description: "Optional brand guidelines to follow in the system prompt.",
+        required: false,
+        multiple: true,
+        type: "text",
+      },
     },
   },
   presets: studioSynthesizeSceneXmlPresets,
-  template: ({ selectionJson = "{}", photoCount = 0, customInstructions }) => ({
-    system,
+  template: ({ selectionJson = "{}", photoCount = 0, customInstructions, brandGuide }) => ({
+    system: toTextBlock(brandGuide)
+      ? `${system}\n\nFollow this brand guide when making design, styling, material, color, and scene decisions:\n${toTextBlock(brandGuide)}`
+      : system,
     user: `Given the following design selections, generate the scene XML.
 
 ${selectionJson}${

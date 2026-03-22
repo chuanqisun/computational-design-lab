@@ -21,11 +21,13 @@ const pickedMechanisms$ = new BehaviorSubject<string[]>([]);
 const pickedShapes$ = new BehaviorSubject<string[]>([]);
 const filterText$ = new BehaviorSubject<string>("");
 const customInstructions$ = new BehaviorSubject<string>("");
+const synthesisBrandGuide$ = new BehaviorSubject<string>("");
 const synthesisOutput$ = new BehaviorSubject<string>("");
 const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
 const conversationHistory$ = new BehaviorSubject<Content[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
+const photoBrandGuide$ = new BehaviorSubject<string>("");
 const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);
 const scannedPhotos$ = new BehaviorSubject<ScannedPhoto[]>([]);
 const apiKeys$ = new BehaviorSubject(loadApiKeys());
@@ -38,7 +40,9 @@ const clearInputs = () => {
   pickedShapes$.next([]);
   filterText$.next("");
   customInstructions$.next("");
+  synthesisBrandGuide$.next("");
   editInstructions$.next("");
+  photoBrandGuide$.next("");
   scannedPhotos$.next([]);
 };
 
@@ -50,9 +54,11 @@ const persistenceReady = Promise.all([
   persistSubject(pickedMechanisms$, "studio:pickedMechanisms"),
   persistSubject(pickedShapes$, "studio:pickedShapes"),
   persistSubject(customInstructions$, "studio:customInstructions"),
+  persistSubject(synthesisBrandGuide$, "studio:synthesisBrandGuide"),
   persistSubject(synthesisOutput$, "studio:synthesisOutput"),
   persistSubject(editInstructions$, "studio:editInstructions"),
   persistSubject(photoScene$, "studio:photoScene"),
+  persistSubject(photoBrandGuide$, "studio:photoBrandGuide"),
   persistSubject(photoGallery$, "studio:photoGallery"),
 ]);
 
@@ -120,11 +126,13 @@ const Main = createComponent(() => {
         pickedMechanisms$,
         pickedShapes$,
         customInstructions$,
+        synthesisBrandGuide$,
         synthesisOutput$,
         isSynthesizing$,
         editInstructions$,
         conversationHistory$,
         photoScene$,
+        photoBrandGuide$,
         photoGallery$,
         scannedPhotos$,
       })}

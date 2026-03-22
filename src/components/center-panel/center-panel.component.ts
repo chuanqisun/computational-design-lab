@@ -18,11 +18,13 @@ export interface CenterPanelProps {
   pickedMechanisms$: BehaviorSubject<string[]>;
   pickedShapes$: BehaviorSubject<string[]>;
   customInstructions$: BehaviorSubject<string>;
+  synthesisBrandGuide$: BehaviorSubject<string>;
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
   editInstructions$: BehaviorSubject<string>;
   conversationHistory$: BehaviorSubject<Content[]>;
   photoScene$: BehaviorSubject<string>;
+  photoBrandGuide$: BehaviorSubject<string>;
   photoGallery$: BehaviorSubject<PhotoCard[]>;
   scannedPhotos$: BehaviorSubject<ScannedPhoto[]>;
 }
@@ -45,11 +47,13 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
     pickedMechanisms$,
     pickedShapes$,
     customInstructions$,
+    synthesisBrandGuide$,
     synthesisOutput$,
     isSynthesizing$,
     editInstructions$,
     conversationHistory$,
     photoScene$,
+    photoBrandGuide$,
     photoGallery$,
     scannedPhotos$,
   } = props;
@@ -134,6 +138,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
       pickedMechanisms: pickedMechanisms$.value,
       pickedShapes: pickedShapes$.value,
       customInstructions: customInstructions$.value,
+      brandGuide: synthesisBrandGuide$.value,
       scannedPhotos: scannedPhotos$.value,
       synthesisOutput$,
       isSynthesizing$,
@@ -143,6 +148,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
   const handleRevise = () =>
     revise({
       editInstructions: editInstructions$.value,
+      brandGuide: synthesisBrandGuide$.value,
       synthesisOutput$,
       isSynthesizing$,
       conversationHistory$,
@@ -153,6 +159,7 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
     takePhoto({
       synthesisOutput: synthesisOutput$.value,
       photoScene: photoScene$.value,
+      brandGuide: photoBrandGuide$.value,
       photoGallery$,
     });
 
@@ -162,9 +169,11 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
     synthesisOutput$,
     isSynthesizing$,
     customInstructions$,
+    synthesisBrandGuide$,
     editInstructions$,
     conversationHistory$,
     photoScene$,
+    photoBrandGuide$,
     suggestedScenes$,
     photoGallery$,
   ]).pipe(
@@ -175,9 +184,11 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
         synthesis,
         isSynthesizing,
         customInstr,
+        synthesisBrandGuide,
         editInstr,
         history,
         photoScene,
+        photoBrandGuide,
         suggestedScenes,
         gallery,
       ]) => html`
@@ -198,6 +209,12 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
             placeholder="Custom instructions (optional)..."
             .value=${customInstr}
             @input=${(e: Event) => customInstructions$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
+          <textarea
+            rows="4"
+            placeholder="Optional brand guide..."
+            .value=${synthesisBrandGuide}
+            @input=${(e: Event) => synthesisBrandGuide$.next((e.target as HTMLTextAreaElement).value)}
           ></textarea>
           <menu>
             <button @click=${handleSynthesize} ?disabled=${isSynthesizing}>
@@ -226,6 +243,12 @@ export const CenterPanelComponent = createComponent((props: CenterPanelProps) =>
             placeholder="Specify photo shoot scene..."
             .value=${photoScene}
             @input=${(e: Event) => photoScene$.next((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
+          <textarea
+            rows="4"
+            placeholder="Optional brand guide..."
+            .value=${photoBrandGuide}
+            @input=${(e: Event) => photoBrandGuide$.next((e.target as HTMLTextAreaElement).value)}
           ></textarea>
           <div class="suggested-scenes">
             <div class="scene-buttons">
