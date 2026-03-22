@@ -11,6 +11,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { persistSubject } from "../../../lib/persistence";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
@@ -32,6 +33,9 @@ export const IterateTool = createComponent(
     const numDesigns$ = new BehaviorSubject<number>(3);
     const isGenerating$ = new BehaviorSubject(false);
     const generate$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(prompt$, "context-tray:iterate:prompt");
+    void persistSubject(numDesigns$, "context-tray:iterate:num-designs");
 
     const effect$ = generate$.pipe(
       filter((v) => v === true),

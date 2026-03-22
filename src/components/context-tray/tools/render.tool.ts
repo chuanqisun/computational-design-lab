@@ -11,6 +11,7 @@ import {
   type Observable,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { persistSubject } from "../../../lib/persistence";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
@@ -29,6 +30,8 @@ export const RenderTool = createComponent(
   }) => {
     const prompt$ = new BehaviorSubject<string>("");
     const render$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(prompt$, "context-tray:render:prompt");
 
     const renderEffect$ = render$.pipe(
       filter((trigger) => trigger === true),

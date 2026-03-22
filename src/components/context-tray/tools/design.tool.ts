@@ -11,6 +11,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { persistSubject } from "../../../lib/persistence";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
@@ -33,6 +34,10 @@ export const DesignTool = createComponent(
     const numDesigns$ = new BehaviorSubject<number>(1);
     const isGenerating$ = new BehaviorSubject(false);
     const performGenerate$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(inputText$, "context-tray:design:input-text");
+    void persistSubject(brandGuide$, "context-tray:design:brand-guide");
+    void persistSubject(numDesigns$, "context-tray:design:num-designs");
 
     const effect$ = performGenerate$.pipe(
       filter((val) => val === true),

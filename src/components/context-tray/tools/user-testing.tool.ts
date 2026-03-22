@@ -12,6 +12,7 @@ import {
   withLatestFrom,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { persistSubject } from "../../../lib/persistence";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
 import { generatePersonas$, rankDesigns$ } from "../llm/synthetic-users";
@@ -41,6 +42,10 @@ export const UserTestingTool = createComponent(
     const isRunning$ = new BehaviorSubject<boolean>(false);
     const progressMsg$ = new BehaviorSubject<string>("");
     const startAction$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(trait$, "context-tray:user-testing:trait");
+    void persistSubject(segment$, "context-tray:user-testing:segment");
+    void persistSubject(numUsers$, "context-tray:user-testing:num-users");
 
     const startEffect$ = startAction$.pipe(
       filter((v) => v === true),

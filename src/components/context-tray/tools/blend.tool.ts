@@ -11,6 +11,7 @@ import {
   type Observable,
 } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { persistSubject } from "../../../lib/persistence";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
@@ -29,6 +30,8 @@ export const BlendTool = createComponent(
   }) => {
     const blendInstruction$ = new BehaviorSubject<string>("");
     const blend$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(blendInstruction$, "context-tray:blend:instruction");
 
     const blendEffect$ = blend$.pipe(
       filter((trigger) => trigger === true),

@@ -1,5 +1,6 @@
 import { html } from "lit-html";
 import { BehaviorSubject, filter, ignoreElements, map, mergeWith, tap, withLatestFrom, type Observable } from "rxjs";
+import { persistSubject } from "../../../lib/persistence";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
@@ -9,6 +10,8 @@ export const WriterTool = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: Observable<ApiKeys> }) => {
     const inputText$ = new BehaviorSubject<string>("");
     const write$ = new BehaviorSubject<boolean>(false);
+
+    void persistSubject(inputText$, "context-tray:writer:input-text");
 
     const writeEffect$ = write$.pipe(
       filter((trigger) => trigger === true),
