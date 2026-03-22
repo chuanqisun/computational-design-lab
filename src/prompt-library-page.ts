@@ -18,11 +18,9 @@ import canvasScanMoodsTemplate from "./prompt-templates/canvas-scan-moods";
 import canvasScanMoodsSupervisedTemplate from "./prompt-templates/canvas-scan-moods-supervised";
 import canvasVisualizeConceptTemplate from "./prompt-templates/canvas-visualize-concept";
 import type {
-  PromptContentType,
   PromptSlotMetadata,
   PromptTemplateModule,
   PromptTemplatePreset,
-  RenderedPrompt,
 } from "./prompt-templates/prompt-template.types";
 import studioGenerateSoundDescriptionTemplate from "./prompt-templates/studio-generate-sound-description";
 import studioImportCanvasInstructionsTemplate from "./prompt-templates/studio-import-canvas-instructions";
@@ -65,7 +63,9 @@ const templates: TemplateItem[] = [
 
 const selectedTemplateId$ = new BehaviorSubject<string>(templates[0]?.id ?? "");
 const templateValues$ = new BehaviorSubject<Record<string, SlotValue>>({});
-const copyStatus$ = new BehaviorSubject<string>("");
+const copiedButtons$ = new BehaviorSubject<Record<string, boolean>>({});
+
+const copyResetTimeouts = new Map<string, number>();
 
 function createInitialValues(template: TemplateRecord): Record<string, SlotValue> {
   return buildTemplateValues(template);
@@ -126,10 +126,6 @@ function itemInputLabel(slot: PromptSlotMetadata): string {
   return "Item";
 }
 
-function contentTypeLabel(type: PromptContentType | "number" | "boolean"): string {
-  return type.toUpperCase();
-}
-
 function updateListSlotItem(slotName: string, index: number, nextValue: string) {
   const currentValue = templateValues$.value[slotName];
   const nextItems = Array.isArray(currentValue) ? [...currentValue] : [];
@@ -138,7 +134,6 @@ function updateListSlotItem(slotName: string, index: number, nextValue: string) 
     ...templateValues$.value,
     [slotName]: nextItems,
   });
-  copyStatus$.next("");
 }
 
 function addListSlotItem(slotName: string) {
@@ -148,7 +143,6 @@ function addListSlotItem(slotName: string) {
     ...templateValues$.value,
     [slotName]: nextItems,
   });
-  copyStatus$.next("");
 }
 
 function removeListSlotItem(slotName: string, index: number) {
@@ -158,7 +152,6 @@ function removeListSlotItem(slotName: string, index: number) {
     ...templateValues$.value,
     [slotName]: nextItems,
   });
-  copyStatus$.next("");
 }
 
 function updateSelectedTemplate(templateId: string) {
@@ -166,7 +159,7 @@ function updateSelectedTemplate(templateId: string) {
   if (!template) return;
   selectedTemplateId$.next(templateId);
   templateValues$.next(createInitialValues(template.module));
-  copyStatus$.next("");
+  copiedButtons$.next({});
 }
 
 function applyPreset(templateId: string, preset: PromptTemplatePreset<Record<string, unknown>>) {
@@ -174,7 +167,7 @@ function applyPreset(templateId: string, preset: PromptTemplatePreset<Record<str
   if (!template) return;
   selectedTemplateId$.next(templateId);
   templateValues$.next(buildTemplateValues(template.module, preset.values));
-  copyStatus$.next("");
+  copiedButtons$.next({});
 }
 
 function updateSlotValue(slotName: string, slot: PromptSlotMetadata, rawValue: string | boolean) {
@@ -182,25 +175,36 @@ function updateSlotValue(slotName: string, slot: PromptSlotMetadata, rawValue: s
     ...templateValues$.value,
     [slotName]: parseSlotValue(slot, rawValue),
   });
-  copyStatus$.next("");
 }
 
-function buildPreviewText(renderedPrompt: RenderedPrompt): string {
-  return [
-    renderedPrompt.system ? `SYSTEM\n\n${renderedPrompt.system}` : "",
-    renderedPrompt.developer ? `DEVELOPER\n\n${renderedPrompt.developer}` : "",
-    `USER\n\n${renderedPrompt.user}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n----------------\n\n");
+function setCopyButtonState(buttonId: string, isCopied: boolean) {
+  copiedButtons$.next({
+    ...copiedButtons$.value,
+    [buttonId]: isCopied,
+  });
 }
 
-async function copyPreview(previewText: string) {
+function resetCopyButton(buttonId: string) {
+  const timeout = copyResetTimeouts.get(buttonId);
+  if (timeout !== undefined) {
+    window.clearTimeout(timeout);
+    copyResetTimeouts.delete(buttonId);
+  }
+  setCopyButtonState(buttonId, false);
+}
+
+async function copyPreview(buttonId: string, previewText: string) {
   try {
     await navigator.clipboard.writeText(previewText);
-    copyStatus$.next("Copied");
+    resetCopyButton(buttonId);
+    setCopyButtonState(buttonId, true);
+    const timeout = window.setTimeout(() => {
+      setCopyButtonState(buttonId, false);
+      copyResetTimeouts.delete(buttonId);
+    }, 2000);
+    copyResetTimeouts.set(buttonId, timeout);
   } catch {
-    copyStatus$.next("Clipboard unavailable");
+    resetCopyButton(buttonId);
   }
 }
 
@@ -211,15 +215,14 @@ selectedTemplateId$.subscribe((templateId) => {
   templateValues$.next(createInitialValues(template.module));
 });
 
-const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).pipe(
-  map(([selectedTemplateId, templateValues, copyStatus]) => {
+const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$]).pipe(
+  map(([selectedTemplateId, templateValues, copiedButtons]) => {
     const selectedTemplate = templates.find((item) => item.id === selectedTemplateId) ?? templates[0];
     if (!selectedTemplate) {
       return html`<main class="empty-state"><p>No prompt templates found.</p></main>`;
     }
 
     const renderedPrompt = selectedTemplate.module.template(templateValues);
-    const previewText = buildPreviewText(renderedPrompt);
     const slotEntries = Object.entries(selectedTemplate.module.metadata.slots);
     const presets = selectedTemplate.module.presets ?? [];
 
@@ -254,10 +257,6 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
             <div>
               <h2>${selectedTemplate.module.metadata.title}</h2>
               <p>${selectedTemplate.id}</p>
-            </div>
-            <div class="template-summary">
-              <span>${selectedTemplate.module.metadata.inputType} in</span>
-              <span>${selectedTemplate.module.metadata.outputType} out</span>
             </div>
           </header>
 
@@ -295,9 +294,7 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
                       <span class="field__label-row">
                         <span class="field__name">${slotName}</span>
                         <span class="field__meta"
-                          >${contentTypeLabel(slot.type)}${slot.multiple ? " · LIST" : ""}${slot.required
-                            ? " · REQUIRED"
-                            : ""}</span
+                          >${slot.multiple ? "LIST" : ""}${slot.required ? " · REQUIRED" : ""}</span
                         >
                       </span>
                       <span class="field__description">${slot.description}</span>
@@ -433,20 +430,19 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
             </section>
 
             <section class="section-block section-block--output">
-              <header class="section-block__header section-block__header--split">
-                <div>
-                  <h3>Rendered Output</h3>
-                  <p>Rendered system, developer, and user messages ready to copy.</p>
-                </div>
-                <menu>
-                  <button @click=${() => copyPreview(previewText)}>Copy Output</button>
-                </menu>
-              </header>
               <div class="prompt-preview">
                 ${renderedPrompt.system
                   ? html`
                       <section class="prompt-block">
-                        <header class="prompt-block__header">System</header>
+                        <header class="prompt-block__header">
+                          <span>System</span>
+                          <button
+                            @mousedown=${() => resetCopyButton("system")}
+                            @click=${() => copyPreview("system", renderedPrompt.system || "")}
+                          >
+                            ${copiedButtons.system ? "Copied" : "Copy"}
+                          </button>
+                        </header>
                         <pre>${renderedPrompt.system}</pre>
                       </section>
                     `
@@ -454,17 +450,32 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copyStatus$]).
                 ${renderedPrompt.developer
                   ? html`
                       <section class="prompt-block">
-                        <header class="prompt-block__header">Developer</header>
+                        <header class="prompt-block__header">
+                          <span>Developer</span>
+                          <button
+                            @mousedown=${() => resetCopyButton("developer")}
+                            @click=${() => copyPreview("developer", renderedPrompt.developer || "")}
+                          >
+                            ${copiedButtons.developer ? "Copied" : "Copy"}
+                          </button>
+                        </header>
                         <pre>${renderedPrompt.developer}</pre>
                       </section>
                     `
                   : ""}
                 <section class="prompt-block">
-                  <header class="prompt-block__header">User</header>
+                  <header class="prompt-block__header">
+                    <span>User</span>
+                    <button
+                      @mousedown=${() => resetCopyButton("user")}
+                      @click=${() => copyPreview("user", renderedPrompt.user)}
+                    >
+                      ${copiedButtons.user ? "Copied" : "Copy"}
+                    </button>
+                  </header>
                   <pre>${renderedPrompt.user}</pre>
                 </section>
               </div>
-              <p class="copy-status" aria-live="polite">${copyStatus || " "}</p>
             </section>
           </div>
         </section>

@@ -49,6 +49,7 @@ pre {
 
 button {
   border: 1px solid var(--panel-border-strong);
+  padding: 0.5ch;
   background: white;
   cursor: pointer;
 }
@@ -60,12 +61,13 @@ button:hover {
 input,
 textarea {
   width: 100%;
+  padding: 0.5ch;
   border: 1px solid var(--panel-border);
   background: white;
 }
 
 textarea {
-  min-height: 2lh;
+  max-height: 12rem;
   resize: none;
   field-sizing: content;
 }
