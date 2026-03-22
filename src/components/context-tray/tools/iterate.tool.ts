@@ -10,8 +10,8 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs";
-import { createComponent } from "../../../sdk/create-component";
 import { persistSubject } from "../../../lib/persistence";
+import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
