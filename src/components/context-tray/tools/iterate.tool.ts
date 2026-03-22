@@ -30,19 +30,21 @@ export const IterateTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const prompt$ = new BehaviorSubject<string>("");
+    const brandGuide$ = new BehaviorSubject<string>("");
     const numDesigns$ = new BehaviorSubject<number>(3);
     const isGenerating$ = new BehaviorSubject(false);
     const generate$ = new BehaviorSubject<boolean>(false);
 
     void persistSubject(prompt$, "context-tray:iterate:prompt");
+    void persistSubject(brandGuide$, "context-tray:iterate:brand-guide");
     void persistSubject(numDesigns$, "context-tray:iterate:num-designs");
 
     const effect$ = generate$.pipe(
       filter((v) => v === true),
       tap(() => generate$.next(false)),
-      withLatestFrom(selected$, prompt$, numDesigns$, apiKeys$),
+      withLatestFrom(selected$, prompt$, brandGuide$, numDesigns$, apiKeys$),
       filter(([_, selected]) => selected.length > 0),
-      tap(([_, selected, prompt, numDesigns, apiKeys]) => {
+      tap(([_, selected, prompt, brandGuide, numDesigns, apiKeys]) => {
         if (!apiKeys.gemini) return;
         isGenerating$.next(true);
 
@@ -52,6 +54,7 @@ export const IterateTool = createComponent(
           items: selected,
           requirements:
             prompt.trim() || "Iterate and improve on the existing designs, incorporating any feedback provided.",
+          brandGuide,
           numDesigns,
           apiKey: apiKeys.gemini,
         }).pipe(
@@ -82,14 +85,22 @@ export const IterateTool = createComponent(
       ignoreElements(),
     );
 
-    return combineLatest([prompt$, numDesigns$, isGenerating$, apiKeys$]).pipe(
-      map(([prompt, numDesigns, isGenerating, apiKeys]) => {
+    return combineLatest([prompt$, brandGuide$, numDesigns$, isGenerating$, apiKeys$]).pipe(
+      map(([prompt, brandGuide, numDesigns, isGenerating, apiKeys]) => {
         return html`
           <div class="iterate-tool">
             <textarea
+              rows="3"
               placeholder="Optional: describe direction or paste feedback..."
               .value=${prompt}
               @input=${(e: Event) => prompt$.next((e.target as HTMLTextAreaElement).value)}
+            ></textarea>
+            <textarea
+              class="brand-guide-input"
+              rows="4"
+              placeholder="Optional brand guide..."
+              .value=${brandGuide}
+              @input=${(e: Event) => brandGuide$.next((e.target as HTMLTextAreaElement).value)}
             ></textarea>
             <div class="iterate-row">
               <label for="iterate-count">Count</label>
