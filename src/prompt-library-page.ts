@@ -48,11 +48,11 @@ const templates: TemplateItem[] = [
   { id: "canvas-scan-moods", module: canvasScanMoodsTemplate as TemplateRecord },
   { id: "canvas-visualize-concept", module: canvasVisualizeConceptTemplate as TemplateRecord },
   { id: "canvas-to-studio-conversion", module: studioImportCanvasInstructionsTemplate as TemplateRecord },
-  { id: "studio-generate-sound-description", module: studioGenerateSoundDescriptionTemplate as TemplateRecord },
-  { id: "studio-revise-scene-xml", module: studioReviseSceneXmlTemplate as TemplateRecord },
   { id: "studio-scan-product-features", module: studioScanProductFeaturesTemplate as TemplateRecord },
-  { id: "studio-stage-photo-scene", module: studioStagePhotoSceneTemplate as TemplateRecord },
   { id: "studio-synthesize-scene-xml", module: studioSynthesizeSceneXmlTemplate as TemplateRecord },
+  { id: "studio-revise-scene-xml", module: studioReviseSceneXmlTemplate as TemplateRecord },
+  { id: "studio-generate-sound-description", module: studioGenerateSoundDescriptionTemplate as TemplateRecord },
+  { id: "studio-stage-photo-scene", module: studioStagePhotoSceneTemplate as TemplateRecord },
 ];
 
 const selectedTemplateId$ = new BehaviorSubject<string>(templates[0]?.id ?? "");

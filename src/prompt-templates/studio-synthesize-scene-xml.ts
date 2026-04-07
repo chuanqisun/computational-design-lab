@@ -39,7 +39,7 @@ const template: PromptTemplateModule<
   "selectionJson" | "photoCount" | "customInstructions" | "brandGuide"
 > = {
   metadata: {
-    title: "Synthesize Scene XML",
+    title: "Generate Scene XML",
     purpose:
       "Generate a complete product visualization scene XML from selected attributes, optional photos, and custom instructions.",
     sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
