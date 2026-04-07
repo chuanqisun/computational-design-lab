@@ -1,4 +1,3 @@
-import { studioSynthesizeSceneXmlPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -8,6 +7,30 @@ export interface StudioSynthesizeSceneXmlVars {
   customInstructions: string | string[];
   brandGuide?: string | string[];
 }
+
+const shampooSelectionJson = `{
+  "shapes": ["Tall rounded bottle", "Soft shoulder silhouette"],
+  "materials": ["PET", "PP cap"],
+  "surfaceOptions": ["Soft-touch matte label", "Satin cap"],
+  "mechanisms": ["Flip-top cap"],
+  "colors": ["Warm white", "Eucalyptus green"]
+}`;
+
+const mouthwashSelectionJson = `{
+  "shapes": ["Rectangular bottle", "Beveled shoulder"],
+  "materials": ["Clear PET", "PP dosing cap"],
+  "surfaceOptions": ["Gloss bottle", "Matte label"],
+  "mechanisms": ["Measured dosage cap"],
+  "colors": ["Clear", "Aqua", "White"]
+}`;
+
+const refillSelectionJson = `{
+  "shapes": ["Stand-up refill pouch", "Compact screw closure"],
+  "materials": ["Flexible mono-material film"],
+  "surfaceOptions": ["Matte pouch", "Clear product window"],
+  "mechanisms": ["Screw cap"],
+  "colors": ["Pearl white", "Deep forest green"]
+}`;
 
 const system = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
 
@@ -33,6 +56,47 @@ XML format rules:
 For picked materials: infer the most appropriate surface options and color options based on the other picked items (colors, shapes, mechanisms). When there are multiple colors and multiple surface materials, pick the most straightforward assignment.
 For picked surface options: use the specified surface finishes in the scene. If surface options conflict with chosen materials, prefer the user-specified surface options.
 For picked mechanisms: describe what the mechanism is, but do NOT render it in action.`;
+
+const studioSynthesizeSceneXmlPresets = [
+  {
+    title: "Synthesize Shampoo Scene",
+    description: "Generate scene XML from shampoo selections and instructions.",
+    values: {
+      selectionJson: shampooSelectionJson,
+      photoCount: 1,
+      brandGuide: ["Luma Vale: calm botanicals, matte restraint, soft green accents."],
+      customInstructions: [
+        "Design a bottle inspired by calm botanical repair rituals.",
+        "Keep the presentation premium, tactile, and suitable for a beauty campaign render.",
+      ],
+    },
+  },
+  {
+    title: "Synthesize Mouthwash Scene",
+    description: "Generate scene XML from mouthwash library selections.",
+    values: {
+      selectionJson: mouthwashSelectionJson,
+      photoCount: 0,
+      brandGuide: ["Northstar Care: clear, gentle, clinically calm, never flashy."],
+      customInstructions: [
+        "Create a premium mouthwash bottle scene that emphasizes trust, dosage clarity, and visible formula freshness.",
+      ],
+    },
+  },
+  {
+    title: "Synthesize Refill Scene",
+    description: "Generate scene XML for a refill-led personal care concept.",
+    values: {
+      selectionJson: refillSelectionJson,
+      photoCount: 2,
+      brandGuide: ["Morrow Loop: premium sustainability, muted tones, visible utility."],
+      customInstructions: [
+        "Treat the refill pouch as premium enough for countertop display.",
+        "Balance sustainable cues with a refined editorial studio render.",
+      ],
+    },
+  },
+];
 
 const template: PromptTemplateModule<
   StudioSynthesizeSceneXmlVars,

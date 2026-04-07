@@ -1,4 +1,3 @@
-import { canvasScanConceptsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -23,6 +22,36 @@ const outputSchema = {
 export interface CanvasScanConceptsVars {
   instruction: string | string[];
 }
+
+const canvasScanConceptsPresets = [
+  {
+    title: "Extract Bottle Cues",
+    description: "Pull key form and finish concepts from packaging references.",
+    values: {
+      instruction: [
+        "Distill the key bottle form, finish, and brand mood concepts from the provided shampoo references.",
+      ],
+    },
+  },
+  {
+    title: "Extract Oral Care Signals",
+    description: "Identify concepts that make mouthwash packaging feel trustworthy.",
+    values: {
+      instruction: [
+        "Identify the 3-5 strongest concepts that make the mouthwash references feel clinically trustworthy and easy to use.",
+      ],
+    },
+  },
+  {
+    title: "Extract Refill Ideas",
+    description: "Focus concept extraction on sustainability and ritual.",
+    values: {
+      instruction: [
+        "Distill the key concepts around sustainability, refill behavior, and countertop desirability from these references.",
+      ],
+    },
+  },
+];
 
 const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
   metadata: {

@@ -1,4 +1,3 @@
-import { canvasGeneratePersonasPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toInlineText } from "./prompt-template.utils";
 
@@ -27,6 +26,36 @@ export interface CanvasGeneratePersonasVars {
   segment: string | string[];
   numUsers: number;
 }
+
+const canvasGeneratePersonasPresets = [
+  {
+    title: "Salon-Lite Shoppers",
+    description: "Generate personas for a premium botanical shampoo segment.",
+    values: {
+      trait: "ingredient consciousness",
+      segment: ["Premium shampoo shoppers", "Urban professionals"],
+      numUsers: 3,
+    },
+  },
+  {
+    title: "Family Oral Care",
+    description: "Create personas for approachable mouthwash packaging decisions.",
+    values: {
+      trait: "trust in clinical cues",
+      segment: ["Parents shopping for family oral care"],
+      numUsers: 4,
+    },
+  },
+  {
+    title: "Eco Refill Buyers",
+    description: "Generate refill-oriented packaging personas.",
+    values: {
+      trait: "willingness to adopt refill systems",
+      segment: ["Sustainability-minded personal care buyers"],
+      numUsers: 3,
+    },
+  },
+];
 
 const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segment" | "numUsers"> = {
   metadata: {

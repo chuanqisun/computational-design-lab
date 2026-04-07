@@ -1,4 +1,3 @@
-import { canvasEnhanceImagePromptPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -7,6 +6,48 @@ export interface CanvasEnhanceImagePromptVars {
   cardContext: string | string[];
   qualityGoal: string | string[];
 }
+
+const canvasEnhanceImagePromptPresets = [
+  {
+    title: "Shampoo Hero Upgrade",
+    description: "Rewrite a basic shampoo render prompt into a stronger commercial brief.",
+    values: {
+      originalPrompt: "A shampoo bottle on a white background",
+      cardContext: [
+        "Rounded botanical repair shampoo bottle with matte warm white body and eucalyptus green cap.",
+        "The brand should feel premium, calm, and naturally science-backed.",
+      ],
+      qualityGoal: [
+        "Push toward premium beauty advertising quality.",
+        "Keep the prompt concise and image-model friendly.",
+      ],
+    },
+  },
+  {
+    title: "Mouthwash Clarity Upgrade",
+    description: "Improve a mouthwash prompt for transparency and clinical polish.",
+    values: {
+      originalPrompt: "A mouthwash bottle product shot",
+      cardContext: [
+        "Clear rectangular mouthwash bottle with visible aqua rinse and measured dosage cap.",
+        "Target a clean pharmacy-plus-premium retail mood.",
+      ],
+      qualityGoal: ["Emphasize glasslike clarity, clean reflections, and label legibility."],
+    },
+  },
+  {
+    title: "Refill Editorial Upgrade",
+    description: "Sharpen a refill pouch prompt into an editorial sustainability render.",
+    values: {
+      originalPrompt: "A refill pouch for shampoo",
+      cardContext: [
+        "Stand-up refill pouch with pearl matte finish, translucent window, and compact closure.",
+        "The concept should feel elevated rather than utilitarian.",
+      ],
+      qualityGoal: ["Create a premium editorial render rather than a generic ecommerce image."],
+    },
+  },
+];
 
 const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalPrompt" | "cardContext" | "qualityGoal"> = {
   metadata: {

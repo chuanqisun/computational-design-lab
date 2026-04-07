@@ -1,4 +1,3 @@
-import { canvasRankDesignsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 
 const outputSchema = {
@@ -19,6 +18,54 @@ export interface CanvasRankDesignsVars {
   designCount: number;
   designSummaries: string[];
 }
+
+const canvasRankDesignsPresets = [
+  {
+    title: "Ingredient-Driven Ranking",
+    description: "Rank shampoo concepts for an ingredient-conscious shopper.",
+    values: {
+      personaSummary:
+        "You are a 34-year-old product designer who shops for shampoo based on ingredient transparency, calm aesthetics, and whether the pack looks credible in a premium bathroom.",
+      trait: "premium",
+      designCount: 3,
+      designSummaries: [
+        "A1: Rounded matte shampoo bottle with eucalyptus green cap and minimal recessed label.",
+        "B2: Glossy shampoo bottle with high-contrast botanical graphics and metallic cap.",
+        "C3: Refill pouch plus reusable countertop bottle system with soft neutral labeling.",
+      ],
+    },
+  },
+  {
+    title: "Clinical Trust Ranking",
+    description: "Rank mouthwash concepts for a trust-seeking oral care buyer.",
+    values: {
+      personaSummary:
+        "You are a parent comparing mouthwash packs and care most about visible dosage cues, product clarity, and whether the design looks safe and clinically trustworthy.",
+      trait: "trustworthy",
+      designCount: 3,
+      designSummaries: [
+        "A1: Transparent aqua mouthwash bottle with measured dosage cap and crisp white label.",
+        "B2: Dark opaque bottle with bold flavor graphics and neon accents.",
+        "C3: Frosted bottle with soft blue cap and oversized ingredient callouts.",
+      ],
+    },
+  },
+  {
+    title: "Sustainability Ranking",
+    description: "Rank refill concepts for eco-oriented packaging users.",
+    values: {
+      personaSummary:
+        "You actively choose refill systems when they feel easy to use and premium enough to justify countertop space.",
+      trait: "sustainable",
+      designCount: 3,
+      designSummaries: [
+        "A1: Mono-material refill pouch with reusable pump bottle companion.",
+        "B2: Conventional rigid shampoo bottle with recycled plastic claim on pack.",
+        "C3: Concentrate pod system with small reusable aluminum bottle.",
+      ],
+    },
+  },
+];
 
 const template: PromptTemplateModule<
   CanvasRankDesignsVars,

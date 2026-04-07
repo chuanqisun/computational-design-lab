@@ -1,4 +1,3 @@
-import { canvasVisualizeConceptPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -19,6 +18,48 @@ export interface CanvasVisualizeConceptVars {
   instruction: string | string[];
   maxPrompts: number;
 }
+
+const canvasVisualizeConceptPresets = [
+  {
+    title: "Visualize Shampoo Concept",
+    description: "Create render prompts from a botanical shampoo concept.",
+    values: {
+      conceptTitle: "Eucalyptus Repair",
+      conceptDescription: [
+        "A rounded shampoo bottle with a soft shoulder profile, matte warm white body, and eucalyptus green cap.",
+        "The concept should feel restorative, calm, and premium with subtle spa references.",
+      ],
+      instruction: ["Generate premium studio render prompts with restrained styling and beauty-ad polish."],
+      maxPrompts: 3,
+    },
+  },
+  {
+    title: "Visualize Mouthwash Concept",
+    description: "Create prompts from a clinical mouthwash concept.",
+    values: {
+      conceptTitle: "Measured Clarity",
+      conceptDescription: [
+        "A transparent mouthwash bottle with beveled shoulders, visible aqua formula, and a measured dosage cap.",
+        "The design communicates trust, freshness, and controlled use.",
+      ],
+      instruction: ["Generate clean commercial prompts with crisp lighting and front-label legibility."],
+      maxPrompts: 3,
+    },
+  },
+  {
+    title: "Visualize Refill Concept",
+    description: "Create prompts from a refill-first packaging concept.",
+    values: {
+      conceptTitle: "Refill Ritual",
+      conceptDescription: [
+        "A pearl matte shampoo refill pouch intended to sit visibly on a bathroom shelf.",
+        "It balances sustainability with premium editorial appeal and quiet color blocking.",
+      ],
+      instruction: ["Generate prompts that make the pouch feel elevated, tactile, and environmentally considered."],
+      maxPrompts: 4,
+    },
+  },
+];
 
 const template: PromptTemplateModule<
   CanvasVisualizeConceptVars,

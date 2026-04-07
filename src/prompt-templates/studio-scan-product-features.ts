@@ -1,4 +1,3 @@
-import { studioScanProductFeaturesPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 
 const outputSchema = {
@@ -61,6 +60,39 @@ export interface StudioScanProductFeaturesVars {
   mechanisms: string[];
   colors: string[];
 }
+
+const studioScanProductFeaturesPresets = [
+  {
+    title: "Shampoo Feature Library",
+    description: "Scan against a shampoo-oriented set of library options.",
+    values: {
+      shapes: ["Tall rounded bottle", "Soft shoulder silhouette", "Wide oval footprint"],
+      materials: ["PET", "HDPE", "PP cap"],
+      mechanisms: ["Flip-top cap", "Pump", "Screw cap"],
+      colors: ["Warm white", "Eucalyptus green", "Charcoal", "Amber"],
+    },
+  },
+  {
+    title: "Mouthwash Feature Library",
+    description: "Scan against oral care packaging options.",
+    values: {
+      shapes: ["Rectangular bottle", "Beveled shoulder bottle", "Tall cylindrical bottle"],
+      materials: ["Clear PET", "PETG", "PP dosing cap"],
+      mechanisms: ["Measured dosage cap", "Child-safe screw cap", "Flip cap"],
+      colors: ["Clear", "Aqua", "White", "Cool blue"],
+    },
+  },
+  {
+    title: "Refill Feature Library",
+    description: "Scan against refill-focused pack options.",
+    values: {
+      shapes: ["Stand-up refill pouch", "Slim refill carton", "Compact concentrate pod"],
+      materials: ["Mono-material film", "Flexible PE pouch", "Paper-laminate carton"],
+      mechanisms: ["Screw cap", "Spout", "Snap fit closure"],
+      colors: ["Pearl white", "Forest green", "Stone", "Transparent"],
+    },
+  },
+];
 
 const template: PromptTemplateModule<StudioScanProductFeaturesVars, "shapes" | "materials" | "mechanisms" | "colors"> =
   {

@@ -1,4 +1,3 @@
-import { canvasDesignConceptsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -27,6 +26,57 @@ export interface CanvasDesignConceptsVars {
   referenceSummary: string[];
   brandGuide?: string | string[];
 }
+
+const canvasDesignConceptsPresets = [
+  {
+    title: "Botanical Shampoo Range",
+    description: "Concept generation from a natural haircare board.",
+    values: {
+      numDesigns: 3,
+      brandGuide: ["Luma Vale: calm botanicals, matte restraint, soft green accents."],
+      requirements: [
+        "Design a premium shampoo bottle for a botanical repair line.",
+        "Use a rounded bottle form, matte surfaces, and restrained green accents.",
+      ],
+      referenceSummary: [
+        "Reference card: eucalyptus leaves, pale stone, soft daylight, calm spa mood.",
+        "Reference card: compact rounded bottle with generous shoulders and flip-top cap.",
+      ],
+    },
+  },
+  {
+    title: "Family Mouthwash Concepts",
+    description: "Explore approachable but trustworthy oral care concepts.",
+    values: {
+      numDesigns: 4,
+      brandGuide: ["Northstar Care: clear, gentle, clinically calm, never flashy."],
+      requirements: [
+        "Create mouthwash packaging concepts that feel family-safe and clinically credible.",
+        "Make dosage and clarity of use obvious from the form.",
+      ],
+      referenceSummary: [
+        "Reference card: transparent aqua liquid, crisp white labels, bathroom shelf context.",
+        "Reference card: beveled rectangular bottle with measurement cap and front label window.",
+      ],
+    },
+  },
+  {
+    title: "Refill System Concepts",
+    description: "Generate sustainable packaging concepts for refill-led haircare.",
+    values: {
+      numDesigns: 3,
+      brandGuide: ["Morrow Loop: premium sustainability, muted tones, visible utility."],
+      requirements: [
+        "Create refill-first shampoo packaging concepts for a premium sustainable line.",
+        "Balance reduced plastic use with strong shelf presence.",
+      ],
+      referenceSummary: [
+        "Reference card: stand-up pouch, mono-material film, compact cap, neutral editorial styling.",
+        "Reference card: reusable countertop bottle paired with soft-touch labels and muted color blocking.",
+      ],
+    },
+  },
+];
 
 const template: PromptTemplateModule<
   CanvasDesignConceptsVars,

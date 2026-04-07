@@ -1,4 +1,3 @@
-import { canvasScanMoodsSupervisedPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -24,6 +23,33 @@ export interface CanvasScanMoodsSupervisedVars {
   instruction: string | string[];
   requiredList: string[];
 }
+
+const canvasScanMoodsSupervisedPresets = [
+  {
+    title: "Botanical Supervised",
+    description: "Score a shampoo concept against a targeted mood list.",
+    values: {
+      instruction: ["Analyze this shampoo packaging concept for the required moods and arousal levels."],
+      requiredList: ["Calm", "Restorative", "Premium", "Natural"],
+    },
+  },
+  {
+    title: "Mouthwash Supervised",
+    description: "Score a mouthwash concept against trust-related moods.",
+    values: {
+      instruction: ["Analyze this mouthwash packaging concept for the required moods and arousal levels."],
+      requiredList: ["Fresh", "Clinical", "Trustworthy", "Precise"],
+    },
+  },
+  {
+    title: "Refill Supervised",
+    description: "Score a refill concept against sustainability moods.",
+    values: {
+      instruction: ["Analyze this refill packaging concept for the required moods and arousal levels."],
+      requiredList: ["Sustainable", "Calm", "Modern", "Minimal"],
+    },
+  },
+];
 
 const template: PromptTemplateModule<CanvasScanMoodsSupervisedVars, "instruction" | "requiredList"> = {
   metadata: {

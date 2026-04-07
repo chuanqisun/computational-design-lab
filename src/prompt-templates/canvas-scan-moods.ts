@@ -1,4 +1,3 @@
-import { canvasScanMoodsPresets } from "./prompt-template.presets";
 import type { PromptTemplateModule } from "./prompt-template.types";
 import { toTextBlock } from "./prompt-template.utils";
 
@@ -25,6 +24,42 @@ export interface CanvasScanMoodsVars {
   minOutputCount: number;
   maxOutputCount: number;
 }
+
+const canvasScanMoodsPresets = [
+  {
+    title: "Calm Botanical Moods",
+    description: "Analyze a shampoo concept for soft restorative moods.",
+    values: {
+      instruction: [
+        "Analyze this shampoo packaging concept for moods and arousal levels with a focus on restorative botanical care.",
+      ],
+      minOutputCount: 3,
+      maxOutputCount: 5,
+    },
+  },
+  {
+    title: "Clinical Fresh Moods",
+    description: "Analyze a mouthwash design for crisp oral care moods.",
+    values: {
+      instruction: [
+        "Analyze this mouthwash concept for moods and arousal levels with attention to freshness, trust, and cleanliness.",
+      ],
+      minOutputCount: 2,
+      maxOutputCount: 4,
+    },
+  },
+  {
+    title: "Editorial Sustainable Moods",
+    description: "Analyze a refill concept for quieter emotional tones.",
+    values: {
+      instruction: [
+        "Analyze this refill packaging concept for moods and arousal levels, emphasizing sustainability and calm ritual.",
+      ],
+      minOutputCount: 3,
+      maxOutputCount: 5,
+    },
+  },
+];
 
 const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "minOutputCount" | "maxOutputCount"> = {
   metadata: {
