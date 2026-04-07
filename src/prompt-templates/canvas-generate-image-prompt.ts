@@ -10,6 +10,7 @@ export interface CanvasGenerateImagePromptVars {
 const template: PromptTemplateModule<CanvasGenerateImagePromptVars, "text" | "guidance"> = {
   metadata: {
     title: "Text To Image Prompt",
+    purpose: "Convert source text into a detailed text-to-image prompt with optional rendering guidance.",
     sourceFiles: ["src/components/context-tray/llm/generate-image-prompt-gemini.ts"],
     categories: ["canvas", "text-to-text", "prompt-generation"],
     inputType: "text",

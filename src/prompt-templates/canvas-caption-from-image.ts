@@ -9,6 +9,7 @@ export interface CanvasCaptionFromImageVars {
 const template: PromptTemplateModule<CanvasCaptionFromImageVars, "instruction"> = {
   metadata: {
     title: "Short Image Caption",
+    purpose: "Generate a short caption for an input image.",
     sourceFiles: ["src/components/canvas/ai-helpers.ts"],
     categories: ["canvas", "image-to-text", "captioning"],
     inputType: "image",

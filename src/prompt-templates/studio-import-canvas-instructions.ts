@@ -8,6 +8,7 @@ export interface StudioImportCanvasInstructionsVars {
 const template: PromptTemplateModule<StudioImportCanvasInstructionsVars, "cardDescriptions"> = {
   metadata: {
     title: "Canvas to Studio conversion",
+    purpose: "Convert imported canvas concept card descriptions into studio-specific bottle design guidance.",
     sourceFiles: ["src/studio-page.ts"],
     categories: ["studio", "text-to-text", "input-prep"],
     inputType: "text",

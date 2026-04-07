@@ -9,6 +9,7 @@ export interface PromptSlotMetadata {
 
 export interface PromptTemplateMetadata<Slots extends string> {
   title: string;
+  purpose: string;
   sourceFiles: string[];
   categories: string[];
   inputType: PromptContentType;

@@ -11,6 +11,7 @@ export interface CanvasEnhanceImagePromptVars {
 const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalPrompt" | "cardContext" | "qualityGoal"> = {
   metadata: {
     title: "Enhance Image Prompt",
+    purpose: "Rewrite a basic image prompt into a higher quality image-generation instruction using card context and quality goals.",
     sourceFiles: ["src/components/canvas/ai-helpers.ts", "src/components/canvas/canvas.component.ts"],
     categories: ["canvas", "text-to-text", "prompt-optimization"],
     inputType: "text",

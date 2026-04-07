@@ -34,6 +34,7 @@ const template: PromptTemplateModule<
 > = {
   metadata: {
     title: "Generate Design Concepts",
+    purpose: "Generate multiple design concepts from mixed references and explicit design requirements.",
     sourceFiles: ["src/components/context-tray/llm/design-concepts.ts"],
     categories: ["canvas", "mixed-to-json", "concept-generation"],
     inputType: "mixed",

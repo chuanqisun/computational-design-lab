@@ -26,6 +26,7 @@ const template: PromptTemplateModule<
 > = {
   metadata: {
     title: "Fill Card Fields",
+    purpose: "Fill missing canvas card fields from the available text and image context.",
     sourceFiles: ["src/components/canvas/ai-helpers.ts"],
     categories: ["canvas", "mixed-to-json", "field-completion"],
     inputType: "mixed",

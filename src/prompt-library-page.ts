@@ -254,6 +254,13 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
         <section class="panel panel-form">
           <section class="section-block section-block--presets">
             <header class="section-block__header">
+              <h3>Purpose</h3>
+            </header>
+            <p class="section-copy">${selectedTemplate.module.metadata.purpose}</p>
+          </section>
+
+          <section class="section-block section-block--presets">
+            <header class="section-block__header">
               <h3>Presets</h3>
             </header>
             <div class="preset-row" role="list">

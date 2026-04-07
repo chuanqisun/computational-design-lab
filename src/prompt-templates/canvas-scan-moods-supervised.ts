@@ -28,6 +28,7 @@ export interface CanvasScanMoodsSupervisedVars {
 const template: PromptTemplateModule<CanvasScanMoodsSupervisedVars, "instruction" | "requiredList"> = {
   metadata: {
     title: "Scan Moods Supervised",
+    purpose: "Score a predefined mood list, or fall back to open mood discovery, against a referenced item.",
     sourceFiles: ["src/components/context-tray/llm/scan-moods.ts"],
     categories: ["canvas", "mixed-to-json", "mood-analysis"],
     inputType: "mixed",

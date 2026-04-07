@@ -10,6 +10,7 @@ export interface CanvasBlendImagesVars {
 const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "itemNotes"> = {
   metadata: {
     title: "Blend Images",
+    purpose: "Blend multiple visual references into a single generated image guided by text instructions and reference notes.",
     sourceFiles: ["src/components/context-tray/llm/blend-images.ts"],
     categories: ["canvas", "mixed-to-image", "image-blending"],
     inputType: "mixed",

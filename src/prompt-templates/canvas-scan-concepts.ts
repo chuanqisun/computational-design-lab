@@ -27,6 +27,7 @@ export interface CanvasScanConceptsVars {
 const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
   metadata: {
     title: "Scan Concepts",
+    purpose: "Distill key concepts from referenced canvas items.",
     sourceFiles: ["src/components/context-tray/llm/scan-concepts.ts"],
     categories: ["canvas", "mixed-to-json", "concept-extraction"],
     inputType: "mixed",

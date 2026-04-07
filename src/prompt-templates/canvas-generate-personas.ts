@@ -31,6 +31,7 @@ export interface CanvasGeneratePersonasVars {
 const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segment" | "numUsers"> = {
   metadata: {
     title: "Generate Personas",
+    purpose: "Generate synthetic user personas that vary along a chosen trait and optional segment.",
     sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
     categories: ["canvas", "text-to-json", "persona-generation"],
     inputType: "text",

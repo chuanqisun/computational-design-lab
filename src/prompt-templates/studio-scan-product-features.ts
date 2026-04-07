@@ -66,6 +66,7 @@ const template: PromptTemplateModule<StudioScanProductFeaturesVars, "shapes" | "
   {
     metadata: {
       title: "Scan Product Features",
+      purpose: "Extract product shapes, materials, mechanisms, and colors from a photo using only library-backed options.",
       sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
       categories: ["studio", "image-to-json", "feature-extraction"],
       inputType: "image",

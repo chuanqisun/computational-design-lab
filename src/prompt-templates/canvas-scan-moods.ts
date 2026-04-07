@@ -28,6 +28,7 @@ export interface CanvasScanMoodsVars {
 const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outputCount"> = {
   metadata: {
     title: "Scan Moods",
+    purpose: "Identify moods evoked by a referenced item and score their arousal levels.",
     sourceFiles: ["src/components/context-tray/llm/scan-moods.ts"],
     categories: ["canvas", "mixed-to-json", "mood-analysis"],
     inputType: "mixed",

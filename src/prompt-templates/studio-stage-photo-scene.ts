@@ -11,6 +11,7 @@ export interface StudioStagePhotoSceneVars {
 const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "scene" | "brandGuide"> = {
   metadata: {
     title: "Stage Photo Scene",
+    purpose: "Re-stage an existing product XML scene into a specific photo context.",
     sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
     categories: ["studio", "text-to-xml", "photo-staging"],
     inputType: "text",

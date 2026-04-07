@@ -10,6 +10,7 @@ export interface StudioReviseSceneXmlVars {
 const template: PromptTemplateModule<StudioReviseSceneXmlVars, "currentXml" | "editInstructions"> = {
   metadata: {
     title: "Revise Scene XML",
+    purpose: "Revise an existing scene XML document based on editing instructions.",
     sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
     categories: ["studio", "text-to-xml", "revision"],
     inputType: "mixed",

@@ -26,6 +26,7 @@ const template: PromptTemplateModule<
 > = {
   metadata: {
     title: "Visualize Concept",
+    purpose: "Generate multiple image-generation prompts that visualize a concept and its instruction.",
     sourceFiles: ["src/components/context-tray/llm/visualize-concept.ts"],
     categories: ["canvas", "text-to-json", "image-prompt-generation"],
     inputType: "text",
