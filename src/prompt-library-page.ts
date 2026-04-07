@@ -35,12 +35,12 @@ interface TemplateItem {
 }
 
 const templates: TemplateItem[] = [
+  { id: "canvas-generate-image-prompt", module: canvasGenerateImagePromptTemplate as TemplateRecord },
+  { id: "canvas-enhance-image-prompt", module: canvasEnhanceImagePromptTemplate as TemplateRecord },
   { id: "canvas-blend-images", module: canvasBlendImagesTemplate as TemplateRecord },
   { id: "canvas-caption-from-image", module: canvasCaptionFromImageTemplate as TemplateRecord },
   { id: "canvas-design-concepts", module: canvasDesignConceptsTemplate as TemplateRecord },
-  { id: "canvas-enhance-image-prompt", module: canvasEnhanceImagePromptTemplate as TemplateRecord },
   { id: "canvas-fill-card", module: canvasFillCardTemplate as TemplateRecord },
-  { id: "canvas-generate-image-prompt", module: canvasGenerateImagePromptTemplate as TemplateRecord },
   { id: "canvas-generate-personas", module: canvasGeneratePersonasTemplate as TemplateRecord },
   { id: "canvas-rank-designs", module: canvasRankDesignsTemplate as TemplateRecord },
   { id: "canvas-scan-concepts", module: canvasScanConceptsTemplate as TemplateRecord },

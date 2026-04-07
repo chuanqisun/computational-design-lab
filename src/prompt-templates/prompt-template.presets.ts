@@ -491,7 +491,8 @@ export const canvasScanMoodsPresets = [
       instruction: [
         "Analyze this shampoo packaging concept for moods and arousal levels with a focus on restorative botanical care.",
       ],
-      outputCount: 5,
+      minOutputCount: 3,
+      maxOutputCount: 5,
     },
   },
   {
@@ -501,7 +502,8 @@ export const canvasScanMoodsPresets = [
       instruction: [
         "Analyze this mouthwash concept for moods and arousal levels with attention to freshness, trust, and cleanliness.",
       ],
-      outputCount: 4,
+      minOutputCount: 2,
+      maxOutputCount: 4,
     },
   },
   {
@@ -511,7 +513,8 @@ export const canvasScanMoodsPresets = [
       instruction: [
         "Analyze this refill packaging concept for moods and arousal levels, emphasizing sustainability and calm ritual.",
       ],
-      outputCount: 5,
+      minOutputCount: 3,
+      maxOutputCount: 5,
     },
   },
 ];

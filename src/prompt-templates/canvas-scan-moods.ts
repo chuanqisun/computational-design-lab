@@ -22,10 +22,11 @@ const outputSchema = {
 
 export interface CanvasScanMoodsVars {
   instruction: string | string[];
-  outputCount: number;
+  minOutputCount: number;
+  maxOutputCount: number;
 }
 
-const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outputCount"> = {
+const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "minOutputCount" | "maxOutputCount"> = {
   metadata: {
     title: "Scan Moods",
     purpose: "Identify moods evoked by a referenced item and score their arousal levels.",
@@ -41,8 +42,14 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outpu
         multiple: true,
         type: "text",
       },
-      outputCount: {
-        description: "Target number of moods to identify.",
+      minOutputCount: {
+        description: "Minimum number of moods to identify.",
+        required: false,
+        multiple: false,
+        type: "number",
+      },
+      maxOutputCount: {
+        description: "Maximum number of moods to identify.",
         required: false,
         multiple: false,
         type: "number",
@@ -50,8 +57,8 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "outpu
     },
   },
   presets: canvasScanMoodsPresets,
-  template: ({ instruction, outputCount = 5 }) => ({
-    developer: `Analyze the provided item and identify 3-${Math.max(3, outputCount)} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.
+  template: ({ instruction, minOutputCount = 3, maxOutputCount = 5 }) => ({
+    developer: `Analyze the provided item and identify ${minOutputCount}-${Math.max(minOutputCount, maxOutputCount)} moods it evokes. For each mood, provide a single English word with first letter Capitalized and an arousal level from 1 to 10, where 1 is calm/low energy and 10 is intense/high energy.
 
 Return ONLY valid JSON matching this schema:
 ${JSON.stringify(outputSchema, null, 2)}`,
