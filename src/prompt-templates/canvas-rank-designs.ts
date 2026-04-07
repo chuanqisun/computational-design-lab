@@ -26,7 +26,8 @@ const template: PromptTemplateModule<
 > = {
   metadata: {
     title: "Rank Designs As Persona",
-    purpose: "Rank designs from a persona perspective against a target trait and return ordered IDs with brief feedback.",
+    purpose:
+      "Rank designs from a persona perspective against a target trait and return ordered IDs with brief feedback.",
     sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
     categories: ["canvas", "mixed-to-json", "ranking"],
     inputType: "mixed",

@@ -10,7 +10,8 @@ export interface StudioGenerateSoundDescriptionVars {
 const template: PromptTemplateModule<StudioGenerateSoundDescriptionVars, "sceneXml" | "animationPrompt"> = {
   metadata: {
     title: "Generate Sound Description",
-    purpose: "Generate a natural-language sound description for a product animation based on scene XML and motion instructions.",
+    purpose:
+      "Generate a natural-language sound description for a product animation based on scene XML and motion instructions.",
     sourceFiles: ["src/lib/studio-ai.ts"],
     categories: ["studio", "mixed-to-text", "sound-design"],
     inputType: "mixed",
