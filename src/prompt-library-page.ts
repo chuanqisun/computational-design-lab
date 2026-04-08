@@ -401,7 +401,11 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                                       `,
                                     )}
                                   </div>
-                                  <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
+                                  <button
+                                    type="button"
+                                    class="list-field__add"
+                                    @click=${() => addListSlotItem(slotName)}
+                                  >
                                     Add item
                                   </button>
                                 </div>
