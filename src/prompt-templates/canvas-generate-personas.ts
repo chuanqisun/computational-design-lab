@@ -65,6 +65,7 @@ const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segm
     categories: ["canvas", "text-to-json", "persona-generation"],
     inputType: "text",
     outputType: "json",
+    model: "gemini-3-flash-preview",
     outputSchema,
     slots: {
       trait: {

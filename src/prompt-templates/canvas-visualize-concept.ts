@@ -72,6 +72,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "text-to-json", "image-prompt-generation"],
     inputType: "text",
     outputType: "json",
+    model: "gemini-3-flash-preview",
     outputSchema,
     slots: {
       conceptTitle: {

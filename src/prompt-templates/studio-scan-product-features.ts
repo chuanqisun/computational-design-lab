@@ -104,6 +104,7 @@ const template: PromptTemplateModule<StudioScanProductFeaturesVars, "shapes" | "
       categories: ["studio", "image-to-json", "feature-extraction"],
       inputType: "image",
       outputType: "json",
+      model: "gemini-3-flash-preview",
       outputSchema,
       slots: {
         shapes: {

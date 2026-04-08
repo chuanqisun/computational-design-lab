@@ -366,6 +366,10 @@ pre {
     flex-direction: column;
   }
 
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
   .list-field__item {
     grid-template-columns: 1fr;
   }

@@ -110,6 +110,10 @@ function formatOutputSchema(template: TemplateRecord): string {
   return JSON.stringify(template.metadata.outputSchema, null, 2);
 }
 
+function getTemplateModelLabel(template: TemplateRecord): string {
+  return template.metadata.model;
+}
+
 function isTextArea(slot: PromptSlotMetadata): boolean {
   return slot.multiple || slot.type === "xml" || slot.type === "json" || slot.type === "mixed" || slot.type === "text";
 }
@@ -283,21 +287,80 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                 slotEntries,
                 ([slotName]) => slotName,
                 ([slotName, slot]) => html`
-                  <label class="field">
-                    <span class="field__label-row">
-                      <span class="field__name">${slotName}</span>
-                      <span class="field__meta"
-                        >${slot.multiple ? "LIST" : ""}${slot.required ? " · REQUIRED" : ""}</span
-                      >
-                    </span>
-                    <span class="field__description">${slot.description}</span>
-                    ${slot.type === "image"
-                      ? html`
-                          <div class="attachment-note" role="note">
-                            <p>This prompt expects an image attachment outside this form.</p>
-                            <p>Add the image separately in the chat or tool where you use the prompt.</p>
-                          </div>
-                          ${slot.multiple
+                  <div class="field-row">
+                    <div class="field field--property">
+                      <div class="field__label-row">
+                        <span class="field__name">${slotName}</span>
+                        <span class="field__meta"
+                          >${[slot.multiple ? "LIST" : "", slot.required ? "REQUIRED" : ""]
+                            .filter(Boolean)
+                            .join(" · ")}</span
+                        >
+                      </div>
+                      <span class="field__description">${slot.description}</span>
+                    </div>
+
+                    <label class="field field--control">
+                      ${slot.type === "image"
+                        ? html`
+                            <div class="attachment-note" role="note">
+                              <p>This prompt expects an image attachment outside this form.</p>
+                              <p>Add the image separately in the chat or tool where you use the prompt.</p>
+                            </div>
+                            ${slot.multiple
+                              ? html`
+                                  <div class="list-field">
+                                    <div class="list-field__items">
+                                      ${repeat(
+                                        Array.isArray(templateValues[slotName])
+                                          ? (templateValues[slotName] as string[])
+                                          : [],
+                                        (_, index) => `${slotName}-${index}`,
+                                        (item, index) => html`
+                                          <div class="list-field__item">
+                                            <input
+                                              type="text"
+                                              placeholder="Describe the image you will attach separately"
+                                              .value=${item}
+                                              @input=${(event: Event) =>
+                                                updateListSlotItem(
+                                                  slotName,
+                                                  index,
+                                                  (event.currentTarget as HTMLInputElement).value,
+                                                )}
+                                            />
+                                            <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
+                                              Remove
+                                            </button>
+                                          </div>
+                                        `,
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      class="list-field__add"
+                                      @click=${() => addListSlotItem(slotName)}
+                                    >
+                                      Add image reference
+                                    </button>
+                                  </div>
+                                `
+                              : html`<input
+                                  type="text"
+                                  placeholder="Optional note about the image you will attach separately"
+                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                  @input=${(event: Event) =>
+                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
+                                />`}
+                          `
+                        : slot.type === "boolean"
+                          ? html`<input
+                              type="checkbox"
+                              .checked=${Boolean(templateValues[slotName])}
+                              @change=${(event: Event) =>
+                                updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).checked)}
+                            />`
+                          : slot.multiple
                             ? html`
                                 <div class="list-field">
                                   <div class="list-field__items">
@@ -308,17 +371,29 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                                       (_, index) => `${slotName}-${index}`,
                                       (item, index) => html`
                                         <div class="list-field__item">
-                                          <input
-                                            type="text"
-                                            placeholder="Describe the image you will attach separately"
-                                            .value=${item}
-                                            @input=${(event: Event) =>
-                                              updateListSlotItem(
-                                                slotName,
-                                                index,
-                                                (event.currentTarget as HTMLInputElement).value,
-                                              )}
-                                          />
+                                          ${isStructuredTextArea(slot)
+                                            ? html`<textarea
+                                                rows=${Math.max(2, slot.type === "xml" || slot.type === "json" ? 8 : 4)}
+                                                placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                                .value=${item}
+                                                @input=${(event: Event) =>
+                                                  updateListSlotItem(
+                                                    slotName,
+                                                    index,
+                                                    (event.currentTarget as HTMLTextAreaElement).value,
+                                                  )}
+                                              ></textarea>`
+                                            : html`<input
+                                                type=${slot.type === "number" ? "number" : "text"}
+                                                placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
+                                                .value=${item}
+                                                @input=${(event: Event) =>
+                                                  updateListSlotItem(
+                                                    slotName,
+                                                    index,
+                                                    (event.currentTarget as HTMLInputElement).value,
+                                                  )}
+                                              />`}
                                           <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
                                             Remove
                                           </button>
@@ -326,96 +401,35 @@ const app$ = combineLatest([selectedTemplateId$, templateValues$, copiedButtons$
                                       `,
                                     )}
                                   </div>
-                                  <button
-                                    type="button"
-                                    class="list-field__add"
-                                    @click=${() => addListSlotItem(slotName)}
-                                  >
-                                    Add image reference
+                                  <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
+                                    Add item
                                   </button>
                                 </div>
                               `
-                            : html`<input
-                                type="text"
-                                placeholder="Optional note about the image you will attach separately"
-                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                @input=${(event: Event) =>
-                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
-                              />`}
-                        `
-                      : slot.type === "boolean"
-                        ? html`<input
-                            type="checkbox"
-                            .checked=${Boolean(templateValues[slotName])}
-                            @change=${(event: Event) =>
-                              updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).checked)}
-                          />`
-                        : slot.multiple
-                          ? html`
-                              <div class="list-field">
-                                <div class="list-field__items">
-                                  ${repeat(
-                                    Array.isArray(templateValues[slotName])
-                                      ? (templateValues[slotName] as string[])
-                                      : [],
-                                    (_, index) => `${slotName}-${index}`,
-                                    (item, index) => html`
-                                      <div class="list-field__item">
-                                        ${isStructuredTextArea(slot)
-                                          ? html`<textarea
-                                              rows=${Math.max(2, slot.type === "xml" || slot.type === "json" ? 8 : 4)}
-                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
-                                              .value=${item}
-                                              @input=${(event: Event) =>
-                                                updateListSlotItem(
-                                                  slotName,
-                                                  index,
-                                                  (event.currentTarget as HTMLTextAreaElement).value,
-                                                )}
-                                            ></textarea>`
-                                          : html`<input
-                                              type=${slot.type === "number" ? "number" : "text"}
-                                              placeholder=${`${itemInputLabel(slot)} ${index + 1}`}
-                                              .value=${item}
-                                              @input=${(event: Event) =>
-                                                updateListSlotItem(
-                                                  slotName,
-                                                  index,
-                                                  (event.currentTarget as HTMLInputElement).value,
-                                                )}
-                                            />`}
-                                        <button type="button" @click=${() => removeListSlotItem(slotName, index)}>
-                                          Remove
-                                        </button>
-                                      </div>
-                                    `,
+                            : isTextArea(slot)
+                              ? html`<textarea
+                                  rows=${Math.max(
+                                    2,
+                                    slot.multiple || slot.type === "xml" || slot.type === "json" ? 8 : 4,
                                   )}
-                                </div>
-                                <button type="button" class="list-field__add" @click=${() => addListSlotItem(slotName)}>
-                                  Add item
-                                </button>
-                              </div>
-                            `
-                          : isTextArea(slot)
-                            ? html`<textarea
-                                rows=${Math.max(
-                                  2,
-                                  slot.multiple || slot.type === "xml" || slot.type === "json" ? 8 : 4,
-                                )}
-                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                @input=${(event: Event) =>
-                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLTextAreaElement).value)}
-                              ></textarea>`
-                            : html`<input
-                                type=${slot.type === "number" ? "number" : "text"}
-                                .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
-                                @input=${(event: Event) =>
-                                  updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
-                              />`}
-                  </label>
+                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                  @input=${(event: Event) =>
+                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLTextAreaElement).value)}
+                                ></textarea>`
+                              : html`<input
+                                  type=${slot.type === "number" ? "number" : "text"}
+                                  .value=${formatSlotValue(templateValues[slotName] ?? defaultSlotValue(slot))}
+                                  @input=${(event: Event) =>
+                                    updateSlotValue(slotName, slot, (event.currentTarget as HTMLInputElement).value)}
+                                />`}
+                    </label>
+                  </div>
                 `,
               )}
             </div>
+
+            <h3>Models</h3>
+            <p>${getTemplateModelLabel(selectedTemplate.module)}</p>
           </section>
         </section>
 

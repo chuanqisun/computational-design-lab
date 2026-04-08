@@ -31,6 +31,7 @@ const template: PromptTemplateModule<CanvasCaptionFromImageVars, "instruction"> 
     categories: ["canvas", "image-to-text", "captioning"],
     inputType: "image",
     outputType: "text",
+    model: "gemini-3-flash-preview",
     slots: {
       instruction: {
         description: "Captioning instruction shown to the model alongside the source image.",

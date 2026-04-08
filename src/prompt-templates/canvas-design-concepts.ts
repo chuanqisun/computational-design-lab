@@ -89,6 +89,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "concept-generation"],
     inputType: "mixed",
     outputType: "json",
+    model: "gemini-3-flash-preview",
     outputSchema,
     slots: {
       numDesigns: {

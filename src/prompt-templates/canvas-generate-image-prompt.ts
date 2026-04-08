@@ -47,6 +47,7 @@ const template: PromptTemplateModule<CanvasGenerateImagePromptVars, "text" | "gu
     categories: ["canvas", "text-to-text", "prompt-generation"],
     inputType: "text",
     outputType: "text",
+    model: "gemini-3-flash-preview",
     slots: {
       text: {
         description: "Source text that should be turned into an image prompt.",
