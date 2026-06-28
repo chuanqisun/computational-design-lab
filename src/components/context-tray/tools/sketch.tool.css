@@ -23,7 +23,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #fcfcfc;
+    background: var(--color-canvas-background);
     padding: 1ch;
     border: 1px solid var(--color-border);
   }

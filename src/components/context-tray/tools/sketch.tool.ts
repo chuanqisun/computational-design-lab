@@ -8,6 +8,9 @@ import { imageToimage } from "../../semantic-scan/image-to-image";
 import { submitTask } from "../tasks";
 import "./sketch.tool.css";
 
+const SKETCH_STROKE_COLOR = "#ff0000";
+const SKETCH_LINE_WIDTH = 4;
+
 export const SketchTool = createComponent(
   ({
     selected$,
@@ -34,8 +37,8 @@ export const SketchTool = createComponent(
       ctx.beginPath();
       ctx.moveTo(x, y);
 
-      ctx.strokeStyle = "#ff0000"; // Red illustration layer
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = SKETCH_STROKE_COLOR;
+      ctx.lineWidth = SKETCH_LINE_WIDTH;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
     };
@@ -152,7 +155,7 @@ export const SketchTool = createComponent(
           if (!resultImageSrc) return;
           const { x, y, z } = positionGenerator.next().value;
           const card: CanvasItem = {
-            id: `sketch-result-${Date.now()}`,
+            id: `sketch-result-${crypto.randomUUID()}`,
             imageSrc: resultImageSrc,
             x,
             y,

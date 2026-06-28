@@ -14,6 +14,8 @@
   --section-header-text-color: white;
   --page-background: white;
   --color-border: #ccc;
+  --color-canvas-background: #fcfcfc;
+  --color-sketch-stroke: #ff0000;
   --spacing-unit: 1ch;
 }
 
