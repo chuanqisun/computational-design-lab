@@ -1,0 +1,54 @@
+.sketch-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+
+  button {
+    width: 100%;
+  }
+
+  .sketch-dialog {
+    padding: 2ch;
+    display: flex;
+    flex-direction: column;
+    gap: 2ch;
+    width: min(800px, 95vw);
+    background: white;
+    border: 1px solid black;
+  }
+
+  .sketch-canvas-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fcfcfc;
+    padding: 1ch;
+    border: 1px solid #ccc;
+  }
+
+  .sketch-canvas {
+    max-width: 100%;
+    max-height: 50vh;
+    cursor: crosshair;
+    background-color: white;
+    display: block;
+  }
+
+  .sketch-feedback-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1ch;
+
+    label {
+      font-weight: bold;
+    }
+  }
+
+  .sketch-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1ch;
+  }
+}
