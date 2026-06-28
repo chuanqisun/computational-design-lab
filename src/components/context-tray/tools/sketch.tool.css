@@ -8,13 +8,17 @@
   }
 
   .sketch-dialog {
+    padding: 0;
+    width: min(800px, 95vw);
+    border: 1px solid var(--color-text-active);
+  }
+
+  .sketch-dialog-body {
     padding: 2ch;
     display: flex;
     flex-direction: column;
     gap: 2ch;
-    width: min(800px, 95vw);
     background: var(--page-background);
-    border: 1px solid var(--color-text-active);
   }
 
   .sketch-canvas-container {
@@ -23,7 +27,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: var(--page-background);
     border: 1px solid var(--color-border);
   }
 
@@ -31,7 +34,6 @@
     max-width: 100%;
     max-height: 50vh;
     cursor: crosshair;
-    background-color: var(--page-background);
     display: block;
   }
 

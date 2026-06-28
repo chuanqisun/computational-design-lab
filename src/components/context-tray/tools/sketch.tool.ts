@@ -149,13 +149,14 @@ export const SketchTool = createComponent(
       const positionGenerator = getNextPositions(selected);
 
       const task$ = imageToimage({
-        instruction: feedbackText.trim() || "Improve this image based on the sketched annotations",
+        instruction: feedbackText.trim() || "Apply the changes indicated by the red sketch annotations on this image",
         image: illustratedImage,
         apiKey: apiKeys.gemini,
       }).pipe(
         tap((resultImageSrc) => {
           if (!resultImageSrc) return;
-          const { x, y, z } = positionGenerator.next().value;
+          const nextPos = positionGenerator.next();
+          const { x, y, z } = nextPos && nextPos.value ? nextPos.value : { x: 100, y: 100, z: 1 };
           const card: CanvasItem = {
             id: `sketch-result-${crypto.randomUUID()}`,
             imageSrc: resultImageSrc,
@@ -197,39 +198,41 @@ export const SketchTool = createComponent(
             </button>
 
             <dialog id="sketch-tool-dialog" class="sketch-dialog">
-              <h3>Sketch Illustration & Feedback</h3>
+              <div class="sketch-dialog-body">
+                <h3>Sketch Illustration & Feedback</h3>
 
-              <div class="sketch-canvas-container">
-                <canvas
-                  id="sketch-canvas"
-                  class="sketch-canvas"
-                  @mousedown=${handleMouseDown}
-                  @mousemove=${handleMouseMove}
-                  @mouseup=${handleMouseUpOrLeave}
-                  @mouseleave=${handleMouseUpOrLeave}
-                ></canvas>
-              </div>
+                <div class="sketch-canvas-container">
+                  <canvas
+                    id="sketch-canvas"
+                    class="sketch-canvas"
+                    @mousedown=${handleMouseDown}
+                    @mousemove=${handleMouseMove}
+                    @mouseup=${handleMouseUpOrLeave}
+                    @mouseleave=${handleMouseUpOrLeave}
+                  ></canvas>
+                </div>
 
-              <div class="sketch-feedback-area">
-                <label for="sketch-feedback">Additional Feedback</label>
-                <textarea
-                  id="sketch-feedback"
-                  class="sketch-feedback-textarea"
-                  rows="2"
-                  placeholder="Describe your requested changes here..."
-                ></textarea>
-              </div>
+                <div class="sketch-feedback-area">
+                  <label for="sketch-feedback">Additional Feedback</label>
+                  <textarea
+                    id="sketch-feedback"
+                    class="sketch-feedback-textarea"
+                    rows="2"
+                    placeholder="Describe your requested changes here..."
+                  ></textarea>
+                </div>
 
-              <div class="sketch-dialog-footer">
-                <button @click=${() => handleClear(imageSrc)}>Clear</button>
-                <button @click=${handleCancel}>Cancel</button>
-                <button
-                  ?disabled=${!apiKeys.gemini}
-                  @click=${() => handleSubmit(imageSrc)}
-                  title=${!apiKeys.gemini ? "Gemini API key required" : ""}
-                >
-                  Submit
-                </button>
+                <div class="sketch-dialog-footer">
+                  <button @click=${() => handleClear(imageSrc)}>Clear</button>
+                  <button @click=${handleCancel}>Cancel</button>
+                  <button
+                    ?disabled=${!apiKeys.gemini}
+                    @click=${() => handleSubmit(imageSrc)}
+                    title=${!apiKeys.gemini ? "Gemini API key required" : ""}
+                  >
+                    Submit
+                  </button>
+                </div>
               </div>
             </dialog>
           </div>
