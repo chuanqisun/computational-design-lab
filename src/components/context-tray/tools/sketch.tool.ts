@@ -1,5 +1,5 @@
 import { html } from "lit-html";
-import { BehaviorSubject, combineLatest, map, type Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, map, tap, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import { type CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
@@ -210,7 +210,7 @@ export const SketchTool = createComponent(
                 <textarea
                   id="sketch-feedback"
                   class="sketch-feedback-textarea"
-                  rows="3"
+                  rows="2"
                   placeholder="Describe your requested changes here..."
                 ></textarea>
               </div>

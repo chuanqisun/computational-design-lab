@@ -13,8 +13,8 @@
     flex-direction: column;
     gap: 2ch;
     width: min(800px, 95vw);
-    background: white;
-    border: 1px solid black;
+    background: var(--page-background);
+    border: 1px solid var(--color-text-active);
   }
 
   .sketch-canvas-container {
@@ -25,14 +25,14 @@
     align-items: center;
     background: #fcfcfc;
     padding: 1ch;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border);
   }
 
   .sketch-canvas {
     max-width: 100%;
     max-height: 50vh;
     cursor: crosshair;
-    background-color: white;
+    background-color: var(--page-background);
     display: block;
   }
 
