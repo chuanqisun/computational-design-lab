@@ -23,14 +23,24 @@ export const SketchTool = createComponent(
     items$: BehaviorSubject<CanvasItem[]>;
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
-    let isDrawing = false;
+    const isDrawing$ = new BehaviorSubject(false);
+    let strokeColor = "#ff0000";
+    let imageAspect = 1.5; // height / width, defaults to standard card aspect ratio (300/200)
+    let dialogEl: HTMLDialogElement | null = null;
+
+    const getDialog = () => {
+      if (!dialogEl) {
+        dialogEl = document.getElementById("sketch-tool-dialog") as HTMLDialogElement | null;
+      }
+      return dialogEl;
+    };
 
     const handleMouseDown = (e: MouseEvent) => {
       const canvas = e.currentTarget as HTMLCanvasElement;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      isDrawing = true;
+      isDrawing$.next(true);
 
       const rect = canvas.getBoundingClientRect();
       const x = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -39,14 +49,14 @@ export const SketchTool = createComponent(
       ctx.beginPath();
       ctx.moveTo(x, y);
 
-      ctx.strokeStyle = getSketchStrokeColor();
+      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = SKETCH_LINE_WIDTH;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDrawing) return;
+      if (!isDrawing$.value) return;
 
       const canvas = e.currentTarget as HTMLCanvasElement;
       const ctx = canvas.getContext("2d");
@@ -61,8 +71,8 @@ export const SketchTool = createComponent(
     };
 
     const handleMouseUpOrLeave = (e: MouseEvent) => {
-      if (!isDrawing) return;
-      isDrawing = false;
+      if (!isDrawing$.value) return;
+      isDrawing$.next(false);
       const canvas = e.currentTarget as HTMLCanvasElement;
       const ctx = canvas.getContext("2d");
       if (ctx) {
@@ -71,8 +81,10 @@ export const SketchTool = createComponent(
     };
 
     const openSketchDialog = (imageSrc: string) => {
-      const dialog = document.getElementById("sketch-tool-dialog") as HTMLDialogElement | null;
+      const dialog = getDialog();
       if (!dialog) return;
+
+      strokeColor = getComputedStyle(document.documentElement).getPropertyValue("--color-sketch-stroke").trim() || "#ff0000";
 
       dialog.showModal();
 
@@ -92,6 +104,7 @@ export const SketchTool = createComponent(
         img.onload = () => {
           canvas.width = img.width;
           canvas.height = img.height;
+          imageAspect = img.height / img.width;
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
         };
@@ -100,7 +113,7 @@ export const SketchTool = createComponent(
     };
 
     const handleClear = (imageSrc: string) => {
-      const dialog = document.getElementById("sketch-tool-dialog") as HTMLDialogElement | null;
+      const dialog = getDialog();
       if (!dialog) return;
 
       const canvas = dialog.querySelector("#sketch-canvas") as HTMLCanvasElement | null;
@@ -118,14 +131,14 @@ export const SketchTool = createComponent(
     };
 
     const handleCancel = () => {
-      const dialog = document.getElementById("sketch-tool-dialog") as HTMLDialogElement | null;
+      const dialog = getDialog();
       if (dialog) {
         dialog.close();
       }
     };
 
     const handleSubmit = (imageSrc: string) => {
-      const dialog = document.getElementById("sketch-tool-dialog") as HTMLDialogElement | null;
+      const dialog = getDialog();
       if (!dialog) return;
 
       const canvas = dialog.querySelector("#sketch-canvas") as HTMLCanvasElement | null;
@@ -147,9 +160,11 @@ export const SketchTool = createComponent(
       }
 
       const positionGenerator = getNextPositions(selected);
+      const cardWidth = 200;
+      const cardHeight = Math.round(cardWidth * imageAspect);
 
       const task$ = imageToimage({
-        instruction: feedbackText.trim() || "Apply the changes indicated by the red sketch annotations on this image",
+        instruction: feedbackText.trim() || "Apply the changes indicated by the sketch annotations on this image",
         image: illustratedImage,
         apiKey: apiKeys.gemini,
       }).pipe(
@@ -162,8 +177,8 @@ export const SketchTool = createComponent(
             imageSrc: resultImageSrc,
             x,
             y,
-            width: 200,
-            height: 300,
+            width: cardWidth,
+            height: cardHeight,
             isSelected: false,
             zIndex: z,
           };
