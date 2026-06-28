@@ -8,7 +8,9 @@ import { imageToimage } from "../../semantic-scan/image-to-image";
 import { submitTask } from "../tasks";
 import "./sketch.tool.css";
 
-const SKETCH_STROKE_COLOR = "#ff0000";
+const getSketchStrokeColor = () => {
+  return getComputedStyle(document.documentElement).getPropertyValue("--color-sketch-stroke").trim() || "#ff0000";
+};
 const SKETCH_LINE_WIDTH = 4;
 
 export const SketchTool = createComponent(
@@ -37,7 +39,7 @@ export const SketchTool = createComponent(
       ctx.beginPath();
       ctx.moveTo(x, y);
 
-      ctx.strokeStyle = SKETCH_STROKE_COLOR;
+      ctx.strokeStyle = getSketchStrokeColor();
       ctx.lineWidth = SKETCH_LINE_WIDTH;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
