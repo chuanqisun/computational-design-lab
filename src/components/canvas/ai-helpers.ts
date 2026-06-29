@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
 import { from, map, Observable, switchMap } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -181,7 +181,7 @@ export function generateRefinedCardText(input: {
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const parts: any[] = [];
+        const parts: Part[] = [];
 
         parts.push({
           text: `You are an AI assistant helping to refine a card's content after an image modification.
@@ -205,7 +205,7 @@ Example: {"title": "...", "body": "..."}`
             const dataUrl = await urlToBase64(input.oldImageSrc);
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
-              text: "This is the original (old) image before modification:"
+              text: "This is the original (old) image before modification."
             });
             parts.push({
               inlineData: { mimeType, data }
@@ -220,7 +220,7 @@ Example: {"title": "...", "body": "..."}`
             const dataUrl = await urlToBase64(input.newImageSrc);
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
-              text: "This is the refined (new) image after modification:"
+              text: "This is the refined (new) image after modification."
             });
             parts.push({
               inlineData: { mimeType, data }
