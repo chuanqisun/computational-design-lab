@@ -62,3 +62,11 @@ applyTo: "**"
 ## `sdk/*.ts`
 
 - lit-html helper functions for working with observables
+
+## Sketch Tool Requirements
+
+- Leverage CardComponent in `src/components/canvas/card.component.ts` to output a full card containing title, body text, and image.
+- Follow the exact order of operation:
+  1. Use the user illustration input (combined drawing and feedback) to update the image first via the image-to-image API.
+  2. Show AI the old image, new image, old title, and old body text, and ask AI to generate the new title and new body text. Use these to fill out and complete the card.
+

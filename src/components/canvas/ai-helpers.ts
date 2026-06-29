@@ -1,5 +1,6 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { from, map, Observable, switchMap } from "rxjs";
+import { progress$ } from "../progress/progress";
 
 /**
  * Converts a URL or fetchable resource to a base64 string.
@@ -167,3 +168,100 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
     })(),
   );
 }
+
+export function generateRefinedCardText(input: {
+  oldImageSrc: string;
+  newImageSrc: string;
+  oldTitle: string;
+  oldBody: string;
+  apiKey: string;
+}): Observable<{ title: string; body: string }> {
+  return from(
+    (async () => {
+      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+      try {
+        const ai = new GoogleGenAI({ apiKey: input.apiKey });
+        const parts: any[] = [];
+
+        parts.push({
+          text: `You are an AI assistant helping to refine a card's content after an image modification.
+We modified an original image based on user drawing and feedback to produce a refined image.
+Original Card Title: "${input.oldTitle || ""}"
+Original Card Body: "${input.oldBody || ""}"
+
+We will show you the original (old) image and the refined (new) image.
+Please analyze the differences and generate a new title and a new body text that match the refined image while preserving the style and context of the original card.
+
+Your output must be a JSON object with two fields:
+- "title": a short, catchy title (max 4 words)
+- "body": a concise, compelling description (1-2 sentences)
+
+Return ONLY the JSON object. Do not include any other text or markdown formatting.
+Example: {"title": "...", "body": "..."}`
+        });
+
+        if (input.oldImageSrc) {
+          try {
+            const dataUrl = await urlToBase64(input.oldImageSrc);
+            const { mimeType, data } = extractDataFromDataUrl(dataUrl);
+            parts.push({
+              text: "This is the original (old) image before modification:"
+            });
+            parts.push({
+              inlineData: { mimeType, data }
+            });
+          } catch (e) {
+            console.error("Failed to process old image for text generation", e);
+          }
+        }
+
+        if (input.newImageSrc) {
+          try {
+            const dataUrl = await urlToBase64(input.newImageSrc);
+            const { mimeType, data } = extractDataFromDataUrl(dataUrl);
+            parts.push({
+              text: "This is the refined (new) image after modification:"
+            });
+            parts.push({
+              inlineData: { mimeType, data }
+            });
+          } catch (e) {
+            console.error("Failed to process new image for text generation", e);
+          }
+        }
+
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          config: {
+            responseMimeType: "application/json",
+          },
+          contents: [
+            {
+              role: "user",
+              parts,
+            },
+          ],
+        });
+
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          return { title: input.oldTitle || "Untitled", body: input.oldBody || "" };
+        }
+
+        try {
+          const parsed = JSON.parse(text);
+          return {
+            title: parsed.title || input.oldTitle || "Untitled",
+            body: parsed.body || input.oldBody || "",
+          };
+        } catch (e) {
+          console.error("Failed to parse JSON response from AI for sketch refinement", text);
+          return { title: input.oldTitle || "Untitled", body: input.oldBody || "" };
+        }
+      } finally {
+        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+      }
+    })()
+  );
+}
+
