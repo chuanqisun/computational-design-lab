@@ -12,6 +12,7 @@ import { DesignTool } from "./tools/design.tool";
 import { ExportTool } from "./tools/export.tool";
 import { IterateTool } from "./tools/iterate.tool";
 import { RenderTool } from "./tools/render.tool";
+import { SketchTool } from "./tools/sketch.tool";
 import { UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
 import { WriterTool } from "./tools/writer.tool";
@@ -32,6 +33,7 @@ export const ContextTrayComponent = createComponent(
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
     const exportToolUI = ExportTool({ items$ });
+    const sketchToolUI = SketchTool({ selected$, items$, apiKeys$ });
 
     const template$ = combineLatest([selected$, selectedWithText$]).pipe(
       map(([selected, _selectedWithText]) => {
@@ -71,6 +73,10 @@ export const ContextTrayComponent = createComponent(
                 <section class="tool-section">
                   <h2>Iterate</h2>
                   <div class="tool-body">${iterateUI}</div>
+                </section>
+                <section class="tool-section">
+                  <h2>Sketch</h2>
+                  <div class="tool-body">${sketchToolUI}</div>
                 </section>
               `
             : nothing}
