@@ -1,11 +1,11 @@
 import { html } from "lit-html";
 import { BehaviorSubject, combineLatest, map, switchMap, tap, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
+import { generateRefinedCardText } from "../../canvas/ai-helpers";
 import { type CanvasItem } from "../../canvas/canvas.component";
 import { getNextPositions } from "../../canvas/layout";
 import { type ApiKeys } from "../../connections/storage";
 import { imageToimage } from "../../semantic-scan/image-to-image";
-import { generateRefinedCardText } from "../../canvas/ai-helpers";
 import { submitTask } from "../tasks";
 import "./sketch.tool.css";
 
@@ -81,7 +81,8 @@ export const SketchTool = createComponent(
       const dialog = getDialog();
       if (!dialog) return;
 
-      strokeColor = getComputedStyle(document.documentElement).getPropertyValue("--color-sketch-stroke").trim() || "#ff0000";
+      strokeColor =
+        getComputedStyle(document.documentElement).getPropertyValue("--color-sketch-stroke").trim() || "#ff0000";
 
       dialog.showModal();
 
@@ -171,7 +172,9 @@ export const SketchTool = createComponent(
       }).pipe(
         switchMap((resultImageSrc) => {
           if (!resultImageSrc) {
-            throw new Error("Failed to generate refined image from sketch. Please verify your API keys and the input image format.");
+            throw new Error(
+              "Failed to generate refined image from sketch. Please verify your API keys and the input image format.",
+            );
           }
           return generateRefinedCardText({
             oldImageSrc,
@@ -184,7 +187,7 @@ export const SketchTool = createComponent(
               imageSrc: resultImageSrc,
               title: textResult.title,
               body: textResult.body,
-            }))
+            })),
           );
         }),
         tap(({ imageSrc, title, body }) => {
@@ -227,7 +230,9 @@ export const SketchTool = createComponent(
               @click=${() => {
                 if (imageSrc) openSketchDialog(imageSrc);
               }}
-              title=${!hasImage ? "Please select a card with an image to use the Sketch tool." : "Sketch over the selected image"}
+              title=${!hasImage
+                ? "Please select a card with an image to use the Sketch tool."
+                : "Sketch over the selected image"}
             >
               Sketch
             </button>
