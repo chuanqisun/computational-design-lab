@@ -9,9 +9,6 @@ import { generateRefinedCardText } from "../../canvas/ai-helpers";
 import { submitTask } from "../tasks";
 import "./sketch.tool.css";
 
-const getSketchStrokeColor = () => {
-  return getComputedStyle(document.documentElement).getPropertyValue("--color-sketch-stroke").trim() || "#ff0000";
-};
 const SKETCH_LINE_WIDTH = 4;
 
 export const SketchTool = createComponent(
@@ -26,7 +23,6 @@ export const SketchTool = createComponent(
   }) => {
     const isDrawing$ = new BehaviorSubject(false);
     let strokeColor = "#ff0000";
-    let imageAspect = 1.5; // height / width, defaults to standard card aspect ratio (300/200)
     let dialogEl: HTMLDialogElement | null = null;
 
     const getDialog = () => {
@@ -105,7 +101,6 @@ export const SketchTool = createComponent(
         img.onload = () => {
           canvas.width = img.width;
           canvas.height = img.height;
-          imageAspect = img.height / img.width;
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
         };
@@ -138,7 +133,7 @@ export const SketchTool = createComponent(
       }
     };
 
-    const handleSubmit = (imageSrc: string) => {
+    const handleSubmit = () => {
       const dialog = getDialog();
       if (!dialog) return;
 
@@ -167,12 +162,12 @@ export const SketchTool = createComponent(
 
       const positionGenerator = getNextPositions(selected);
       const cardWidth = 200;
-      const cardHeight = Math.round(cardWidth * imageAspect);
+      const geminiApiKey = apiKeys.gemini;
 
       const task$ = imageToimage({
         instruction: feedbackText.trim() || "Apply the changes indicated by the sketch annotations on this image",
         image: illustratedImage,
-        apiKey: apiKeys.gemini,
+        apiKey: geminiApiKey,
       }).pipe(
         switchMap((resultImageSrc) => {
           if (!resultImageSrc) {
@@ -183,7 +178,7 @@ export const SketchTool = createComponent(
             newImageSrc: resultImageSrc,
             oldTitle,
             oldBody,
-            apiKey: apiKeys.gemini,
+            apiKey: geminiApiKey,
           }).pipe(
             map((textResult) => ({
               imageSrc: resultImageSrc,
@@ -203,7 +198,7 @@ export const SketchTool = createComponent(
             x,
             y,
             width: cardWidth,
-            height: cardHeight,
+            height: cardWidth + 100, // standard card aspect ratio height (200) + text area height (100)
             isSelected: false,
             zIndex: z,
           };
@@ -267,7 +262,7 @@ export const SketchTool = createComponent(
                   <button @click=${handleCancel}>Cancel</button>
                   <button
                     ?disabled=${!apiKeys.gemini}
-                    @click=${() => handleSubmit(imageSrc)}
+                    @click=${() => handleSubmit()}
                     title=${!apiKeys.gemini ? "Gemini API key required" : ""}
                   >
                     Submit
