@@ -214,7 +214,7 @@ export const SketchTool = createComponent(
                 return item;
               });
               items$.next(updatedItems);
-            })
+            }),
           );
         }),
       );
