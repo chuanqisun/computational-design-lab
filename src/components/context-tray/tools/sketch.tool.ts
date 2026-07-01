@@ -165,39 +165,26 @@ export const SketchTool = createComponent(
       const cardWidth = 200;
       const geminiApiKey = apiKeys.gemini;
 
+      const cardId = `sketch-result-${crypto.randomUUID()}`;
+      const nextPos = positionGenerator.next();
+      const { x, y, z } = nextPos && nextPos.value ? nextPos.value : { x: 100, y: 100, z: 1 };
+
       const task$ = imageToimage({
         instruction: feedbackText.trim() || "Apply the changes indicated by the sketch annotations on this image",
         image: illustratedImage,
         apiKey: geminiApiKey,
       }).pipe(
-        switchMap((resultImageSrc) => {
+        tap((resultImageSrc) => {
           if (!resultImageSrc) {
             throw new Error(
               "Failed to generate refined image from sketch. Please verify your API keys and the input image format.",
             );
           }
-          return generateRefinedCardText({
-            oldImageSrc,
-            newImageSrc: resultImageSrc,
-            oldTitle,
-            oldBody,
-            apiKey: geminiApiKey,
-          }).pipe(
-            map((textResult) => ({
-              imageSrc: resultImageSrc,
-              title: textResult.title,
-              body: textResult.body,
-            })),
-          );
-        }),
-        tap(({ imageSrc, title, body }) => {
-          const nextPos = positionGenerator.next();
-          const { x, y, z } = nextPos && nextPos.value ? nextPos.value : { x: 100, y: 100, z: 1 };
           const card: CanvasItem = {
-            id: `sketch-result-${crypto.randomUUID()}`,
-            imageSrc,
-            title,
-            body,
+            id: cardId,
+            imageSrc: resultImageSrc,
+            title: "Analyzing...",
+            body: "Generating text description...",
             x,
             y,
             width: cardWidth,
@@ -206,6 +193,29 @@ export const SketchTool = createComponent(
             zIndex: z,
           };
           items$.next([...items$.value, card]);
+        }),
+        switchMap((resultImageSrc) => {
+          return generateRefinedCardText({
+            oldImageSrc,
+            newImageSrc: resultImageSrc,
+            oldTitle,
+            oldBody,
+            apiKey: geminiApiKey,
+          }).pipe(
+            tap((textResult) => {
+              const updatedItems = items$.value.map((item) => {
+                if (item.id === cardId) {
+                  return {
+                    ...item,
+                    title: textResult.title,
+                    body: textResult.body,
+                  };
+                }
+                return item;
+              });
+              items$.next(updatedItems);
+            })
+          );
         }),
       );
 
