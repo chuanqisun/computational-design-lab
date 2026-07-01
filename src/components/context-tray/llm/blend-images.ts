@@ -7,11 +7,7 @@ import { progress$ } from "../../progress/progress";
  * Use Google Gen AI gemini flash 2.5 image model to blend items based on user provided instruction.
  * Returns the observable of image data url
  */
-export function blendImages(input: {
-  instruction: string;
-  items: CanvasItem[];
-  apiKey: string;
-}): Observable<string> {
+export function blendImages(input: { instruction: string; items: CanvasItem[]; apiKey: string }): Observable<string> {
   return new Observable<string>((subscriber) => {
     progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
 
@@ -25,7 +21,7 @@ export function blendImages(input: {
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-2.5-flash-image";
+        const model = "gemini-3.1-flash-image";
         const config = {
           responseModalities: ["IMAGE"],
           abortSignal: abortController.signal,

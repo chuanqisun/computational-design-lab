@@ -60,7 +60,7 @@ const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "ite
     categories: ["canvas", "mixed-to-image", "image-blending"],
     inputType: "mixed",
     outputType: "image",
-    model: "gemini-2.5-flash-image",
+    model: "gemini-3.1-flash-image",
     slots: {
       instruction: {
         description: "Primary blend or edit instruction.",

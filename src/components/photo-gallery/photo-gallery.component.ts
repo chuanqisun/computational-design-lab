@@ -135,7 +135,7 @@ export const renderPhotoGallery = (gallery: PhotoCard[], photoGallery$: Behavior
                               width="540"
                               height="960"
                               aspect-ratio="9:16"
-                              model="gemini-2.5-flash-image"
+                              model="gemini-3.1-flash-image"
                             ></generative-image>
                           `}
                   </div>

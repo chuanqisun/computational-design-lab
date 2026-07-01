@@ -48,13 +48,15 @@ export function generateImage(
         abortSignal: abortController.signal,
         ...(options.aspectRatio
           ? {
-              imageConfig: {
-                aspectRatio: options.aspectRatio,
+              responseFormat: {
+                image: {
+                  aspectRatio: options.aspectRatio,
+                },
               },
             }
           : {}),
       };
-      const model = "gemini-2.5-flash-image";
+      const model = options.model || "gemini-3.1-flash-image";
       const contents: ContentListUnion = [
         {
           role: "user",

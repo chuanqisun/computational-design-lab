@@ -381,7 +381,7 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("width", "720");
     genImage.setAttribute("height", "1280");
     genImage.setAttribute("aspect-ratio", "9:16");
-    genImage.setAttribute("model", "gemini-2.5-flash-image");
+    genImage.setAttribute("model", "gemini-3.1-flash-lite-image");
 
     // Store component IDs on the element
     const ids = [
