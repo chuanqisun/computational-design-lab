@@ -179,7 +179,6 @@ export const ConnectionsComponent = createComponent((props: ConnectionsComponent
                 />
               </div>`
             : ""}
-
           ${hasProvider("gemini")
             ? html`<div class="form-field">
                 <label for="gemini-key">Gemini API Key</label>
