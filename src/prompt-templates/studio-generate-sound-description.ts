@@ -90,7 +90,7 @@ const template: PromptTemplateModule<StudioGenerateSoundDescriptionVars, "sceneX
     categories: ["studio", "mixed-to-text", "sound-design"],
     inputType: "mixed",
     outputType: "text",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     slots: {
       sceneXml: {
         description: "Scene XML used as the visual basis.",

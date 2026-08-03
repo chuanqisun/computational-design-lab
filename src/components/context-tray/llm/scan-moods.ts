@@ -62,7 +62,7 @@ export function scanMoods$(inputs: { item: CanvasItem; apiKey: string }): Observ
         }
 
         const response = await ai.models.generateContentStream({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           config: {
             responseMimeType: "application/json",
             responseSchema: schema,
@@ -172,7 +172,7 @@ export function scanMoodsSupervised$(inputs: {
         }
 
         const response = await ai.models.generateContentStream({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.6-flash",
           config: {
             responseMimeType: "application/json",
             responseSchema: schema,

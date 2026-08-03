@@ -147,7 +147,7 @@ Pick only items that are visibly present on the product in the photo. Return emp
 
   try {
     const response = await ai.interactions.create({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       input: [
         { type: "image", data: base64Data, mime_type: mimeType },
         { type: "text", text: promptText },
@@ -289,7 +289,7 @@ export async function synthesize(params: SynthesizeParams) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.6-flash",
       input: [userMessage],
       system_instruction: getStudioSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
@@ -355,7 +355,7 @@ export async function revise(params: ReviseParams) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.6-flash",
       input: contents,
       system_instruction: getStudioSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
@@ -434,7 +434,7 @@ ${currentXml}
 Photo scene: ${scene}`;
 
     const response = await ai.interactions.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.6-flash",
       input: promptText,
       system_instruction: getPhotoStageSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
@@ -465,7 +465,7 @@ async function generateSoundDescription(
 ) {
   try {
     const response = await ai.interactions.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.6-flash",
       input: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
 
 Scene XML:

@@ -74,7 +74,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "field-completion"],
     inputType: "mixed",
     outputType: "json",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     outputSchema,
     slots: {
       title: {

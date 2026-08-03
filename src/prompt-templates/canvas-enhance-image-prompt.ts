@@ -58,7 +58,7 @@ const template: PromptTemplateModule<CanvasEnhanceImagePromptVars, "originalProm
     categories: ["canvas", "text-to-text", "prompt-optimization"],
     inputType: "text",
     outputType: "text",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     slots: {
       originalPrompt: {
         description: "Base prompt authored by the user or stored on the card.",

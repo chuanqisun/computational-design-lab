@@ -110,7 +110,7 @@ const template: PromptTemplateModule<
     categories: ["studio", "mixed-to-xml", "scene-synthesis"],
     inputType: "mixed",
     outputType: "xml",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     slots: {
       selectionJson: {
         description: "Serialized material, shape, mechanism, color, and surface selections.",

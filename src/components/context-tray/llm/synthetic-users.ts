@@ -81,7 +81,7 @@ export function generatePersonas$({
         const prompt = `Generate ${numUsers} synthetic user personas${segmentText}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`;
 
         const stream = await ai.interactions.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           input: prompt,
           response_format: { type: "text", mime_type: "application/json", schema },
           generation_config: { thinking_level: "minimal" },
@@ -154,7 +154,7 @@ export function rankDesigns$({
         }
 
         const response = await ai.interactions.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           input: parts,
           system_instruction: systemPrompt,
           response_format: { type: "text", mime_type: "application/json", schema },

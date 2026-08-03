@@ -93,7 +93,7 @@ For each design, provide:
         contents.push({ type: "text", text: userPrompt });
 
         const stream = await ai.interactions.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           input: contents,
           system_instruction: systemPrompt,
           response_format: { type: "text", mime_type: "application/json", schema },

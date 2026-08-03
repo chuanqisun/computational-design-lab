@@ -47,7 +47,7 @@ export function getCaption(src: string, apiKey: string): Observable<string> {
       const ai = new GoogleGenAI({ apiKey });
 
       const interaction = await ai.interactions.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.6-flash",
         input: [
           { type: "text", text: "Describe this image in a short caption." },
           { type: "image", mime_type: mimeType, data },
@@ -78,7 +78,7 @@ export function enhancePrompt(originalPrompt: string, cardContext: string, apiKe
       Keep it descriptive but concise. Return ONLY the enhanced prompt.`;
 
       const interaction = await ai.interactions.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.6-flash",
         input: prompt,
         response_modalities: ["text"],
         store: false,
@@ -135,7 +135,7 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
 
       const ai = new GoogleGenAI({ apiKey });
       const interaction = await ai.interactions.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.6-flash",
         input: parts,
         response_format: { type: "text", mime_type: "application/json" },
         store: false,
@@ -223,7 +223,7 @@ Example: {"title": "...", "body": "..."}`,
         }
 
         const interaction = await ai.interactions.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           input: parts,
           response_format: { type: "text", mime_type: "application/json" },
           store: false,

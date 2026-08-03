@@ -16,7 +16,7 @@ export function generateTitle$(input: { text: string; apiKey: string }): Observa
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-3-flash-preview";
+        const model = "gemini-3.6-flash";
 
         const response = await ai.models.generateContentStream({
           model,

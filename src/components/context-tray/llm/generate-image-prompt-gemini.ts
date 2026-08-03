@@ -16,7 +16,7 @@ export function generateImagePrompt$(input: { text: string; apiKey: string }): O
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-3-flash-preview";
+        const model = "gemini-3.6-flash";
 
         const response = await ai.models.generateContentStream({
           model,

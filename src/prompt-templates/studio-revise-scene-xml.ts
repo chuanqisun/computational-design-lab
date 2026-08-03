@@ -92,7 +92,7 @@ const template: PromptTemplateModule<StudioReviseSceneXmlVars, "currentXml" | "e
     categories: ["studio", "text-to-xml", "revision"],
     inputType: "mixed",
     outputType: "xml",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     slots: {
       currentXml: {
         description: "Current scene XML to revise.",

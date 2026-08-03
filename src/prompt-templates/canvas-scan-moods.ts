@@ -69,7 +69,7 @@ const template: PromptTemplateModule<CanvasScanMoodsVars, "instruction" | "minOu
     categories: ["canvas", "mixed-to-json", "mood-analysis"],
     inputType: "mixed",
     outputType: "json",
-    model: "gemini-3-flash-preview",
+    model: "gemini-3.6-flash",
     outputSchema,
     slots: {
       instruction: {
