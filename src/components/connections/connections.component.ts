@@ -9,11 +9,14 @@ import { testConnection } from "./test-connections";
 
 export interface ConnectionsComponentProps {
   apiKeys$: BehaviorSubject<ApiKeys>;
+  providers?: Array<keyof ApiKeys>;
 }
 
 export const ConnectionsComponent = createComponent((props: ConnectionsComponentProps) => {
   // 1. Internal state
   const { apiKeys$ } = props;
+  const providers = props.providers ?? ["openai", "gemini"];
+  const hasProvider = (provider: keyof ApiKeys) => providers.includes(provider);
   const testResults$ = new BehaviorSubject<{ openai?: string; gemini?: string }>({});
   const testErrors$ = new BehaviorSubject<{ openai?: string; gemini?: string }>({});
   const testLoading$ = new BehaviorSubject<{ openai?: boolean; gemini?: boolean }>({});
@@ -89,12 +92,10 @@ export const ConnectionsComponent = createComponent((props: ConnectionsComponent
     e.preventDefault();
 
     const currentApiKeys = apiKeys$.value;
-    // Test OpenAI first
-    if (currentApiKeys.openai) {
+    if (hasProvider("openai") && currentApiKeys.openai) {
       testConnection$.next({ provider: "openai" });
     }
-    // Then test Gemini
-    if (currentApiKeys.gemini) {
+    if (hasProvider("gemini") && currentApiKeys.gemini) {
       testConnection$.next({ provider: "gemini" });
     }
   };
@@ -102,12 +103,17 @@ export const ConnectionsComponent = createComponent((props: ConnectionsComponent
   // Derived observables for template
   const isDisabled$ = testLoading$.pipe(
     mergeMap((loading) =>
-      apiKeys$.pipe(map((apiKeys) => loading.openai || loading.gemini || (!apiKeys.openai && !apiKeys.gemini))),
+      apiKeys$.pipe(
+        map(
+          (apiKeys) =>
+            providers.some((provider) => loading[provider]) || !providers.some((provider) => apiKeys[provider]),
+        ),
+      ),
     ),
   );
 
   const buttonText$ = testLoading$.pipe(
-    map((loading) => (loading.openai || loading.gemini ? "Testing..." : "Test Connections")),
+    map((loading) => (providers.some((provider) => loading[provider]) ? "Testing..." : "Test Connections")),
   );
 
   const openaiStatus$ = testLoading$.pipe(
@@ -161,33 +167,38 @@ export const ConnectionsComponent = createComponent((props: ConnectionsComponent
     map(
       (apiKeys) => html`
         <form class="connections-form" @submit=${handleTestSubmit}>
-          <div class="form-field">
-            <label for="openai-key">OpenAI API Key</label>
-            <input
-              id="openai-key"
-              type="password"
-              value=${apiKeys.openai || ""}
-              placeholder="sk-..."
-              @input=${handleOpenAIChange}
-            />
-          </div>
+          ${hasProvider("openai")
+            ? html`<div class="form-field">
+                <label for="openai-key">OpenAI API Key</label>
+                <input
+                  id="openai-key"
+                  type="password"
+                  value=${apiKeys.openai || ""}
+                  placeholder="sk-..."
+                  @input=${handleOpenAIChange}
+                />
+              </div>`
+            : ""}
 
-          <div class="form-field">
-            <label for="gemini-key">Gemini API Key</label>
-            <input
-              id="gemini-key"
-              type="password"
-              value=${apiKeys.gemini || ""}
-              placeholder="API key for Google Gemini"
-              @input=${handleGeminiChange}
-            />
-          </div>
+          ${hasProvider("gemini")
+            ? html`<div class="form-field">
+                <label for="gemini-key">Gemini API Key</label>
+                <input
+                  id="gemini-key"
+                  type="password"
+                  value=${apiKeys.gemini || ""}
+                  placeholder="API key for Google Gemini"
+                  @input=${handleGeminiChange}
+                />
+              </div>`
+            : ""}
 
           <button type="submit" ?disabled=${observe(isDisabled$)}>${observe(buttonText$)}</button>
 
           <div class="form-status">
-            <small>OpenAI: ${observe(openaiStatus$)}</small><br />
-            <small>Gemini: ${observe(geminiStatus$)}</small>
+            ${hasProvider("openai") ? html`<small>OpenAI: ${observe(openaiStatus$)}</small>` : ""}
+            ${hasProvider("openai") && hasProvider("gemini") ? html`<br />` : ""}
+            ${hasProvider("gemini") ? html`<small>Gemini: ${observe(geminiStatus$)}</small>` : ""}
           </div>
         </form>
       `,

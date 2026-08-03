@@ -46,7 +46,6 @@ export function testGeminiConnection(apiKey: string): Observable<string> {
     const stream = await ai.interactions.create({
       model,
       input: "Please respond with exactly 'Gemini test success!'",
-      generation_config: { thinking_level: "minimal" },
       store: false,
       stream: true,
     });

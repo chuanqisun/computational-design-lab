@@ -179,6 +179,7 @@ observer.observe(document.body, { attributes: true, subtree: true, attributeFilt
 useSetupDialog({
   dialogElement: document.getElementById("setup-dialog") as HTMLDialogElement,
   apiKeys$,
+  providers: ["gemini"],
 });
 
 render(Main(), document.getElementById("app")!);

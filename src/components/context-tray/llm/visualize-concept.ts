@@ -1,5 +1,5 @@
+import { GoogleGenAI } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
-import { OpenAI } from "openai";
 import { Observable, map, mergeMap } from "rxjs";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
 import { progress$ } from "../../progress/progress";
@@ -8,7 +8,6 @@ import type { Concept } from "./scan-concepts";
 export interface VisualizeConceptProps {
   concept: Concept;
   instruction: string;
-  openaiApiKey: string;
   geminiApiKey: string;
 }
 
@@ -35,12 +34,7 @@ export function visualizeConcept$(props: VisualizeConceptProps): Observable<stri
 export function createRenderPrompt(props: VisualizeConceptProps): Observable<string> {
   return new Observable<string>((subscriber) => {
     const abortController = new AbortController();
-
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: props.openaiApiKey,
-    });
-
+    const ai = new GoogleGenAI({ apiKey: props.geminiApiKey });
     const parser = new JSONParser();
 
     // Wire up parser event to emit prompts
@@ -74,12 +68,25 @@ Respond in JSON format:
 }
         `.trim();
 
-        const responseStream = await openai.responses.create(
+        const schema = {
+          type: "object",
+          properties: {
+            prompts: {
+              type: "array",
+              items: { type: "string" },
+              maxItems: 3,
+            },
+          },
+          required: ["prompts"],
+        };
+
+        const responseStream = await ai.interactions.create(
           {
-            model: "gpt-5-mini",
+            model: "gemini-3.6-flash",
             input: prompt,
-            text: { format: { type: "json_object" }, verbosity: "low" },
-            reasoning: { effort: "minimal" },
+            response_format: { type: "text", mime_type: "application/json", schema },
+            generation_config: { thinking_level: "minimal" },
+            store: false,
             stream: true,
           },
           {
@@ -88,8 +95,8 @@ Respond in JSON format:
         );
 
         for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
+          if (chunk.event_type === "step.delta" && chunk.delta.type === "text") {
+            parser.write(chunk.delta.text);
           }
         }
         subscriber.complete();

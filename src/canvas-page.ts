@@ -147,7 +147,7 @@ const Main = createComponent(() => {
   const canvasUI = CanvasComponent({ items$, apiKeys$, interaction$: canvasInteraction$ });
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
   const resizerUI = ResizerComponent({ trayWidth$ });
-  const connectionsUI = ConnectionsComponent({ apiKeys$ });
+  const connectionsUI = ConnectionsComponent({ apiKeys$, providers: ["gemini"] });
 
   const saveViewport$ = fromEvent(document, "scroll", { capture: true }).pipe(
     filter((e) => (e.target as HTMLElement).classList?.contains("canvas-area")),

@@ -43,8 +43,8 @@ export const VisualizeTool = createComponent(
           return;
         }
 
-        if (!apiKeys.gemini || !apiKeys.openai) {
-          console.warn("No Gemini or OpenAI API key provided.");
+        if (!apiKeys.gemini) {
+          console.warn("No Gemini API key provided.");
           return;
         }
 
@@ -56,7 +56,6 @@ export const VisualizeTool = createComponent(
         const task$ = visualizeConcept$({
           concept,
           instruction: vizType.instruction,
-          openaiApiKey: apiKeys.openai,
           geminiApiKey: apiKeys.gemini,
         }).pipe(
           tap((url) => {
