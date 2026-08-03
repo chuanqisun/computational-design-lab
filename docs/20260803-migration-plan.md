@@ -258,16 +258,16 @@ migrated.
 
 ## Risks and Mitigations
 
-| Risk                                                            | Mitigation                                                                                                                       |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Risk                                                            | Mitigation                                                                                                                                      |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Interactions stream events differ from Generate Content chunks. | Establish the correct SDK event handling in the first call of each behavior group, then apply the same verified pattern to the remaining calls. |
-| Structured streaming loses incremental emissions.               | Preserve the parser contract or translate typed events into equivalent item-level emissions.                                     |
-| Image output parts or MIME fields use a different envelope.     | Test image fixtures in each image-owning module and preserve MIME types during local conversion.                                  |
-| SDK upgrade introduces unrelated type or browser changes.       | Complete the SDK spike first and keep the dependency upgrade isolated from feature batches.                                      |
-| Cancellation stops RxJS work but not network work.              | Pass an abort signal through every streaming and image call and test unsubscription.                                             |
-| Stateful interactions accidentally retain design data.          | Set `store: false` explicitly at every call site and do not use `previousInteractionId` in phase one.                            |
-| Model/config support differs by endpoint.                       | Verify every currently used model, thinking setting, schema, response modality, and image aspect ratio during the spike.         |
-| Dormant legacy modules are later activated.                     | Add a lint or CI search preventing new runtime `generateContent*` calls; migrate dormant modules before wiring them into a page. |
+| Structured streaming loses incremental emissions.               | Preserve the parser contract or translate typed events into equivalent item-level emissions.                                                    |
+| Image output parts or MIME fields use a different envelope.     | Test image fixtures in each image-owning module and preserve MIME types during local conversion.                                                |
+| SDK upgrade introduces unrelated type or browser changes.       | Complete the SDK spike first and keep the dependency upgrade isolated from feature batches.                                                     |
+| Cancellation stops RxJS work but not network work.              | Pass an abort signal through every streaming and image call and test unsubscription.                                                            |
+| Stateful interactions accidentally retain design data.          | Set `store: false` explicitly at every call site and do not use `previousInteractionId` in phase one.                                           |
+| Model/config support differs by endpoint.                       | Verify every currently used model, thinking setting, schema, response modality, and image aspect ratio during the spike.                        |
+| Dormant legacy modules are later activated.                     | Add a lint or CI search preventing new runtime `generateContent*` calls; migrate dormant modules before wiring them into a page.                |
 
 ## Alternatives Considered
 
