@@ -69,7 +69,7 @@ export function scanConcepts$(inputs: {
 
         const response = await ai.interactions.create({
           model: "gemini-3.6-flash",
-          input: parts,
+          input: [{ type: "user_input", content: parts }],
           system_instruction: developerPrompt,
           response_format: { type: "text", mime_type: "application/json", schema },
           generation_config: { thinking_level: "minimal" },

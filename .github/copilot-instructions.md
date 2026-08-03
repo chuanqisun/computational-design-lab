@@ -52,6 +52,10 @@ applyTo: "**"
 - Components handle their own internal state and effects
 - No manual subscriptions needed in main.ts as components manage their own reactive behavior
 
+## Gemini Interactions API
+
+- Pass `input` to `ai.interactions.create` as an explicit `Interactions.Step[]` using `user_input` and `model_output` steps. Do not pass string, `Content[]`, or deprecated `{ role, content }` turn-list shorthand.
+
 ## `src/components/*`
 
 - Use the createComponent utility for reactive components

@@ -59,6 +59,11 @@ const getInteractionText = (outputs: Interactions.Step[] | undefined) =>
     .map((content) => content.text)
     .join("");
 
+const toInteractionStep = (turn: StudioTurn): Interactions.Step =>
+  turn.role === "user"
+    ? { type: "user_input", content: turn.content }
+    : { type: "model_output", content: turn.content };
+
 export async function runScanAI(
   photo: ScannedPhoto,
   scannedPhotos$: BehaviorSubject<ScannedPhoto[]>,
@@ -149,8 +154,13 @@ Pick only items that are visibly present on the product in the photo. Return emp
     const response = await ai.interactions.create({
       model: "gemini-3.6-flash",
       input: [
-        { type: "image", data: base64Data, mime_type: mimeType },
-        { type: "text", text: promptText },
+        {
+          type: "user_input",
+          content: [
+            { type: "image", data: base64Data, mime_type: mimeType },
+            { type: "text", text: promptText },
+          ],
+        },
       ],
       response_format: { type: "text", mime_type: "application/json", schema },
       generation_config: { thinking_level: "low" },
@@ -290,7 +300,7 @@ export async function synthesize(params: SynthesizeParams) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      input: [userMessage],
+      input: [toInteractionStep(userMessage)],
       system_instruction: getStudioSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
       store: false,
@@ -356,7 +366,7 @@ export async function revise(params: ReviseParams) {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      input: contents,
+      input: contents.map(toInteractionStep),
       system_instruction: getStudioSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
       store: false,
@@ -435,7 +445,7 @@ Photo scene: ${scene}`;
 
     const response = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      input: promptText,
+      input: [{ type: "user_input", content: [{ type: "text", text: promptText }] }],
       system_instruction: getPhotoStageSystemPrompt(brandGuide),
       generation_config: { thinking_level: "minimal" },
       store: false,
@@ -466,12 +476,22 @@ async function generateSoundDescription(
   try {
     const response = await ai.interactions.create({
       model: "gemini-3.6-flash",
-      input: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
+      input: [
+        {
+          type: "user_input",
+          content: [
+            {
+              type: "text",
+              text: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
 
 Scene XML:
 ${photoXml}
 
 Animation prompt: ${animationPrompt}`,
+            },
+          ],
+        },
+      ],
       generation_config: { thinking_level: "minimal" },
       store: false,
     });

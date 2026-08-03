@@ -83,7 +83,7 @@ Respond in JSON format:
         const responseStream = await ai.interactions.create(
           {
             model: "gemini-3.6-flash",
-            input: prompt,
+            input: [{ type: "user_input", content: [{ type: "text", text: prompt }] }],
             response_format: { type: "text", mime_type: "application/json", schema },
             generation_config: { thinking_level: "minimal" },
             store: false,

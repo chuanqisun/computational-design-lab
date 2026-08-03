@@ -23,8 +23,13 @@ export function imageToimage(input: { instruction: string; image: string; apiKey
         const response = await ai.interactions.create({
           model,
           input: [
-            { type: "image", mime_type: mimeType, data },
-            { type: "text", text: input.instruction },
+            {
+              type: "user_input",
+              content: [
+                { type: "image", mime_type: mimeType, data },
+                { type: "text", text: input.instruction },
+              ],
+            },
           ],
           response_modalities: ["image"],
           store: false,

@@ -82,7 +82,7 @@ export function generatePersonas$({
 
         const stream = await ai.interactions.create({
           model: "gemini-3.6-flash",
-          input: prompt,
+          input: [{ type: "user_input", content: [{ type: "text", text: prompt }] }],
           response_format: { type: "text", mime_type: "application/json", schema },
           generation_config: { thinking_level: "minimal" },
           store: false,
@@ -155,7 +155,7 @@ export function rankDesigns$({
 
         const response = await ai.interactions.create({
           model: "gemini-3.6-flash",
-          input: parts,
+          input: [{ type: "user_input", content: parts }],
           system_instruction: systemPrompt,
           response_format: { type: "text", mime_type: "application/json", schema },
           generation_config: { thinking_level: "minimal" },

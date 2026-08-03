@@ -94,7 +94,7 @@ For each design, provide:
 
         const stream = await ai.interactions.create({
           model: "gemini-3.6-flash",
-          input: contents,
+          input: [{ type: "user_input", content: contents }],
           system_instruction: systemPrompt,
           response_format: { type: "text", mime_type: "application/json", schema },
           generation_config: { thinking_level: "minimal" },

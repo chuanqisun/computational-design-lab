@@ -56,7 +56,7 @@ export function generateImage(
       const response = await ai.interactions.create(
         {
           model,
-          input,
+          input: [{ type: "user_input", content: input }],
           response_modalities: ["image"],
           ...(options.aspectRatio
             ? { response_format: { type: "image" as const, aspect_ratio: options.aspectRatio } }

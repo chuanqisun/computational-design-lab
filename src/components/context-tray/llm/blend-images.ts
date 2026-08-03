@@ -57,7 +57,7 @@ export function blendImages(input: { instruction: string; items: CanvasItem[]; a
         const response = await ai.interactions.create(
           {
             model,
-            input: parts,
+            input: [{ type: "user_input", content: parts }],
             response_modalities: ["image"],
             store: false,
             stream: true,
