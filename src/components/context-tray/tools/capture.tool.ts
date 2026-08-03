@@ -6,6 +6,27 @@ import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import "./capture.tool.css";
 
+type CaptureMode = "image" | "video";
+
+type CapturedMedia =
+  | { kind: "image"; src: string; mimeType: string; thumbnailUrl?: string }
+  | { kind: "video"; src: string; mimeType: string };
+
+const VIDEO_MIME_TYPES = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
+
+const blobToDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read media"));
+    reader.readAsDataURL(blob);
+  });
+
+const getSupportedVideoMimeType = () => {
+  if (typeof MediaRecorder === "undefined") return null;
+  return VIDEO_MIME_TYPES.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || null;
+};
+
 const createThumbnail = (fullDataUrl: string) =>
   new Promise<string>((resolve, reject) => {
     const img = new Image();
@@ -31,7 +52,38 @@ const createThumbnail = (fullDataUrl: string) =>
 
 export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubject<CanvasItem[]> }) => {
   const pendingPhotos$ = new BehaviorSubject<PendingPhoto[]>([]);
+  const pendingVideo$ = new BehaviorSubject<{ src: string; mimeType: string } | null>(null);
   const stream$ = new BehaviorSubject<MediaStream | null>(null);
+  const captureMode$ = new BehaviorSubject<CaptureMode>("image");
+  const isRecording$ = new BehaviorSubject(false);
+
+  let mediaRecorder: MediaRecorder | null = null;
+  let recordedChunks: Blob[] = [];
+  let keepRecordingResult = false;
+
+  const commitMedia = (media: CapturedMedia[], source: "upload" | "capture-tool") => {
+    if (media.length === 0) return;
+
+    const canvasElement = document.querySelector("[data-canvas]") as HTMLElement | null;
+    const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+    const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+    const additions: CanvasItem[] = media.map((item, index) => ({
+      id: `${item.kind}-${crypto.randomUUID()}`,
+      ...(item.kind === "image" ? { imageSrc: item.src } : { videoSrc: item.src, videoMimeType: item.mimeType }),
+      x: center.x - 100 + index * 24,
+      y: center.y - 150 + index * 24,
+      width: 200,
+      height: 300,
+      isSelected: false,
+      zIndex: maxZ + index + 1,
+      metadata: {
+        source,
+        ...(item.kind === "image" && item.thumbnailUrl ? { thumbnailUrl: item.thumbnailUrl } : {}),
+      },
+    }));
+
+    items$.next([...items$.value, ...additions]);
+  };
 
   const closeDialog = () => {
     const dialog = document.getElementById("capture-tool-dialog") as HTMLDialogElement | null;
@@ -40,7 +92,14 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     }
   };
 
+  const stopVideoRecording = (keepResult: boolean) => {
+    if (!mediaRecorder || mediaRecorder.state === "inactive") return;
+    keepRecordingResult = keepResult;
+    mediaRecorder.stop();
+  };
+
   const stopCamera = () => {
+    stopVideoRecording(false);
     const stream = stream$.value;
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
@@ -58,6 +117,8 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     if (!dialog) return;
     if (!dialog.open) {
       pendingPhotos$.next([]);
+      pendingVideo$.next(null);
+      captureMode$.next("image");
       dialog.showModal();
     }
   };
@@ -67,33 +128,42 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     const files = input.files;
     if (!files?.length) return;
 
-    const nextPending: PendingPhoto[] = [];
+    const uploadedMedia: CapturedMedia[] = [];
+    const skippedFiles: string[] = [];
 
     for (const file of Array.from(files)) {
-      const fullDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
-
-      const thumbnailUrl = await createThumbnail(fullDataUrl);
-      nextPending.push({
-        id: `upload-${crypto.randomUUID()}`,
-        fullDataUrl,
-        thumbnailUrl,
-      });
+      try {
+        const src = await blobToDataUrl(file);
+        if (file.type.startsWith("image/")) {
+          uploadedMedia.push({
+            kind: "image",
+            src,
+            mimeType: file.type,
+            thumbnailUrl: await createThumbnail(src),
+          });
+        } else if (file.type.startsWith("video/")) {
+          uploadedMedia.push({ kind: "video", src, mimeType: file.type });
+        } else {
+          skippedFiles.push(file.name);
+        }
+      } catch {
+        skippedFiles.push(file.name);
+      }
     }
 
-    pendingPhotos$.next([...pendingPhotos$.value, ...nextPending]);
+    commitMedia(uploadedMedia, "upload");
     input.value = "";
+    if (skippedFiles.length > 0) alert(`Could not upload: ${skippedFiles.join(", ")}`);
   };
 
   const startCamera = async () => {
     if (stream$.value) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
       stream$.next(stream);
 
       requestAnimationFrame(() => {
@@ -135,33 +205,87 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     pendingPhotos$.next(pendingPhotos$.value.filter((photo) => photo.id !== id));
   };
 
+  const setCaptureMode = (mode: CaptureMode) => {
+    if (mode === captureMode$.value) return;
+    stopVideoRecording(false);
+    pendingPhotos$.next([]);
+    pendingVideo$.next(null);
+    captureMode$.next(mode);
+  };
+
+  const startVideoRecording = () => {
+    const stream = stream$.value;
+    const mimeType = getSupportedVideoMimeType();
+    if (!stream || !mimeType || isRecording$.value) return;
+
+    pendingVideo$.next(null);
+    recordedChunks = [];
+    keepRecordingResult = false;
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder = recorder;
+
+    recorder.addEventListener("dataavailable", (event: BlobEvent) => {
+      if (event.data.size > 0) recordedChunks.push(event.data);
+    });
+    recorder.addEventListener("error", () => {
+      recordedChunks = [];
+      isRecording$.next(false);
+      alert("Video recording failed.");
+    });
+    recorder.addEventListener("stop", () => {
+      const chunks = recordedChunks;
+      const shouldKeep = keepRecordingResult;
+      recordedChunks = [];
+      keepRecordingResult = false;
+      mediaRecorder = null;
+      if (!shouldKeep || chunks.length === 0) {
+        isRecording$.next(false);
+        return;
+      }
+
+      const blob = new Blob(chunks, { type: recorder.mimeType });
+      void blobToDataUrl(blob)
+        .then((src) => pendingVideo$.next({ src, mimeType: recorder.mimeType }))
+        .catch(() => alert("Could not prepare the recorded video."))
+        .finally(() => isRecording$.next(false));
+    });
+
+    recorder.start();
+    isRecording$.next(true);
+  };
+
   const commitPhotos = () => {
     const pending = pendingPhotos$.value;
     if (pending.length === 0) return;
 
-    const canvasElement = document.querySelector("[data-canvas]") as HTMLElement | null;
-    const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-    const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
-
-    const additions: CanvasItem[] = pending.map((photo, index) => ({
-      id: `scan-photo-${Date.now()}-${index}`,
-      imageSrc: photo.fullDataUrl,
-      x: center.x - 100 + index * 24,
-      y: center.y - 150 + index * 24,
-      width: 200,
-      height: 300,
-      isSelected: false,
-      zIndex: maxZ + index + 1,
-      metadata: {
-        source: "capture-tool",
+    commitMedia(
+      pending.map((photo) => ({
+        kind: "image",
+        src: photo.fullDataUrl,
+        mimeType: "image/jpeg",
         thumbnailUrl: photo.thumbnailUrl,
-      },
-    }));
-
-    items$.next([...items$.value, ...additions]);
+      })),
+      "capture-tool",
+    );
     pendingPhotos$.next([]);
     stopCamera();
     closeDialog();
+  };
+
+  const commitVideo = () => {
+    const pendingVideo = pendingVideo$.value;
+    if (!pendingVideo) return;
+    commitMedia([{ kind: "video", ...pendingVideo }], "capture-tool");
+    pendingVideo$.next(null);
+    stopCamera();
+    closeDialog();
+  };
+
+  const handleDialogClose = () => {
+    stopCamera();
+    pendingPhotos$.next([]);
+    pendingVideo$.next(null);
+    captureMode$.next("image");
   };
 
   const stopCameraEffect$ = stream$.pipe(
@@ -175,40 +299,76 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     ignoreElements(),
   );
 
-  const template$ = combineLatest([pendingPhotos$, stream$]).pipe(
-    map(([pendingPhotos, stream]) => {
+  const template$ = combineLatest([pendingPhotos$, pendingVideo$, stream$, captureMode$, isRecording$]).pipe(
+    map(([pendingPhotos, pendingVideo, stream, captureMode, isRecording]) => {
+      const videoMimeType = getSupportedVideoMimeType();
       return html`
         <div class="capture-tool">
-          <button @click=${openDialog}>Capture</button>
+          <menu class="capture-tool-menu">
+            <button @click=${openFilePicker}>Upload</button>
+            <button @click=${openDialog}>Capture</button>
+          </menu>
 
-          <dialog id="capture-tool-dialog" @close=${stopCamera}>
+          <input
+            id="capture-tool-file-input"
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            @change=${handleFileUpload}
+            hidden
+          />
+
+          <dialog id="capture-tool-dialog" @close=${handleDialogClose}>
             <div class="capture-tool-dialog-body">
               <header class="capture-tool-header">
                 <h3>Capture</h3>
+                <div class="capture-tool-mode" role="group" aria-label="Capture type">
+                  <label>
+                    <input
+                      type="radio"
+                      name="capture-tool-mode"
+                      value="image"
+                      .checked=${captureMode === "image"}
+                      ?disabled=${isRecording}
+                      @change=${() => setCaptureMode("image")}
+                    />
+                    Image
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="capture-tool-mode"
+                      value="video"
+                      .checked=${captureMode === "video"}
+                      ?disabled=${isRecording || !videoMimeType}
+                      @change=${() => setCaptureMode("video")}
+                    />
+                    Video
+                  </label>
+                </div>
               </header>
-
-              <input
-                id="capture-tool-file-input"
-                type="file"
-                accept="image/*"
-                multiple
-                @change=${handleFileUpload}
-                hidden
-              />
 
               <section class="capture-tool-content">
                 <menu class="capture-tool-menu">
-                  <button @click=${openFilePicker}>Upload</button>
                   ${stream
-                    ? html`<button @click=${captureFromCamera}>Capture</button>
-                        <button @click=${stopCamera}>Stop camera</button>`
+                    ? captureMode === "image"
+                      ? html`<button @click=${captureFromCamera}>Capture image</button>
+                          <button @click=${stopCamera}>Stop camera</button>`
+                      : html`<button @click=${() => stopVideoRecording(true)} ?disabled=${!isRecording}>
+                            Stop recording
+                          </button>
+                          <button @click=${startVideoRecording} ?disabled=${isRecording}>Start recording</button>
+                          <button @click=${stopCamera} ?disabled=${isRecording}>Stop camera</button>`
                     : html`<button @click=${startCamera}>Start camera</button>`}
                 </menu>
 
+                ${captureMode === "video" && !videoMimeType
+                  ? html`<p>Video recording is not supported by this browser.</p>`
+                  : html``}
                 ${stream
                   ? html`<video id="capture-tool-video" autoplay playsinline class="capture-tool-video"></video>`
                   : html``}
-                ${pendingPhotos.length > 0
+                ${captureMode === "image" && pendingPhotos.length > 0
                   ? html`
                       <div class="capture-tool-previews">
                         ${pendingPhotos.map(
@@ -222,11 +382,19 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
                       </div>
                     `
                   : html``}
+                ${captureMode === "video" && pendingVideo
+                  ? html`<div class="capture-tool-recording-preview">
+                      <video src=${pendingVideo.src} controls playsinline preload="metadata"></video>
+                      <button @click=${() => pendingVideo$.next(null)}>Retry</button>
+                    </div>`
+                  : html``}
               </section>
 
               <footer class="capture-tool-footer">
                 <menu class="capture-tool-menu">
-                  <button ?disabled=${pendingPhotos.length === 0} @click=${commitPhotos}>Confirm</button>
+                  ${captureMode === "image"
+                    ? html`<button ?disabled=${pendingPhotos.length === 0} @click=${commitPhotos}>Confirm</button>`
+                    : html`<button ?disabled=${!pendingVideo || isRecording} @click=${commitVideo}>Confirm</button>`}
                   <button @click=${closeDialog}>Close</button>
                 </menu>
               </footer>

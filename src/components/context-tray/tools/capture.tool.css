@@ -12,6 +12,13 @@
     border-bottom: 1px solid #ccc;
     padding: 1ch 2ch;
     flex-shrink: 0;
+    display: grid;
+    gap: 1ch;
+  }
+
+  .capture-tool-mode {
+    display: flex;
+    gap: 2ch;
   }
 
   .capture-tool-content {
@@ -46,6 +53,16 @@
     height: 4ch;
     object-fit: cover;
     border: 1px solid #ccc;
+  }
+
+  .capture-tool-recording-preview {
+    display: grid;
+    gap: 1ch;
+
+    video {
+      width: 100%;
+      max-width: 48ch;
+    }
   }
 
   .capture-tool-menu {

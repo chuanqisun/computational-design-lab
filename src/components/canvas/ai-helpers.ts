@@ -29,6 +29,24 @@ function extractDataFromDataUrl(dataUrl: string): { mimeType: string; data: stri
   return { mimeType: matches[1], data: matches[2] };
 }
 
+const GEMINI_VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/mpeg",
+  "video/mpg",
+  "video/mov",
+  "video/avi",
+  "video/x-flv",
+  "video/webm",
+  "video/wmv",
+  "video/3gpp",
+  "video/vnd.youtube.yt",
+]);
+
+function normalizeGeminiVideoMimeType(mimeType?: string): string | null {
+  const baseMimeType = mimeType?.split(";", 1)[0].trim().toLowerCase();
+  return baseMimeType && GEMINI_VIDEO_MIME_TYPES.has(baseMimeType) ? baseMimeType : null;
+}
+
 function extractInteractionText(
   steps: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>,
 ): string {
@@ -101,6 +119,8 @@ export interface CardContent {
   body?: string;
   imagePrompt?: string;
   imageSrc?: string;
+  videoSrc?: string;
+  videoMimeType?: string;
 }
 
 export function fillCard(content: CardContent, apiKey: string): Observable<Partial<CardContent>> {
@@ -115,8 +135,9 @@ Image Prompt: ${content.imagePrompt || "(missing)"}
 Please generate the missing fields based on the available information.
 - If title is missing, generate a short, catchy title (max 3 words).
 - If body is missing, generate a concise description (max 2 sentences).
-- If image prompt is missing and no image is provided, generate a detailed image generation prompt.
-- If image is provided, use it to generate the missing text fields.
+- If image prompt is missing and no image or video is provided, generate a detailed image generation prompt.
+- If image or video is provided, use it to generate the missing text fields.
+- Never generate or return video content.
 
 Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
 Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
@@ -138,6 +159,24 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
         }
       }
 
+      if (content.videoSrc) {
+        try {
+          const dataUrl = await urlToBase64(content.videoSrc);
+          const extracted = extractDataFromDataUrl(dataUrl);
+          const mimeType =
+            normalizeGeminiVideoMimeType(extracted.mimeType) ?? normalizeGeminiVideoMimeType(content.videoMimeType);
+          if (!mimeType) throw new Error("Unsupported Gemini video MIME type");
+
+          parts.push({
+            type: "video",
+            mime_type: mimeType,
+            data: extracted.data,
+          });
+        } catch (e) {
+          throw new Error("Failed to process video for AI", { cause: e });
+        }
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       const interaction = await ai.interactions.create({
         model: "gemini-3.6-flash",
@@ -150,7 +189,14 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
       if (!text) return {};
 
       try {
-        return JSON.parse(text) as Partial<CardContent>;
+        const parsed = JSON.parse(text) as Partial<CardContent>;
+        const updates: Partial<CardContent> = {};
+        if (!content.title && typeof parsed.title === "string") updates.title = parsed.title;
+        if (!content.body && typeof parsed.body === "string") updates.body = parsed.body;
+        if (!content.videoSrc && !content.imagePrompt && typeof parsed.imagePrompt === "string") {
+          updates.imagePrompt = parsed.imagePrompt;
+        }
+        return updates;
       } catch (e) {
         console.error("Failed to parse JSON response from AI", text);
         return {};

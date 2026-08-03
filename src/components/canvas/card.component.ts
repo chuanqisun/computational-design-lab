@@ -2,6 +2,7 @@ import { html } from "lit-html";
 import {
   BehaviorSubject,
   catchError,
+  combineLatest,
   debounceTime,
   distinctUntilChanged,
   exhaustMap,
@@ -32,7 +33,10 @@ function isSameRenderableItem(prev: CanvasItem, curr: CanvasItem): boolean {
     prev.title === curr.title &&
     prev.body === curr.body &&
     prev.imageSrc === curr.imageSrc &&
-    prev.imagePrompt === curr.imagePrompt
+    prev.imagePrompt === curr.imagePrompt &&
+    prev.videoSrc === curr.videoSrc &&
+    prev.videoMimeType === curr.videoMimeType &&
+    prev.videoPosterSrc === curr.videoPosterSrc
   );
 }
 
@@ -52,14 +56,40 @@ export const CardComponent = createComponent(
     );
 
     const isGenerating$ = new BehaviorSubject(false);
+    const isPlaying$ = new BehaviorSubject(false);
     const generatedSignatures$ = new BehaviorSubject<Set<string>>(new Set());
+
+    const stopVideoControlEvent = (event: Event) => event.stopPropagation();
+
+    const toggleVideoPlayback = async (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const button = event.currentTarget as HTMLButtonElement;
+      const video = button.parentElement?.querySelector("video");
+      if (!video) return;
+
+      if (!video.paused) {
+        video.pause();
+        return;
+      }
+
+      try {
+        await video.play();
+      } catch (error) {
+        isPlaying$.next(false);
+        console.error("Video playback failed", error);
+      }
+    };
 
     const getGenerationSignature = (item: CanvasItem): string => {
       const title = item.title?.trim() || "";
       const body = item.body?.trim() || "";
       const imagePrompt = item.imagePrompt?.trim() || "";
       const imageSrc = item.imageSrc?.trim() || "";
-      return `${title}||${body}||${imagePrompt}||${imageSrc}`;
+      const videoSrc = item.videoSrc?.trim() || "";
+      const videoMimeType = item.videoMimeType?.trim() || "";
+      return `${title}||${body}||${imagePrompt}||${imageSrc}||${videoSrc}||${videoMimeType}`;
     };
 
     // Effects
@@ -73,10 +103,11 @@ export const CardComponent = createComponent(
       filter(({ item, apiKey }) => {
         if (!apiKey) return false;
 
-        const hasContent = !!(item.title || item.body || item.imageSrc || item.imagePrompt);
-        const missingFields = !item.title || !item.body || (!item.imagePrompt && !item.imageSrc);
+        const hasContent = !!(item.title || item.body || item.imageSrc || item.imagePrompt || item.videoSrc);
+        const missingText = !item.title || !item.body;
+        const missingImage = !item.videoSrc && !item.imagePrompt && !item.imageSrc;
 
-        return hasContent && missingFields;
+        return hasContent && (missingText || missingImage);
       }),
       distinctUntilChanged((prev, curr) => prev.signature === curr.signature && prev.apiKey === curr.apiKey),
       filter(({ signature }) => !generatedSignatures$.value.has(signature)),
@@ -87,6 +118,8 @@ export const CardComponent = createComponent(
           body: item.body,
           imagePrompt: item.imagePrompt,
           imageSrc: item.imageSrc,
+          videoSrc: item.videoSrc,
+          videoMimeType: item.videoMimeType,
         };
 
         isGenerating$.next(true);
@@ -94,6 +127,9 @@ export const CardComponent = createComponent(
 
         return fillCard(content, apiKey!).pipe(
           tap((updates) => {
+            const currentItem = props.items$.value.find((candidate) => candidate.id === item.id);
+            if (!currentItem || getGenerationSignature(currentItem) !== signature) return;
+
             generatedSignatures$.next(new Set(generatedSignatures$.value).add(signature));
             if (Object.keys(updates).length > 0) {
               props.onUpdate(item.id, updates);
@@ -112,9 +148,9 @@ export const CardComponent = createComponent(
       ignoreElements(),
     );
 
-    const template$ = item$.pipe(
+    const template$ = combineLatest([item$, isPlaying$]).pipe(
       map(
-        (item) => html`
+        ([item, isPlaying]) => html`
           <div
             class="canvas-card ${item.isSelected ? "selected" : ""}"
             data-id="${item.id}"
@@ -122,17 +158,40 @@ export const CardComponent = createComponent(
             0};"
             @mousedown=${(e: MouseEvent) => props.onMouseDown(item.id, e)}
           >
-            <div class="card-image-area">
-              ${item.imageSrc
-                ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
-                : item.imagePrompt
-                  ? html`<generative-image
-                      prompt="${item.imagePrompt}"
-                      width="${item.width}"
-                      height="${item.width}"
-                      @image-loaded=${(e: CustomEvent) => props.onUpdate(item.id, { imageSrc: e.detail.url })}
-                    ></generative-image>`
-                  : html`<div class="card-placeholder-image">No image</div>`}
+            <div class="card-media-area">
+              ${item.videoSrc
+                ? html`<video
+                      class="card-video"
+                      src="${item.videoSrc}"
+                      poster="${item.videoPosterSrc || ""}"
+                      preload="metadata"
+                      playsinline
+                      @play=${() => isPlaying$.next(true)}
+                      @pause=${() => isPlaying$.next(false)}
+                      @ended=${() => isPlaying$.next(false)}
+                    ></video>
+                    <button
+                      class="card-video-control"
+                      data-card-video-control
+                      type="button"
+                      aria-label=${isPlaying ? "Pause video" : "Play video"}
+                      title=${isPlaying ? "Pause video" : "Play video"}
+                      @mousedown=${stopVideoControlEvent}
+                      @keydown=${stopVideoControlEvent}
+                      @click=${toggleVideoPlayback}
+                    >
+                      ${isPlaying ? "Ⅱ" : "▶"}
+                    </button>`
+                : item.imageSrc
+                  ? html`<img src="${item.imageSrc}" alt="${item.title || "Image"}" />`
+                  : item.imagePrompt
+                    ? html`<generative-image
+                        prompt="${item.imagePrompt}"
+                        width="${item.width}"
+                        height="${item.width}"
+                        @image-loaded=${(e: CustomEvent) => props.onUpdate(item.id, { imageSrc: e.detail.url })}
+                      ></generative-image>`
+                    : html`<div class="card-placeholder-image">No media</div>`}
             </div>
             <div class="card-text-area">
               ${item.title

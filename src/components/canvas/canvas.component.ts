@@ -56,11 +56,18 @@ export interface CanvasItem {
   body?: string;
   imageSrc?: string;
   imagePrompt?: string;
+  videoSrc?: string;
+  videoMimeType?: string;
+  videoPosterSrc?: string;
   metadata?: Record<string, any>;
 }
 
 export function hasImage(item: CanvasItem): boolean {
   return !!(item.imageSrc || item.imagePrompt);
+}
+
+export function hasVideo(item: CanvasItem): boolean {
+  return !!item.videoSrc;
 }
 
 export function hasText(item: CanvasItem): boolean {
@@ -342,7 +349,7 @@ export const CanvasComponent = createComponent(
       document.body.removeChild(link);
     };
 
-    // Drag handling — ignore clicks originating from the Open button
+    // Drag handling — ignore clicks originating from card controls
     const handleMouseDown = (item: CanvasItem, e: MouseEvent) => {
       if (e.button !== 0) return;
 
@@ -352,7 +359,7 @@ export const CanvasComponent = createComponent(
         return;
       }
 
-      if ((e.target as HTMLElement).closest("[data-card-open]")) return;
+      if ((e.target as HTMLElement).closest("[data-card-open], [data-card-video-control]")) return;
       e.stopPropagation();
       props.interaction$?.next("start");
 
@@ -668,6 +675,16 @@ export const CanvasComponent = createComponent(
           <div class="card-dialog-body">
             <div class="card-dialog-layout">
               <div class="card-dialog-image-col">
+                ${card.videoSrc
+                  ? html`<video
+                      class="card-dialog-video"
+                      src="${card.videoSrc}"
+                      poster="${card.videoPosterSrc || ""}"
+                      controls
+                      playsinline
+                      preload="metadata"
+                    ></video>`
+                  : html``}
                 ${card.imageSrc
                   ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
                   : card.imagePrompt
@@ -679,7 +696,9 @@ export const CanvasComponent = createComponent(
                         @image-loaded=${(e: CustomEvent) =>
                           updateCard$.next({ id: card.id, updates: { imageSrc: e.detail.url } })}
                       ></generative-image>`
-                    : html`<div class="card-dialog-placeholder">No image</div>`}
+                    : card.videoSrc
+                      ? html``
+                      : html`<div class="card-dialog-placeholder">No media</div>`}
               </div>
               <div class="card-dialog-info-col">
                 <label>Title</label>
