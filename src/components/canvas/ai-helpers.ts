@@ -29,7 +29,9 @@ function extractDataFromDataUrl(dataUrl: string): { mimeType: string; data: stri
   return { mimeType: matches[1], data: matches[2] };
 }
 
-function extractInteractionText(steps: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>): string {
+function extractInteractionText(
+  steps: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>,
+): string {
   return steps
     .filter((step) => step.type === "model_output")
     .flatMap((step) => step.content || [])
@@ -181,7 +183,7 @@ Your output must be a JSON object with two fields:
 - "body": a concise, compelling description (1-2 sentences)
 
 Return ONLY the JSON object. Do not include any other text or markdown formatting.
-Example: {"title": "...", "body": "..."}`
+Example: {"title": "...", "body": "..."}`,
         });
 
         if (input.oldImageSrc) {
@@ -190,7 +192,7 @@ Example: {"title": "...", "body": "..."}`
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
               type: "text",
-              text: "This is the original (old) image before modification."
+              text: "This is the original (old) image before modification.",
             });
             parts.push({
               type: "image",
@@ -208,7 +210,7 @@ Example: {"title": "...", "body": "..."}`
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
               type: "text",
-              text: "This is the refined (new) image after modification."
+              text: "This is the refined (new) image after modification.",
             });
             parts.push({
               type: "image",
@@ -245,7 +247,6 @@ Example: {"title": "...", "body": "..."}`
       } finally {
         progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
-    })()
+    })(),
   );
 }
-

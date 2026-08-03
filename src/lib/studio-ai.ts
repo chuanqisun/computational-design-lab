@@ -371,10 +371,7 @@ export async function revise(params: ReviseParams) {
       }
     }
 
-    conversationHistory$.next([
-      ...contents,
-      { role: "model", content: [{ type: "text", text: accumulated }] },
-    ]);
+    conversationHistory$.next([...contents, { role: "model", content: [{ type: "text", text: accumulated }] }]);
     editInstructions$.next("");
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);

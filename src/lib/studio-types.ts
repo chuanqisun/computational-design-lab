@@ -1,8 +1,6 @@
 import type { BehaviorSubject, Subject } from "rxjs";
 
-export type StudioContent =
-  | { type: "text"; text: string }
-  | { type: "image"; data: string; mime_type: string };
+export type StudioContent = { type: "text"; text: string } | { type: "image"; data: string; mime_type: string };
 
 export interface StudioTurn {
   role: "user" | "model";
