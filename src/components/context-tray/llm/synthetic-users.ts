@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel, Type, type Schema } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
 import type { CanvasItem } from "../../canvas/canvas.component";
@@ -14,6 +14,15 @@ export interface Persona {
 export interface RankingResult {
   rankedItemIds: string[];
   feedback: string;
+}
+
+function getInteractionText(outputs: Interactions.Step[] | undefined): string {
+  return (outputs || [])
+    .filter((output): output is Interactions.ModelOutputStep => output.type === "model_output")
+    .flatMap((output) => output.content || [])
+    .filter((content): content is Interactions.TextContent => content.type === "text")
+    .map((content) => content.text)
+    .join("");
 }
 
 export function generatePersonas$({
@@ -49,18 +58,18 @@ export function generatePersonas$({
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const segmentText = segment && segment !== "All" ? ` in the segment: ${segment}` : "";
-        const schema: Schema = {
-          type: Type.OBJECT,
+        const schema = {
+          type: "object",
           properties: {
             personas: {
-              type: Type.ARRAY,
+              type: "array",
               items: {
-                type: Type.OBJECT,
+                type: "object",
                 properties: {
-                  name: { type: Type.STRING },
-                  age: { type: Type.NUMBER },
-                  occupation: { type: Type.STRING },
-                  description: { type: Type.STRING },
+                  name: { type: "string" },
+                  age: { type: "number" },
+                  occupation: { type: "string" },
+                  description: { type: "string" },
                 },
                 required: ["name", "age", "occupation", "description"],
               },
@@ -71,18 +80,17 @@ export function generatePersonas$({
 
         const prompt = `Generate ${numUsers} synthetic user personas${segmentText}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`;
 
-        const stream = await ai.models.generateContentStream({
+        const stream = await ai.interactions.create({
           model: "gemini-3-flash-preview",
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: schema,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-          },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          input: prompt,
+          response_format: { type: "text", mime_type: "application/json", schema },
+          generation_config: { thinking_level: "minimal" },
+          store: false,
+          stream: true,
         });
 
-        for await (const chunk of stream) {
-          if (chunk.text) parser.write(chunk.text);
+        for await (const event of stream) {
+          if (event.event_type === "step.delta" && event.delta.type === "text") parser.write(event.delta.text);
         }
 
         subscriber.complete();
@@ -112,14 +120,14 @@ export function rankDesigns$({
     (async () => {
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
-        const schema: Schema = {
-          type: Type.OBJECT,
+        const schema = {
+          type: "object",
           properties: {
             rankedItemIds: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
+              type: "array",
+              items: { type: "string" },
             },
-            feedback: { type: Type.STRING },
+            feedback: { type: "string" },
           },
           required: ["rankedItemIds", "feedback"],
         };
@@ -135,28 +143,26 @@ export function rankDesigns$({
 
         const userPrompt = `Here are ${items.length} design concepts:\n\n${itemsDescription}\n\nRank these designs from least to most "${trait}" based on your personal perspective. Return all ${items.length} item IDs in order from least ${trait} (first) to most ${trait} (last). Also write 1-2 sentences of feedback explaining your ranking.`;
 
-        const parts: any[] = [{ text: userPrompt }];
+        const parts: Interactions.Content[] = [{ type: "text", text: userPrompt }];
 
         for (const item of items) {
           if (item.imageSrc) {
             const base64 = item.imageSrc.replace(/^data:image\/\w+;base64,/, "");
             const mimeType = item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
-            parts.push({ inlineData: { data: base64, mimeType } });
+            parts.push({ type: "image", data: base64, mime_type: mimeType });
           }
         }
 
-        const response = await ai.models.generateContent({
+        const response = await ai.interactions.create({
           model: "gemini-3-flash-preview",
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: schema,
-            systemInstruction: systemPrompt,
-            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-          },
-          contents: [{ role: "user", parts }],
+          input: parts,
+          system_instruction: systemPrompt,
+          response_format: { type: "text", mime_type: "application/json", schema },
+          generation_config: { thinking_level: "minimal" },
+          store: false,
         });
 
-        const text = response.text;
+        const text = getInteractionText(response.steps);
         if (text) {
           const result = JSON.parse(text) as RankingResult;
           const validIds = new Set(items.map((i) => i.id));

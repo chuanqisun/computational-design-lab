@@ -1,5 +1,13 @@
-import type { Content } from "@google/genai";
 import type { BehaviorSubject, Subject } from "rxjs";
+
+export type StudioContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mime_type: string };
+
+export interface StudioTurn {
+  role: "user" | "model";
+  content: StudioContent[];
+}
 
 export interface PhotoCard {
   id: string;
@@ -48,7 +56,7 @@ export interface StudioState {
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
   editInstructions$: BehaviorSubject<string>;
-  conversationHistory$: BehaviorSubject<Content[]>;
+  conversationHistory$: BehaviorSubject<StudioTurn[]>;
   photoScene$: BehaviorSubject<string>;
   photoBrandGuide$: BehaviorSubject<string>;
   photoGallery$: BehaviorSubject<PhotoCard[]>;

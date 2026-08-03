@@ -42,33 +42,19 @@ export function testGeminiConnection(apiKey: string): Observable<string> {
     const ai = new GoogleGenAI({
       apiKey,
     });
-    const config = {
-      thinkingConfig: {
-        thinkingBudget: 0,
-      },
-    };
     const model = "gemini-2.5-flash-lite";
-    const contents = [
-      {
-        role: "user",
-        parts: [
-          {
-            text: "Please respond with exactly 'Gemini test success!'",
-          },
-        ],
-      },
-    ];
-
-    const response = await ai.models.generateContentStream({
+    const stream = await ai.interactions.create({
       model,
-      config,
-      contents,
+      input: "Please respond with exactly 'Gemini test success!'",
+      generation_config: { thinking_level: "minimal" },
+      store: false,
+      stream: true,
     });
 
     let fullText = "";
-    for await (const chunk of response) {
-      if (chunk.text) {
-        fullText += chunk.text;
+    for await (const event of stream) {
+      if (event.event_type === "step.delta" && event.delta.type === "text") {
+        fullText += event.delta.text;
       }
     }
 

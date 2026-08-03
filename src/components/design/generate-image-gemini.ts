@@ -1,4 +1,4 @@
-import { GoogleGenAI, type ContentListUnion, type GenerateContentConfig } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -43,63 +43,43 @@ export function generateImage(
         apiKey: connection.apiKey,
       });
 
-      const config: GenerateContentConfig = {
-        responseModalities: ["IMAGE"],
-        abortSignal: abortController.signal,
-        ...(options.aspectRatio
-          ? {
-              responseFormat: {
-                image: {
-                  aspectRatio: options.aspectRatio,
-                },
-              },
-            }
-          : {}),
-      };
       const model = options.model || "gemini-3.1-flash-image";
-      const contents: ContentListUnion = [
-        {
-          role: "user",
-          parts: [
-            ...(options.images?.map((image) => {
-              const [mimeTypePart, data] = image.split(",");
-              const mimeType = mimeTypePart.split(":")[1].split(";")[0];
-              return {
-                inlineData: {
-                  data,
-                  mimeType,
-                },
-              };
-            }) || []),
-            {
-              text: options.prompt,
-            },
-          ],
-        },
+      const input: Interactions.Content[] = [
+        ...(options.images?.map((image) => {
+          const [mimeTypePart, data] = image.split(",");
+          const mimeType = mimeTypePart.split(":")[1].split(";")[0];
+          return { type: "image" as const, data, mime_type: mimeType };
+        }) || []),
+        { type: "text", text: options.prompt },
       ];
 
-      const response = await ai.models.generateContentStream({
-        model,
-        config,
-        contents,
-      });
+      const response = await ai.interactions.create(
+        {
+          model,
+          input,
+          response_modalities: ["image"],
+          ...(options.aspectRatio
+            ? { response_format: { type: "image" as const, aspect_ratio: options.aspectRatio } }
+            : {}),
+          store: false,
+          stream: true,
+        },
+        { signal: abortController.signal },
+      );
 
-      let imageUrls: string[] = [];
+      const images = new Map<number, { mimeType: string; data: string }>();
 
-      for await (const chunk of response) {
-        if (!chunk.candidates || !chunk.candidates[0].content || !chunk.candidates[0].content.parts) {
-          continue;
-        }
+      for await (const event of response) {
+        if (event.event_type !== "step.delta" || event.delta.type !== "image" || !event.delta.data) continue;
 
-        const parts = chunk.candidates[0].content.parts;
-        for (const part of parts) {
-          if (part.inlineData) {
-            const { mimeType, data } = part.inlineData;
-            const imageUrl = `data:${mimeType};base64,${data}`;
-            imageUrls.push(imageUrl);
-          }
-        }
+        const current = images.get(event.index);
+        images.set(event.index, {
+          mimeType: event.delta.mime_type || current?.mimeType || "image/png",
+          data: `${current?.data || ""}${event.delta.data}`,
+        });
       }
+
+      const imageUrls = [...images.values()].map(({ mimeType, data }) => `data:${mimeType};base64,${data}`);
 
       if (imageUrls.length > 0) {
         subscriber.next({

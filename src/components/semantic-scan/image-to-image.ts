@@ -1,4 +1,4 @@
-import { GoogleGenAI, type GenerateContentConfig } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Observable, from } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -9,9 +9,6 @@ export function imageToimage(input: { instruction: string; image: string; apiKey
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
         const model = "gemini-3.1-flash-lite-image";
-        const config: GenerateContentConfig = {
-          responseModalities: ["IMAGE"],
-        };
 
         // Helper to parse data URL
         const parseDataUrl = (dataUrl: string) => {
@@ -23,45 +20,30 @@ export function imageToimage(input: { instruction: string; image: string; apiKey
         // Add the image to parts
         const { mimeType, data } = parseDataUrl(input.image);
 
-        const response = await ai.models.generateContentStream({
+        const response = await ai.interactions.create({
           model,
-          config,
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  inlineData: { mimeType, data },
-                },
-                {
-                  text: input.instruction,
-                },
-              ],
-            },
+          input: [
+            { type: "image", mime_type: mimeType, data },
+            { type: "text", text: input.instruction },
           ],
+          response_modalities: ["image"],
+          store: false,
+          stream: true,
         });
 
-        let imageUrls: string[] = [];
-        for await (const chunk of response) {
-          if (chunk.usageMetadata?.totalTokenCount !== undefined) {
-            console.log("Usage metadata:", chunk.usageMetadata);
-          }
+        const images = new Map<number, { mimeType: string; data: string }>();
+        for await (const event of response) {
+          if (event.event_type !== "step.delta" || event.delta.type !== "image" || !event.delta.data) continue;
 
-          if (!chunk.candidates || !chunk.candidates[0].content || !chunk.candidates[0].content.parts) {
-            continue;
-          }
-
-          const parts = chunk.candidates[0].content.parts;
-          for (const part of parts) {
-            if (part.inlineData) {
-              const { mimeType, data } = part.inlineData;
-              const imageUrl = `data:${mimeType};base64,${data}`;
-              imageUrls.push(imageUrl);
-            }
-          }
+          const current = images.get(event.index);
+          images.set(event.index, {
+            mimeType: event.delta.mime_type || current?.mimeType || "image/png",
+            data: `${current?.data || ""}${event.delta.data}`,
+          });
         }
 
-        return imageUrls[0] || "";
+        const image = images.values().next().value;
+        return image ? `data:${image.mimeType};base64,${image.data}` : "";
       } finally {
         progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
       }

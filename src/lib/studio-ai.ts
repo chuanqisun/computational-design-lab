@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, type Content } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import type { BehaviorSubject } from "rxjs";
 import { loadApiKeys } from "../components/connections/storage";
@@ -6,7 +6,7 @@ import { colors } from "../components/material-library/colors";
 import { materials } from "../components/material-library/materials";
 import { mechanisms } from "../components/material-library/mechanisms";
 import { shapes } from "../components/material-library/shapes";
-import type { PhotoCard, ScannedPhoto, ScanResult } from "./studio-types";
+import type { PhotoCard, ScannedPhoto, ScanResult, StudioContent, StudioTurn } from "./studio-types";
 import { colorsByName, materialsById, mechanismsById, shapesById } from "./studio-utils";
 
 const studioSystemPrompt = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
@@ -51,6 +51,14 @@ const getPhotoStageSystemPrompt = (brandGuide: string) => {
     : undefined;
 };
 
+const getInteractionText = (outputs: Interactions.Step[] | undefined) =>
+  (outputs || [])
+    .filter((output): output is Interactions.ModelOutputStep => output.type === "model_output")
+    .flatMap((output) => output.content || [])
+    .filter((content): content is Interactions.TextContent => content.type === "text")
+    .map((content) => content.text)
+    .join("");
+
 export async function runScanAI(
   photo: ScannedPhoto,
   scannedPhotos$: BehaviorSubject<ScannedPhoto[]>,
@@ -64,51 +72,51 @@ export async function runScanAI(
   const colorNames = colors.map((c) => c.name);
 
   const schema = {
-    type: Type.OBJECT,
+    type: "object",
     properties: {
       shapes: {
-        type: Type.ARRAY,
+        type: "array",
         items: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            id: { type: Type.STRING, enum: shapeIds },
-            name: { type: Type.STRING },
-            description: { type: Type.STRING },
+            id: { type: "string", enum: shapeIds },
+            name: { type: "string" },
+            description: { type: "string" },
           },
           required: ["id", "name", "description"],
         },
       },
       materials: {
-        type: Type.ARRAY,
+        type: "array",
         items: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            id: { type: Type.STRING, enum: materialIds },
-            name: { type: Type.STRING },
-            visual: { type: Type.STRING },
+            id: { type: "string", enum: materialIds },
+            name: { type: "string" },
+            visual: { type: "string" },
           },
           required: ["id", "name", "visual"],
         },
       },
       mechanisms: {
-        type: Type.ARRAY,
+        type: "array",
         items: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            id: { type: Type.STRING, enum: mechanismIds },
-            name: { type: Type.STRING },
-            interaction: { type: Type.STRING },
+            id: { type: "string", enum: mechanismIds },
+            name: { type: "string" },
+            interaction: { type: "string" },
           },
           required: ["id", "name", "interaction"],
         },
       },
       colors: {
-        type: Type.ARRAY,
+        type: "array",
         items: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            name: { type: Type.STRING, enum: colorNames },
-            hex: { type: Type.STRING },
+            name: { type: "string", enum: colorNames },
+            hex: { type: "string" },
           },
           required: ["name", "hex"],
         },
@@ -138,19 +146,16 @@ For each identified feature, return:
 Pick only items that are visibly present on the product in the photo. Return empty arrays for categories not found.`;
 
   try {
-    const response = await ai.models.generateContentStream({
+    const response = await ai.interactions.create({
       model: "gemini-2.5-flash",
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        thinkingConfig: { thinkingBudget: 1024 },
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ inlineData: { data: base64Data, mimeType } }, { text: promptText }],
-        },
+      input: [
+        { type: "image", data: base64Data, mime_type: mimeType },
+        { type: "text", text: promptText },
       ],
+      response_format: { type: "text", mime_type: "application/json", schema },
+      generation_config: { thinking_level: "low" },
+      store: false,
+      stream: true,
     });
 
     const parser = new JSONParser();
@@ -170,9 +175,8 @@ Pick only items that are visibly present on the product in the photo. Return emp
       }
     };
 
-    for await (const chunk of response) {
-      const textPart = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (textPart) parser.write(textPart);
+    for await (const event of response) {
+      if (event.event_type === "step.delta" && event.delta.type === "text") parser.write(event.delta.text);
     }
 
     return result;
@@ -196,7 +200,7 @@ export interface SynthesizeParams {
   scannedPhotos: ScannedPhoto[];
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
-  conversationHistory$: BehaviorSubject<Content[]>;
+  conversationHistory$: BehaviorSubject<StudioTurn[]>;
 }
 
 export async function synthesize(params: SynthesizeParams) {
@@ -269,37 +273,39 @@ export async function synthesize(params: SynthesizeParams) {
       : "";
   const userText = `Given the following design selections, generate the scene XML.\n\n${inputJson}${photoNote}${custom ? `\n\nAdditional instructions:\n${custom}` : ""}`;
 
-  const userParts: Content["parts"] = [];
+  const userParts: StudioContent[] = [];
   for (const photo of photos) {
     const base64Data = photo.fullDataUrl.replace(/^data:image\/\w+;base64,/, "");
     const mimeType = photo.fullDataUrl.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
-    userParts.push({ inlineData: { data: base64Data, mimeType } });
+    userParts.push({ type: "image", data: base64Data, mime_type: mimeType });
   }
-  userParts.push({ text: userText });
+  userParts.push({ type: "text", text: userText });
 
-  const userMessage: Content = { role: "user", parts: userParts };
+  const userMessage: StudioTurn = { role: "user", content: userParts };
 
   isSynthesizing$.next(true);
   synthesisOutput$.next("");
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContentStream({
+    const response = await ai.interactions.create({
       model: "gemini-3-flash-preview",
-      config: {
-        thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: getStudioSystemPrompt(brandGuide),
-      },
-      contents: [userMessage],
+      input: [userMessage],
+      system_instruction: getStudioSystemPrompt(brandGuide),
+      generation_config: { thinking_level: "minimal" },
+      store: false,
+      stream: true,
     });
 
     let accumulated = "";
-    for await (const chunk of response) {
-      accumulated += chunk.text ?? "";
-      synthesisOutput$.next(accumulated);
+    for await (const event of response) {
+      if (event.event_type === "step.delta" && event.delta.type === "text") {
+        accumulated += event.delta.text;
+        synthesisOutput$.next(accumulated);
+      }
     }
 
-    conversationHistory$.next([userMessage, { role: "model", parts: [{ text: accumulated }] }]);
+    conversationHistory$.next([userMessage, { role: "model", content: [{ type: "text", text: accumulated }] }]);
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
   } finally {
@@ -312,7 +318,7 @@ export interface ReviseParams {
   brandGuide: string;
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
-  conversationHistory$: BehaviorSubject<Content[]>;
+  conversationHistory$: BehaviorSubject<StudioTurn[]>;
   editInstructions$: BehaviorSubject<string>;
 }
 
@@ -332,10 +338,13 @@ export async function revise(params: ReviseParams) {
   const history = conversationHistory$.value;
   if (history.length === 0) return;
 
-  const reviseMessage: Content = {
+  const reviseMessage: StudioTurn = {
     role: "user",
-    parts: [
-      { text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}` },
+    content: [
+      {
+        type: "text",
+        text: `Revise the XML based on these instructions. Output only the updated XML, nothing else.\n\n${editText}`,
+      },
     ],
   };
   const contents = [...history, reviseMessage];
@@ -345,22 +354,27 @@ export async function revise(params: ReviseParams) {
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContentStream({
+    const response = await ai.interactions.create({
       model: "gemini-3-flash-preview",
-      config: {
-        thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: getStudioSystemPrompt(brandGuide),
-      },
-      contents,
+      input: contents,
+      system_instruction: getStudioSystemPrompt(brandGuide),
+      generation_config: { thinking_level: "minimal" },
+      store: false,
+      stream: true,
     });
 
     let accumulated = "";
-    for await (const chunk of response) {
-      accumulated += chunk.text ?? "";
-      synthesisOutput$.next(accumulated);
+    for await (const event of response) {
+      if (event.event_type === "step.delta" && event.delta.type === "text") {
+        accumulated += event.delta.text;
+        synthesisOutput$.next(accumulated);
+      }
     }
 
-    conversationHistory$.next([...contents, { role: "model", parts: [{ text: accumulated }] }]);
+    conversationHistory$.next([
+      ...contents,
+      { role: "model", content: [{ type: "text", text: accumulated }] },
+    ]);
     editInstructions$.next("");
   } catch (e) {
     synthesisOutput$.next(`Error: ${e instanceof Error ? e.message : String(e)}`);
@@ -422,16 +436,15 @@ ${currentXml}
 
 Photo scene: ${scene}`;
 
-    const response = await ai.models.generateContent({
+    const response = await ai.interactions.create({
       model: "gemini-3-flash-preview",
-      config: {
-        thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: getPhotoStageSystemPrompt(brandGuide),
-      },
-      contents: [{ role: "user", parts: [{ text: promptText }] }],
+      input: promptText,
+      system_instruction: getPhotoStageSystemPrompt(brandGuide),
+      generation_config: { thinking_level: "minimal" },
+      store: false,
     });
 
-    const sceneXml = response.text?.trim() || "";
+    const sceneXml = getInteractionText(response.steps).trim();
 
     const updatedGallery = photoGallery$.value.map((item) =>
       item.id === outputId ? { ...item, prompt: sceneXml, isGenerating: false } : item,
@@ -454,27 +467,19 @@ async function generateSoundDescription(
   photoGallery$: BehaviorSubject<PhotoCard[]>,
 ) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await ai.interactions.create({
       model: "gemini-3-flash-preview",
-      config: { thinkingConfig: { thinkingBudget: 0 } },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
+      input: `Given the following product scene XML and an animation prompt, generate a short sound description that would accompany this animation. Describe the sounds naturally (e.g., mechanical clicks, liquid pouring, material textures). Output ONLY the sound description text, nothing else.
 
 Scene XML:
 ${photoXml}
 
 Animation prompt: ${animationPrompt}`,
-            },
-          ],
-        },
-      ],
+      generation_config: { thinking_level: "minimal" },
+      store: false,
     });
 
-    const soundDescription = response.text?.trim() || "";
+    const soundDescription = getInteractionText(response.steps).trim();
     const gallery = photoGallery$.value;
     photoGallery$.next(gallery.map((p) => (p.id === photoId ? { ...p, soundDescription } : p)));
   } catch (e) {

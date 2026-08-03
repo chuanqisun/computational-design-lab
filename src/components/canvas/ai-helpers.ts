@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { from, map, Observable, switchMap } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -29,39 +29,35 @@ function extractDataFromDataUrl(dataUrl: string): { mimeType: string; data: stri
   return { mimeType: matches[1], data: matches[2] };
 }
 
+function extractInteractionText(steps: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>): string {
+  return steps
+    .filter((step) => step.type === "model_output")
+    .flatMap((step) => step.content || [])
+    .filter((content) => content.type === "text")
+    .map((content) => content.text || "")
+    .join("");
+}
+
 export function getCaption(src: string, apiKey: string): Observable<string> {
   return from(urlToBase64(src)).pipe(
     switchMap(async (dataUrl) => {
       const { mimeType, data } = extractDataFromDataUrl(dataUrl);
       const ai = new GoogleGenAI({ apiKey });
 
-      const response = await ai.models.generateContent({
+      const interaction = await ai.interactions.create({
         model: "gemini-3-flash-preview",
-        config: {
-          responseModalities: ["TEXT"],
-          thinkingConfig: {
-            thinkingLevel: ThinkingLevel.MINIMAL,
-          },
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: "Describe this image in a short caption." },
-              {
-                inlineData: {
-                  mimeType,
-                  data,
-                },
-              },
-            ],
-          },
+        input: [
+          { type: "text", text: "Describe this image in a short caption." },
+          { type: "image", mime_type: mimeType, data },
         ],
+        response_modalities: ["text"],
+        generation_config: { thinking_level: "minimal" },
+        store: false,
       });
-      return response;
+      return interaction;
     }),
     map((response) => {
-      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = extractInteractionText(response.steps);
       if (!text) throw new Error("No caption generated");
       return text;
     }),
@@ -79,20 +75,14 @@ export function enhancePrompt(originalPrompt: string, cardContext: string, apiKe
       
       Keep it descriptive but concise. Return ONLY the enhanced prompt.`;
 
-      const response = await ai.models.generateContent({
+      const interaction = await ai.interactions.create({
         model: "gemini-3-flash-preview",
-        config: {
-          responseModalities: ["TEXT"],
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
+        input: prompt,
+        response_modalities: ["text"],
+        store: false,
       });
 
-      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = extractInteractionText(interaction.steps);
       if (!text) throw new Error("No enhanced prompt generated");
       return text;
     })(),
@@ -109,7 +99,7 @@ export interface CardContent {
 export function fillCard(content: CardContent, apiKey: string): Observable<Partial<CardContent>> {
   return from(
     (async () => {
-      const parts: any[] = [];
+      const parts: Interactions.Content[] = [];
       let prompt = `I have a card with the following content:
 Title: ${content.title || "(missing)"}
 Body: ${content.body || "(missing)"}
@@ -124,17 +114,16 @@ Please generate the missing fields based on the available information.
 Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
 Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
 
-      parts.push({ text: prompt });
+      parts.push({ type: "text", text: prompt });
 
       if (content.imageSrc) {
         try {
           const dataUrl = await urlToBase64(content.imageSrc);
           const { mimeType, data } = extractDataFromDataUrl(dataUrl);
           parts.push({
-            inlineData: {
-              mimeType,
-              data,
-            },
+            type: "image",
+            mime_type: mimeType,
+            data,
           });
         } catch (e) {
           console.error("Failed to process image for AI", e);
@@ -143,20 +132,14 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
+      const interaction = await ai.interactions.create({
         model: "gemini-3-flash-preview",
-        config: {
-          responseMimeType: "application/json",
-        },
-        contents: [
-          {
-            role: "user",
-            parts,
-          },
-        ],
+        input: parts,
+        response_format: { type: "text", mime_type: "application/json" },
+        store: false,
       });
 
-      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = extractInteractionText(interaction.steps);
       if (!text) return {};
 
       try {
@@ -181,9 +164,10 @@ export function generateRefinedCardText(input: {
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const parts: Part[] = [];
+        const parts: Interactions.Content[] = [];
 
         parts.push({
+          type: "text",
           text: `You are an AI assistant helping to refine a card's content after an image modification.
 We modified an original image based on user drawing and feedback to produce a refined image.
 Original Card Title: "${input.oldTitle || ""}"
@@ -205,10 +189,13 @@ Example: {"title": "...", "body": "..."}`
             const dataUrl = await urlToBase64(input.oldImageSrc);
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
+              type: "text",
               text: "This is the original (old) image before modification."
             });
             parts.push({
-              inlineData: { mimeType, data }
+              type: "image",
+              mime_type: mimeType,
+              data,
             });
           } catch (e) {
             console.error("Failed to process old image for text generation", e);
@@ -220,30 +207,27 @@ Example: {"title": "...", "body": "..."}`
             const dataUrl = await urlToBase64(input.newImageSrc);
             const { mimeType, data } = extractDataFromDataUrl(dataUrl);
             parts.push({
+              type: "text",
               text: "This is the refined (new) image after modification."
             });
             parts.push({
-              inlineData: { mimeType, data }
+              type: "image",
+              mime_type: mimeType,
+              data,
             });
           } catch (e) {
             console.error("Failed to process new image for text generation", e);
           }
         }
 
-        const response = await ai.models.generateContent({
+        const interaction = await ai.interactions.create({
           model: "gemini-3-flash-preview",
-          config: {
-            responseMimeType: "application/json",
-          },
-          contents: [
-            {
-              role: "user",
-              parts,
-            },
-          ],
+          input: parts,
+          response_format: { type: "text", mime_type: "application/json" },
+          store: false,
         });
 
-        const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+        const text = extractInteractionText(interaction.steps);
         if (!text) {
           return { title: input.oldTitle || "Untitled", body: input.oldBody || "" };
         }

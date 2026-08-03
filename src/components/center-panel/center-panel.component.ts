@@ -1,9 +1,8 @@
-import type { Content } from "@google/genai";
 import { html } from "lit-html";
 import type { BehaviorSubject } from "rxjs";
 import { combineLatest, map } from "rxjs";
 import { revise, synthesize, takePhoto } from "../../lib/studio-ai";
-import type { PhotoCard, ScannedPhoto } from "../../lib/studio-types";
+import type { PhotoCard, ScannedPhoto, StudioTurn } from "../../lib/studio-types";
 import { materialsById, mechanismsById, shapesById } from "../../lib/studio-utils";
 import { createComponent } from "../../sdk/create-component";
 import { xmlEditor } from "../../sdk/xml-editor";
@@ -22,7 +21,7 @@ export interface CenterPanelProps {
   synthesisOutput$: BehaviorSubject<string>;
   isSynthesizing$: BehaviorSubject<boolean>;
   editInstructions$: BehaviorSubject<string>;
-  conversationHistory$: BehaviorSubject<Content[]>;
+  conversationHistory$: BehaviorSubject<StudioTurn[]>;
   photoScene$: BehaviorSubject<string>;
   photoBrandGuide$: BehaviorSubject<string>;
   photoGallery$: BehaviorSubject<PhotoCard[]>;

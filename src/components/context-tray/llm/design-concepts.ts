@@ -1,4 +1,4 @@
-import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
 import type { CanvasItem } from "../../canvas/canvas.component";
@@ -39,17 +39,17 @@ export function designConcepts$(inputs: {
     (async () => {
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
-        const schema: Schema = {
-          type: Type.OBJECT,
+        const schema = {
+          type: "object",
           properties: {
             designs: {
-              type: Type.ARRAY,
+              type: "array",
               items: {
-                type: Type.OBJECT,
+                type: "object",
                 properties: {
-                  title: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                  imagePrompt: { type: Type.STRING },
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  imagePrompt: { type: "string" },
                 },
                 required: ["title", "description", "imagePrompt"],
               },
@@ -58,13 +58,14 @@ export function designConcepts$(inputs: {
           required: ["designs"],
         };
 
-        const contents = inputs.items.flatMap((item) => {
-          const parts: any[] = [];
+        const contents: Interactions.Content[] = inputs.items.flatMap((item) => {
+          const parts: Interactions.Content[] = [];
           if (item.imageSrc) {
-            parts.push({ inlineData: { mimeType: "image/jpeg", data: item.imageSrc.split(",")[1] } });
+            const mimeType = item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
+            parts.push({ type: "image", mime_type: mimeType, data: item.imageSrc.split(",")[1] });
           }
           if (item.body) {
-            parts.push({ text: `Title: ${item.title || ""}\nContent: ${item.body}` });
+            parts.push({ type: "text", text: `Title: ${item.title || ""}\nContent: ${item.body}` });
           }
           return parts;
         });
@@ -89,25 +90,21 @@ For each design, provide:
 2. A separate 'imagePrompt' optimized for generating a high-quality, keyshot-style product rendering of this design. Include details on lighting, camera angle, and material properties for a photorealistic studio look.
 `;
 
-        contents.push({ text: userPrompt });
+        contents.push({ type: "text", text: userPrompt });
 
-        const stream = await ai.models.generateContentStream({
+        const stream = await ai.interactions.create({
           model: "gemini-3-flash-preview",
-          contents: [{ role: "user", parts: contents }],
-          config: {
-            systemInstruction: systemPrompt,
-            responseMimeType: "application/json",
-            responseSchema: schema,
-            thinkingConfig: {
-              thinkingLevel: ThinkingLevel.MINIMAL,
-            },
-          },
+          input: contents,
+          system_instruction: systemPrompt,
+          response_format: { type: "text", mime_type: "application/json", schema },
+          generation_config: { thinking_level: "minimal" },
+          store: false,
+          stream: true,
         });
 
-        for await (const chunk of stream) {
-          const text = chunk.text;
-          if (text) {
-            parser.write(text);
+        for await (const event of stream) {
+          if (event.event_type === "step.delta" && event.delta.type === "text") {
+            parser.write(event.delta.text);
           }
         }
 

@@ -1,4 +1,3 @@
-import type { Content } from "@google/genai";
 import { html, render } from "lit-html";
 import { BehaviorSubject, EMPTY, from, mergeMap, scan, Subject } from "rxjs";
 import { CenterPanelComponent } from "./components/center-panel/center-panel.component";
@@ -9,7 +8,7 @@ import { GenerativeVideoElement } from "./components/generative-video/generative
 import { LeftPanelComponent } from "./components/left-panel/left-panel.component";
 import { clearPersistenceExcept, persistSubject } from "./lib/persistence";
 import { runScanAI } from "./lib/studio-ai";
-import type { PhotoCard, ScannedPhoto } from "./lib/studio-types";
+import type { PhotoCard, ScannedPhoto, StudioTurn } from "./lib/studio-types";
 import { createComponent } from "./sdk/create-component";
 import "./studio-page.css";
 
@@ -25,7 +24,7 @@ const synthesisBrandGuide$ = new BehaviorSubject<string>("");
 const synthesisOutput$ = new BehaviorSubject<string>("");
 const isSynthesizing$ = new BehaviorSubject<boolean>(false);
 const editInstructions$ = new BehaviorSubject<string>("");
-const conversationHistory$ = new BehaviorSubject<Content[]>([]);
+const conversationHistory$ = new BehaviorSubject<StudioTurn[]>([]);
 const photoScene$ = new BehaviorSubject<string>("Product stand by itself");
 const photoBrandGuide$ = new BehaviorSubject<string>("");
 const photoGallery$ = new BehaviorSubject<PhotoCard[]>([]);

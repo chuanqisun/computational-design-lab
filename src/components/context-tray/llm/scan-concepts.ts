@@ -1,4 +1,4 @@
-import { GoogleGenAI, type Schema, ThinkingLevel, Type } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
 import type { CanvasItem } from "../../canvas/canvas.component";
@@ -34,16 +34,16 @@ export function scanConcepts$(inputs: {
     (async () => {
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
-        const schema: Schema = {
-          type: Type.OBJECT,
+        const schema = {
+          type: "object",
           properties: {
             concepts: {
-              type: Type.ARRAY,
+              type: "array",
               items: {
-                type: Type.OBJECT,
+                type: "object",
                 properties: {
-                  title: { type: Type.STRING },
-                  description: { type: Type.STRING },
+                  title: { type: "string" },
+                  description: { type: "string" },
                 },
                 required: ["title", "description"],
               },
@@ -54,35 +54,31 @@ export function scanConcepts$(inputs: {
 
         const developerPrompt = `Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear title and one short sentence description.`;
 
-        const parts: any[] = [{ text: inputs.instruction }];
+        const parts: Interactions.Content[] = [{ type: "text", text: inputs.instruction }];
 
         for (const item of inputs.items) {
           if (item.imageSrc) {
             const base64Data = item.imageSrc.replace(/^data:image\/\w+;base64,/, "");
             const mimeType = item.imageSrc.match(/^data:(image\/\w+);/)?.[1] || "image/jpeg";
-            parts.push({ inlineData: { data: base64Data, mimeType } });
+            parts.push({ type: "image", data: base64Data, mime_type: mimeType });
           }
           if (item.body) {
-            parts.push({ text: `${item.title || ""}: ${item.body}` });
+            parts.push({ type: "text", text: `${item.title || ""}: ${item.body}` });
           }
         }
 
-        const response = await ai.models.generateContentStream({
+        const response = await ai.interactions.create({
           model: "gemini-3-flash-preview",
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: schema,
-            systemInstruction: developerPrompt,
-            thinkingConfig: {
-              thinkingLevel: ThinkingLevel.MINIMAL,
-            },
-          },
-          contents: [{ role: "user", parts }],
+          input: parts,
+          system_instruction: developerPrompt,
+          response_format: { type: "text", mime_type: "application/json", schema },
+          generation_config: { thinking_level: "minimal" },
+          store: false,
+          stream: true,
         });
 
-        for await (const chunk of response) {
-          const textPart = chunk.text;
-          if (textPart) parser.write(textPart);
+        for await (const event of response) {
+          if (event.event_type === "step.delta" && event.delta.type === "text") parser.write(event.delta.text);
         }
         subscriber.complete();
       } catch (error) {
