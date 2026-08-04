@@ -114,7 +114,7 @@ describe("animate request model", () => {
 
   it("builds one explicit user input step and controls output option omission", () => {
     const base = {
-      contents: [{ type: "text", text: "Card text" }] as const,
+      contents: [{ type: "text" as const, text: "Card text" }],
       instruction: "Animate this",
       duration: "default" as const,
       task: "default" as const,

@@ -294,12 +294,12 @@ export async function prepareAnimateContents(
 }
 
 export function buildAnimateRequest(input: {
-  contents: Interactions.Content[];
+  contents: readonly Interactions.Content[];
   instruction: string;
   aspectRatio: AnimateAspectRatio;
   duration: AnimateDuration;
   task: AnimateTask;
-}): Interactions.CreateModelInteractionParamsNonStreaming {
+}): Interactions.CreateModelInteractionParamsNonStreaming & { stream: false } {
   const steps: Interactions.Step[] = [
     {
       type: "user_input",
@@ -318,6 +318,7 @@ export function buildAnimateRequest(input: {
     },
     ...(input.task === "default" ? {} : { generation_config: { video_config: { task: input.task } } }),
     store: false,
+    stream: false,
   };
 }
 
