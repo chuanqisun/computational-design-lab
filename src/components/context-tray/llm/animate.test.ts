@@ -6,6 +6,7 @@ import {
   combineAnimateInstruction,
   extractAnimateVideo,
   getAnimatePreflightErrors,
+  getAnimateImageTokens,
   prepareAnimateContents,
   resolveAnimateInputs,
   setAnimateImageRole,
@@ -71,6 +72,25 @@ describe("animate request model", () => {
     );
   });
 
+  it("keeps copyable role tags aligned with annotated starting-frame macros", () => {
+    const { inputs } = resolveAnimateInputs([
+      item({ imageSrc: "one.png" }),
+      item({ imageSrc: "two.png" }),
+      item({ imageSrc: "three.png" }),
+    ]);
+    const roles = { Image1: "auto", Image2: "starting-frame", Image3: "reference" } as const;
+    const annotated = new Set(["Image2"]);
+
+    expect(getAnimateImageTokens(inputs, roles, annotated)).toEqual({
+      Image1: { primary: "<IMAGE_REF_1>" },
+      Image2: { primary: "<FIRST_FRAME>", annotation: "<IMAGE_REF_2>" },
+      Image3: { primary: "<IMAGE_REF_0>" },
+    });
+    expect(buildAnimateMacro(inputs, roles, annotated)).toBe(
+      "[# Sources <FIRST_FRAME>@Image2] [# References <IMAGE_REF_0>@Image3 <IMAGE_REF_2>@Image4]",
+    );
+  });
+
   it("validates API key, empty input, multiple videos, and unsupported video MIME types", () => {
     expect(getAnimatePreflightErrors([], false)).toEqual([
       "A Gemini API key is required.",
@@ -133,7 +153,7 @@ describe("animate request model", () => {
       item({ videoSrc: "data:video/mp4;base64,VIDEO" }),
     ]).inputs;
 
-    await expect(prepareAnimateContents(inputs, new Map())).resolves.toEqual([
+    await expect(prepareAnimateContents(inputs, new Map(), {})).resolves.toEqual([
       { type: "image", mime_type: "image/jpeg", data: "IMAGE" },
       { type: "text", text: "Body: Direction" },
       { type: "video", mime_type: "video/mp4", data: "VIDEO" },

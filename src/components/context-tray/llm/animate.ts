@@ -85,16 +85,60 @@ export function setAnimateImageRole(
   return next;
 }
 
-export function buildAnimateMacro(inputs: AnimateInput[], roles: Readonly<Record<string, AnimateImageRole>>): string {
+export interface AnimateImageTokens {
+  primary: string;
+  annotation?: string;
+}
+
+export function getAnimateImageTokens(
+  inputs: AnimateInput[],
+  roles: Readonly<Record<string, AnimateImageRole>>,
+  annotatedImageIds: ReadonlySet<string> = new Set(),
+): Record<string, AnimateImageTokens> {
   const images = inputs.filter((input): input is Extract<AnimateInput, { kind: "image" }> => input.kind === "image");
+  const tokens: Record<string, AnimateImageTokens> = {};
+  let referenceIndex = 0;
+
+  for (const image of images) {
+    if (roles[image.imageId] === "starting-frame") tokens[image.imageId] = { primary: "<FIRST_FRAME>" };
+  }
+  for (const role of ["reference", "auto"] as const) {
+    for (const image of images) {
+      if ((roles[image.imageId] || "auto") === role) {
+        tokens[image.imageId] = { primary: `<IMAGE_REF_${referenceIndex++}>` };
+      }
+    }
+  }
+
+  const annotatedStartingFrame = images.find(
+    (image) => roles[image.imageId] === "starting-frame" && annotatedImageIds.has(image.imageId),
+  );
+  if (annotatedStartingFrame) {
+    tokens[annotatedStartingFrame.imageId].annotation = `<IMAGE_REF_${referenceIndex}>`;
+  }
+
+  return tokens;
+}
+
+export function buildAnimateMacro(
+  inputs: AnimateInput[],
+  roles: Readonly<Record<string, AnimateImageRole>>,
+  annotatedImageIds: ReadonlySet<string> = new Set(),
+): string {
+  const images = inputs.filter((input): input is Extract<AnimateInput, { kind: "image" }> => input.kind === "image");
+  const tokens = getAnimateImageTokens(inputs, roles, annotatedImageIds);
   const startingFrame = images.find((image) => roles[image.imageId] === "starting-frame");
   const references = images.filter((image) => roles[image.imageId] === "reference");
+  const annotatedStartingFrame = startingFrame && annotatedImageIds.has(startingFrame.imageId) ? startingFrame : undefined;
   const groups: string[] = [];
 
   if (startingFrame) groups.push(`[# Sources <FIRST_FRAME>@${startingFrame.imageId}]`);
-  if (references.length) {
-    const entries = references.map((image, index) => `<IMAGE_REF_${index}>@${image.imageId}`).join(" ");
-    groups.push(`[# References ${entries}]`);
+  if (references.length || annotatedStartingFrame) {
+    const entries = references.map((image) => `${tokens[image.imageId].primary}@${image.imageId}`);
+    if (annotatedStartingFrame) {
+      entries.push(`${tokens[annotatedStartingFrame.imageId].annotation}@Image${images.length + 1}`);
+    }
+    groups.push(`[# References ${entries.join(" ")}]`);
   }
 
   return groups.join(" ");
@@ -198,8 +242,10 @@ async function flattenImage(source: { mimeType: string; data: string }, overlay:
 export async function prepareAnimateContents(
   inputs: AnimateInput[],
   annotatedImages: ReadonlyMap<string, HTMLCanvasElement>,
+  roles: Readonly<Record<string, AnimateImageRole>>,
 ): Promise<Interactions.Content[]> {
   const contents: Interactions.Content[] = [];
+  const annotatedStartingFrames: Interactions.Content[] = [];
 
   for (const input of inputs) {
     if (input.kind === "text") {
@@ -229,7 +275,13 @@ export async function prepareAnimateContents(
     }
 
     try {
-      contents.push({ type: "image", mime_type: "image/png", data: await flattenImage(source, overlay) });
+      const annotated = { type: "image" as const, mime_type: "image/png", data: await flattenImage(source, overlay) };
+      if (roles[input.imageId] === "starting-frame") {
+        contents.push({ type: "image", mime_type: source.mimeType || "image/png", data: source.data });
+        annotatedStartingFrames.push(annotated);
+      } else {
+        contents.push(annotated);
+      }
     } catch (error) {
       throw new Error(`${input.imageId} cannot be exported because its source does not allow canvas access.`, {
         cause: error,
@@ -237,7 +289,7 @@ export async function prepareAnimateContents(
     }
   }
 
-  return contents;
+  return [...contents, ...annotatedStartingFrames];
 }
 
 export function buildAnimateRequest(input: {

@@ -8,6 +8,7 @@ import {
   buildAnimateMacro,
   combineAnimateInstruction,
   generateAnimatedVideo,
+  getAnimateImageTokens,
   getAnimatePreflightErrors,
   prepareAnimateContents,
   resolveAnimateInputs,
@@ -32,7 +33,8 @@ interface AnimateDialogState {
   task: AnimateTask;
   preparing: boolean;
   preparationError: string;
-  copiedImageId: string;
+  annotatedImageIds: ReadonlySet<string>;
+  copiedToken: string;
 }
 
 const DIALOG_ID = "animate-tool-dialog";
@@ -82,7 +84,8 @@ export const AnimateTool = createComponent(
         task: "default",
         preparing: false,
         preparationError: "",
-        copiedImageId: "",
+        annotatedImageIds: new Set(),
+        copiedToken: "",
       });
       requestAnimationFrame(() => getDialog()?.showModal());
     };
@@ -129,6 +132,11 @@ export const AnimateTool = createComponent(
       context.lineCap = "round";
       context.lineJoin = "round";
       canvas.dataset.annotated = "true";
+      const imageId = canvas.dataset.imageId;
+      const state = dialogState$.value;
+      if (imageId && state && !state.annotatedImageIds.has(imageId)) {
+        updateState({ annotatedImageIds: new Set([...state.annotatedImageIds, imageId]) });
+      }
     };
 
     const continueStroke = (event: PointerEvent) => {
@@ -154,14 +162,20 @@ export const AnimateTool = createComponent(
       if (!(canvas instanceof HTMLCanvasElement)) return;
       canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
       delete canvas.dataset.annotated;
+      const state = dialogState$.value;
+      if (state?.annotatedImageIds.has(imageId)) {
+        const annotatedImageIds = new Set(state.annotatedImageIds);
+        annotatedImageIds.delete(imageId);
+        updateState({ annotatedImageIds });
+      }
     };
 
-    const copyImageId = async (imageId: string) => {
+    const copyImageToken = async (token: string) => {
       try {
-        await navigator.clipboard.writeText(imageId);
-        updateState({ copiedImageId: imageId });
+        await navigator.clipboard.writeText(token);
+        updateState({ copiedToken: token });
       } catch {
-        updateState({ preparationError: `${imageId} could not be copied.` });
+        updateState({ preparationError: `${token} could not be copied.` });
       }
     };
 
@@ -177,10 +191,10 @@ export const AnimateTool = createComponent(
         .forEach((canvas) => annotatedImages.set(canvas.dataset.imageId || "", canvas));
 
       try {
-        const contents = await prepareAnimateContents(state.inputs, annotatedImages);
+        const contents = await prepareAnimateContents(state.inputs, annotatedImages, state.roles);
         if (dialogState$.value !== state && !dialogState$.value?.preparing) return;
 
-        const macro = buildAnimateMacro(state.inputs, state.roles);
+        const macro = buildAnimateMacro(state.inputs, state.roles, state.annotatedImageIds);
         const instruction = combineAnimateInstruction(macro, state.instruction) || "Animate the selected content.";
         const position = getNextPositions(state.snapshot).next().value || { x: 100, y: 100, z: 1 };
         const cardId = `animate-result-${crypto.randomUUID()}`;
@@ -223,7 +237,8 @@ export const AnimateTool = createComponent(
     return combineLatest([selected$, apiKeys$, dialogState$]).pipe(
       map(([selected, apiKeys, state]) => {
         const selectedInputs = resolveAnimateInputs(selected).inputs;
-        const macro = state ? buildAnimateMacro(state.inputs, state.roles) : "";
+        const macro = state ? buildAnimateMacro(state.inputs, state.roles, state.annotatedImageIds) : "";
+        const imageTokens = state ? getAnimateImageTokens(state.inputs, state.roles, state.annotatedImageIds) : {};
         const preflightErrors = state ? getAnimatePreflightErrors(state.inputs, !!apiKeys.gemini) : [];
 
         return html`
@@ -260,9 +275,25 @@ export const AnimateTool = createComponent(
                           return html`<section class="animate-input">
                             <header class="animate-input-header">
                               <strong>${input.imageId}</strong>
-                              <button class="small" @click=${() => void copyImageId(input.imageId)}>Copy</button>
+                              <button
+                                class="small"
+                                @click=${() => void copyImageToken(imageTokens[input.imageId].primary)}
+                              >
+                                Copy ${imageTokens[input.imageId].primary}
+                              </button>
+                              ${imageTokens[input.imageId].annotation
+                                ? html`<button
+                                    class="small"
+                                    @click=${() => void copyImageToken(imageTokens[input.imageId].annotation!)}
+                                  >
+                                    Copy ${imageTokens[input.imageId].annotation}
+                                  </button>`
+                                : nothing}
                               <span class="animate-copy-status" aria-live="polite">
-                                ${state.copiedImageId === input.imageId ? "Copied" : nothing}
+                                ${state.copiedToken === imageTokens[input.imageId].primary ||
+                                state.copiedToken === imageTokens[input.imageId].annotation
+                                  ? "Copied"
+                                  : nothing}
                               </span>
                             </header>
                             <fieldset class="animate-segments">
