@@ -211,8 +211,6 @@ export const AnimateTool = createComponent(
               id: cardId,
               videoSrc: `data:${video.mimeType};base64,${video.data}`,
               videoMimeType: video.mimeType,
-              title: "Animated video",
-              body: state.instruction.trim(),
               x: position.x,
               y: position.y,
               width: 200,
