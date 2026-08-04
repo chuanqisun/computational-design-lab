@@ -56,6 +56,8 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
   const stream$ = new BehaviorSubject<MediaStream | null>(null);
   const captureMode$ = new BehaviorSubject<CaptureMode>("image");
   const isRecording$ = new BehaviorSubject(false);
+  const cameras$ = new BehaviorSubject<MediaDeviceInfo[]>([]);
+  const selectedCameraId$ = new BehaviorSubject("");
 
   let mediaRecorder: MediaRecorder | null = null;
   let recordedChunks: Blob[] = [];
@@ -120,6 +122,20 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
       pendingVideo$.next(null);
       captureMode$.next("image");
       dialog.showModal();
+      void refreshCameras();
+    }
+  };
+
+  const refreshCameras = async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(({ kind }) => kind === "videoinput");
+      cameras$.next(cameras);
+      if (selectedCameraId$.value && !cameras.some(({ deviceId }) => deviceId === selectedCameraId$.value)) {
+        selectedCameraId$.next("");
+      }
+    } catch {
+      cameras$.next([]);
     }
   };
 
@@ -156,15 +172,17 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     if (skippedFiles.length > 0) alert(`Could not upload: ${skippedFiles.join(", ")}`);
   };
 
-  const startCamera = async () => {
+  const startCamera = async (deviceId = selectedCameraId$.value) => {
     if (stream$.value) return;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: "environment" } },
         audio: false,
       });
       stream$.next(stream);
+      selectedCameraId$.next(stream.getVideoTracks()[0]?.getSettings().deviceId || deviceId);
+      await refreshCameras();
 
       requestAnimationFrame(() => {
         const video = document.getElementById("capture-tool-video") as HTMLVideoElement | null;
@@ -175,6 +193,14 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     } catch {
       alert("Could not access webcam.");
     }
+  };
+
+  const selectCamera = async (deviceId: string) => {
+    if (deviceId === selectedCameraId$.value) return;
+    selectedCameraId$.next(deviceId);
+    if (!stream$.value) return;
+    stopCamera();
+    await startCamera(deviceId);
   };
 
   const captureFromCamera = async () => {
@@ -299,8 +325,16 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
     ignoreElements(),
   );
 
-  const template$ = combineLatest([pendingPhotos$, pendingVideo$, stream$, captureMode$, isRecording$]).pipe(
-    map(([pendingPhotos, pendingVideo, stream, captureMode, isRecording]) => {
+  const template$ = combineLatest([
+    pendingPhotos$,
+    pendingVideo$,
+    stream$,
+    captureMode$,
+    isRecording$,
+    cameras$,
+    selectedCameraId$,
+  ]).pipe(
+    map(([pendingPhotos, pendingVideo, stream, captureMode, isRecording, cameras, selectedCameraId]) => {
       const videoMimeType = getSupportedVideoMimeType();
       return html`
         <div class="capture-tool">
@@ -359,8 +393,24 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
                           </button>
                           <button @click=${startVideoRecording} ?disabled=${isRecording}>Start recording</button>
                           <button @click=${stopCamera} ?disabled=${isRecording}>Stop camera</button>`
-                    : html`<button @click=${startCamera}>Start camera</button>`}
+                    : html`<button @click=${() => void startCamera()}>Start camera</button>`}
                 </menu>
+
+                ${cameras.length > 1
+                  ? html`<label class="capture-tool-camera-select">
+                      Camera
+                      <select
+                        .value=${selectedCameraId}
+                        ?disabled=${isRecording}
+                        @change=${(event: Event) => void selectCamera((event.target as HTMLSelectElement).value)}
+                      >
+                        ${cameras.map(
+                          (camera, index) =>
+                            html`<option value=${camera.deviceId}>${camera.label || `Camera ${index + 1}`}</option>`,
+                        )}
+                      </select>
+                    </label>`
+                  : html``}
 
                 ${captureMode === "video" && !videoMimeType
                   ? html`<p>Video recording is not supported by this browser.</p>`

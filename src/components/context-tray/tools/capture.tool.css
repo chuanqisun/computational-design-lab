@@ -30,6 +30,11 @@
     flex: 1;
   }
 
+  .capture-tool-camera-select {
+    display: grid;
+    gap: 0.5ch;
+  }
+
   .capture-tool-video {
     width: 100%;
     max-width: 48ch;
