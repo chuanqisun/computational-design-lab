@@ -411,7 +411,6 @@ export const CaptureTool = createComponent(({ items$ }: { items$: BehaviorSubjec
                       </select>
                     </label>`
                   : html``}
-
                 ${captureMode === "video" && !videoMimeType
                   ? html`<p>Video recording is not supported by this browser.</p>`
                   : html``}
