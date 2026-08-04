@@ -18,7 +18,9 @@ export const taskRunner$ = taskQueue$.pipe(
     task$.pipe(
       takeUntil(stopTasks$),
       catchError((error) => {
-        console.error("Task error:", error);
+        const message = error instanceof Error ? error.message : "Task failed.";
+        console.error(`Task error: ${message}`);
+        alert(message);
         return of(undefined);
       }),
     ),

@@ -48,10 +48,15 @@ continuity matters.
 - Let users assign image roles and refer to stable image IDs in their prompt.
 - Keep generated role macros visible and non-editable.
 - Let users choose the model-default, `16:9`, or `9:16` output aspect ratio.
+- Let users choose the model-default, 4-second, or 8-second output duration.
+- Let users use model-default task inference or explicitly select
+  `text_to_video`, `image_to_video`, `reference_to_video`, or `edit`.
 - Submit a mixed-media Interactions API request to Gemini Omni Flash.
 - Add the generated video to the Canvas as a new card without replacing the
   selected inputs.
 - Integrate with the existing RxJS task queue and Gemini API-key handling.
+- Track queued generation in `progress$.videoGen` until completion, failure, or
+  cancellation.
 
 ## Non-goals
 
@@ -61,8 +66,8 @@ continuity matters.
 - Video extension or interpolation.
 - Supporting more than one video input in a request. Gemini Omni currently does
   not support reasoning across multiple videos.
-- Adding controls for duration, resolution, audio, or model selection in the
-  first release. These can be expressed in the prompt where supported.
+- Adding controls for resolution, audio, or model selection in the first
+  release. These can be expressed in the prompt where supported.
 - External media storage, URI delivery, or stateful editing.
 
 ## Existing Integration Points
@@ -175,6 +180,17 @@ It omits `aspect_ratio` from the request and lets Gemini choose its default;
 the other options send their literal ratio. The choice is local dialog state
 and is not persisted between generations.
 
+The output controls also include a duration segmented control with **Default**,
+**4 sec**, and **8 sec** options. Default is selected whenever the dialog opens.
+It omits `duration` from the request; the explicit choices send `4s` or `8s`.
+The choice is local dialog state and is not persisted between generations.
+
+The task-type control offers **Default**, **text_to_video**,
+**image_to_video**, **reference_to_video**, and **edit**. Default is selected
+whenever the dialog opens and omits `generation_config`, allowing Gemini to
+infer the task from the mixed-media input. Explicit choices send their literal
+value as `generation_config.video_config.task`.
+
 ### 4. Image roles and generated macro
 
 Each image starts with role `auto`.
@@ -257,10 +273,9 @@ await ai.interactions.create({
   response_format: {
     type: "video",
     ...(aspectRatio === "default" ? {} : { aspect_ratio: aspectRatio }),
+    ...(duration === "default" ? {} : { duration }),
   },
-  generation_config: {
-    video_config: { task: hasVideo ? "edit" : hasImage ? "image_to_video" : "text_to_video" },
-  },
+  ...(task === "default" ? {} : { generation_config: { video_config: { task } } }),
   store: false,
 });
 ```
@@ -364,7 +379,8 @@ API keys, base64 media, and generated responses must not be logged.
 - Macro generation handles no roles, one starting frame, multiple references,
   role changes, and contiguous reference reindexing.
 - Selecting a second starting frame resets the first to auto.
-- Task selection resolves to `edit`, `image_to_video`, or `text_to_video`.
+- Default task mode omits `generation_config`; every explicit task mode is
+  serialized unchanged.
 - More than one resolved video fails preflight.
 - Model-output parsing extracts base64 data and MIME type and rejects an empty
   video response.
@@ -377,6 +393,9 @@ API keys, base64 media, and generated responses must not be logged.
 - The macro is visible, cannot be edited, and updates from role controls.
 - Copy writes the expected `ImageN` value.
 - Aspect ratio starts at Default and can be changed to `16:9` or `9:16`.
+- Duration starts at Default and can be changed to 4 or 8 seconds.
+- Task type starts at Default and supports `text_to_video`, `image_to_video`,
+  `reference_to_video`, and `edit`.
 - Cancel and Escape discard dialog state.
 - Generate cannot submit twice.
 
@@ -392,6 +411,10 @@ Mock `@google/genai`; tests must not call the live API.
   request.
 - Verify Default omits `aspect_ratio`, while `16:9` and `9:16` are forwarded in
   `response_format`.
+- Verify Default omits `duration`, while `4s` and `8s` are forwarded in
+  `response_format`.
+- Verify Default omits `generation_config`, while each explicit task is
+  forwarded in `generation_config.video_config.task`.
 - Verify every image and video input and the generated output use inline base64
   without Files API or URI-delivery calls.
 - Verify successful output appends exactly one playable video card.
@@ -401,7 +424,7 @@ Mock `@google/genai`; tests must not call the live API.
 
 ### Phase 1: Pure request model
 
-- Add input resolution, image-role, macro, validation, task-selection, and
+- Add input resolution, image-role, macro, validation, task-mode serialization, and
   output-extraction functions with unit tests.
 - Compile a minimal Omni request against the installed SDK to confirm request
   property names and output step types.
@@ -432,6 +455,10 @@ Mock `@google/genai`; tests must not call the live API.
   that macro directly.
 - The output control offers Default, `16:9`, and `9:16`; Default omits the
   request field and explicit choices set it.
+- The output control offers Default, 4 sec, and 8 sec; Default omits `duration`
+  and explicit choices send `4s` or `8s`.
+- The task control offers Default and all four supported explicit modes;
+  Default omits task configuration and explicit choices send their literals.
 - Auto-role images produce no macro entry but remain in the media input.
 - Annotated image payloads visibly contain both the source and overlay while
   source Canvas cards remain unchanged.
@@ -441,6 +468,8 @@ Mock `@google/genai`; tests must not call the live API.
 - All media sent to or returned by Gemini uses inline base64, with no external
   storage or URI delivery.
 - A successful request adds one playable video card near the selected cards.
+- Active Animate requests increment video generation progress and always
+  decrement it when the task terminates.
 - Cancellation or any failure adds no output card and does not mutate inputs.
 
 ## Decisions
@@ -454,3 +483,8 @@ Mock `@google/genai`; tests must not call the live API.
    first release does not retain or expose interaction IDs.
 4. Per-card media precedence remains strict. Text fields from a card are not
    sent when that card resolves to video or image.
+5. Output duration offers Default, 4 sec, and 8 sec. Default omits `duration`;
+   explicit choices send `4s` or `8s` in `response_format`.
+6. Task type offers Default, `text_to_video`, `image_to_video`,
+   `reference_to_video`, and `edit`. Default relies on model inference by
+   omitting `generation_config`.

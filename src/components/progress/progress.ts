@@ -8,7 +8,7 @@ export interface AppProgress {
 }
 
 /**
- * If you make any LLM calls to generate text or image, you must track progress here:
+ * If you make any LLM calls to generate text, image, or video, you must track progress here:
  * increment the relevant field when starting a call, and decrement it when the call finishes.
  * Make sure to decrement with the "finally" semantics of rxjs so we can guarantee it always happens even on error.
  *

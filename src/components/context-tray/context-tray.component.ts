@@ -4,6 +4,7 @@ import { createComponent } from "../../sdk/create-component";
 import { hasText, type CanvasItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
+import { AnimateTool } from "./tools/animate.tool";
 import { BlendTool } from "./tools/blend.tool";
 import { CanvasTool } from "./tools/canvas.tool";
 import { CaptureTool } from "./tools/capture.tool";
@@ -34,6 +35,7 @@ export const ContextTrayComponent = createComponent(
     const canvasToolUI = CanvasTool({ items$ });
     const exportToolUI = ExportTool({ items$ });
     const sketchToolUI = SketchTool({ selected$, items$, apiKeys$ });
+    const animateToolUI = AnimateTool({ selected$, items$, apiKeys$ });
 
     const template$ = combineLatest([selected$, selectedWithText$]).pipe(
       map(([selected, _selectedWithText]) => {
@@ -77,6 +79,10 @@ export const ContextTrayComponent = createComponent(
                 <section class="tool-section">
                   <h2>Sketch</h2>
                   <div class="tool-body">${sketchToolUI}</div>
+                </section>
+                <section class="tool-section">
+                  <h2>Animate</h2>
+                  <div class="tool-body">${animateToolUI}</div>
                 </section>
               `
             : nothing}

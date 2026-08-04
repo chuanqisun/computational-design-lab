@@ -55,6 +55,9 @@ applyTo: "**"
 ## Gemini Interactions API
 
 - Pass `input` to `ai.interactions.create` as an explicit `Interactions.Step[]` using `user_input` and `model_output` steps. Do not pass string, `Content[]`, or deprecated `{ role, content }` turn-list shorthand.
+- For Gemini Omni Animate output duration, omit `response_format.duration` for the model default or send `4s`/`8s` for explicit choices.
+- For Gemini Omni Animate task type, omit `generation_config` for Default or send the selected explicit mode as `generation_config.video_config.task`.
+- Track text, image, and video LLM calls in `progress$`; decrement counters with observable teardown/finally semantics so errors and cancellation are covered.
 
 ## `src/components/*`
 

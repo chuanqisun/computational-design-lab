@@ -1,0 +1,134 @@
+.animate-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+
+  > button {
+    width: 100%;
+  }
+
+  dialog {
+    width: min(72ch, 95vw);
+    max-height: 90vh;
+    margin: auto;
+    border: 1px solid var(--color-text-active);
+    background: var(--page-background);
+  }
+
+  .animate-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2ch;
+    padding: 2ch;
+  }
+
+  .animate-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 3ch;
+  }
+
+  .animate-input {
+    display: flex;
+    flex-direction: column;
+    gap: 1ch;
+
+    video {
+      width: 100%;
+      max-height: 40vh;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      color: var(--color-text-secondary);
+    }
+  }
+
+  .animate-input-header,
+  footer {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  .animate-copy-status {
+    color: var(--color-text-secondary);
+  }
+
+  .animate-segments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1ch;
+    border: 0;
+
+    legend {
+      color: var(--color-text-secondary);
+      margin-block-end: 0.5ch;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5ch;
+    }
+
+    input {
+      width: auto;
+      padding: 0;
+    }
+  }
+
+  .animate-image-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #f5f5f5;
+
+    img,
+    canvas {
+      grid-area: 1 / 1;
+      display: block;
+      max-width: 100%;
+      max-height: 45vh;
+    }
+
+    canvas {
+      width: auto;
+      height: auto;
+      cursor: crosshair;
+      touch-action: none;
+    }
+  }
+
+  .animate-clear {
+    align-self: flex-start;
+  }
+
+  .animate-instruction {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .animate-macro {
+    min-height: 1.4lh;
+    padding: 1ch;
+    border: 1px solid #ccc;
+    border-block-end: 0;
+    color: var(--color-text-secondary);
+    white-space: pre-wrap;
+  }
+
+  .animate-instruction textarea {
+    min-height: 3lh;
+  }
+
+  .animate-warning,
+  .animate-errors {
+    color: var(--color-error);
+  }
+
+  footer {
+    justify-content: flex-end;
+  }
+}
