@@ -129,7 +129,8 @@ export function buildAnimateMacro(
   const tokens = getAnimateImageTokens(inputs, roles, annotatedImageIds);
   const startingFrame = images.find((image) => roles[image.imageId] === "starting-frame");
   const references = images.filter((image) => roles[image.imageId] === "reference");
-  const annotatedStartingFrame = startingFrame && annotatedImageIds.has(startingFrame.imageId) ? startingFrame : undefined;
+  const annotatedStartingFrame =
+    startingFrame && annotatedImageIds.has(startingFrame.imageId) ? startingFrame : undefined;
   const groups: string[] = [];
 
   if (startingFrame) groups.push(`[# Sources <FIRST_FRAME>@${startingFrame.imageId}]`);
