@@ -13,6 +13,7 @@ import { DesignTool } from "./tools/design.tool";
 import { ExportTool } from "./tools/export.tool";
 import { IterateTool } from "./tools/iterate.tool";
 import { RenderTool } from "./tools/render.tool";
+import { SearchTool } from "./tools/search.tool";
 import { SketchTool } from "./tools/sketch.tool";
 import { UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
@@ -30,6 +31,7 @@ export const ContextTrayComponent = createComponent(
     const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
     const iterateUI = IterateTool({ selected$, items$, apiKeys$ });
     const renderToolUI = RenderTool({ selected$, items$, apiKeys$ });
+    const searchToolUI = SearchTool({ selected$, items$, apiKeys$ });
     const writerToolUI = WriterTool({ items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
@@ -48,54 +50,64 @@ export const ContextTrayComponent = createComponent(
             <div class="tool-body">${renderToolUI}</div>
             <div class="tool-body">${writerToolUI}</div>
           </section>
-          ${totalSelected > 0
-            ? html`
-                <section class="tool-section">
-                  <h2>Visualize</h2>
-                  <div class="tool-body">${visualizeUI}</div>
-                </section>
-                <section class="tool-section">
-                  <h2>Scan</h2>
-                  <div class="tool-body">${conceptualScanUI}</div>
-                </section>
-                ${totalSelected > 1
-                  ? html`<section class="tool-section">
-                      <h2>Blend</h2>
-                      <div class="tool-body">${blendToolUI}</div>
-                    </section>`
-                  : nothing}
-                <section class="tool-section">
-                  <h2>Design</h2>
-                  <div class="tool-body">${designToolUI}</div>
-                </section>
-                <section class="tool-section">
-                  <h2>User testing</h2>
-                  <div class="tool-body">${userTestingUI}</div>
-                </section>
-                <section class="tool-section">
-                  <h2>Iterate</h2>
-                  <div class="tool-body">${iterateUI}</div>
-                </section>
-                <section class="tool-section">
-                  <h2>Sketch</h2>
-                  <div class="tool-body">${sketchToolUI}</div>
-                </section>
-                <section class="tool-section">
-                  <h2>Animate</h2>
-                  <div class="tool-body">${animateToolUI}</div>
-                </section>
-              `
-            : nothing}
+          <section class="tool-section">
+            <h2>Search</h2>
+            <div class="tool-body">${searchToolUI}</div>
+          </section>
+          ${
+            totalSelected > 0
+              ? html`
+                  <section class="tool-section">
+                    <h2>Visualize</h2>
+                    <div class="tool-body">${visualizeUI}</div>
+                  </section>
+                  <section class="tool-section">
+                    <h2>Scan</h2>
+                    <div class="tool-body">${conceptualScanUI}</div>
+                  </section>
+                  ${
+                    totalSelected > 1
+                      ? html`<section class="tool-section">
+                          <h2>Blend</h2>
+                          <div class="tool-body">${blendToolUI}</div>
+                        </section>`
+                      : nothing
+                  }
+                  <section class="tool-section">
+                    <h2>Design</h2>
+                    <div class="tool-body">${designToolUI}</div>
+                  </section>
+                  <section class="tool-section">
+                    <h2>User testing</h2>
+                    <div class="tool-body">${userTestingUI}</div>
+                  </section>
+                  <section class="tool-section">
+                    <h2>Iterate</h2>
+                    <div class="tool-body">${iterateUI}</div>
+                  </section>
+                  <section class="tool-section">
+                    <h2>Sketch</h2>
+                    <div class="tool-body">${sketchToolUI}</div>
+                  </section>
+                  <section class="tool-section">
+                    <h2>Animate</h2>
+                    <div class="tool-body">${animateToolUI}</div>
+                  </section>
+                `
+              : nothing
+          }
           <section class="tool-section">
             <h2>Canvas</h2>
             <div class="tool-body">${canvasToolUI}</div>
           </section>
-          ${totalSelected > 0
-            ? html` <section class="tool-section">
-                <h2>Export</h2>
-                <div class="tool-body">${exportToolUI}</div>
-              </section>`
-            : nothing}
+          ${
+            totalSelected > 0
+              ? html` <section class="tool-section">
+                  <h2>Export</h2>
+                  <div class="tool-body">${exportToolUI}</div>
+                </section>`
+              : nothing
+          }
         </aside>`;
       }),
     );

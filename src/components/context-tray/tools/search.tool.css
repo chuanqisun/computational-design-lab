@@ -1,0 +1,15 @@
+.search-tool {
+  display: grid;
+  gap: 0.5ch;
+
+  textarea {
+    width: 100%;
+    min-height: 2lh;
+    field-sizing: content;
+    resize: none;
+  }
+
+  button {
+    justify-self: start;
+  }
+}
