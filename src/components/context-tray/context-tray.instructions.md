@@ -15,3 +15,4 @@ Animate image copy controls use Gemini prompt tags such as `<FIRST_FRAME>` and `
 Animate output cards omit title and body so the card auto-fill flow derives both fields from the generated video.
 The Animate dialog is capped to the visible viewport and scrolls vertically when its content is taller.
 The Capture dialog lists available webcams after permission is granted and lets the user switch the active preview camera when not recording.
+Search is a standalone tray section. It creates standard 200x300 cards with imageSrc and omits title and body so CardComponent's reactive auto-fill flow fills them automatically.
