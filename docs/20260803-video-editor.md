@@ -2,7 +2,7 @@
 
 - Status: Proposed
 - Scope: Canvas context tray and Gemini Omni Flash integration
-- Model: `gemini-omni-flash-preview`
+- Model: `gemini-omni-1.1-flash`
 
 ## Summary
 
@@ -186,7 +186,7 @@ It omits `duration` from the request; the explicit choices send `4s` or `8s`.
 The choice is local dialog state and is not persisted between generations.
 
 The task-type control offers **Default**, **text_to_video**,
-**image_to_video**, **reference_to_video**, and **edit**. Default is selected
+**image_to_video**, **reference_to_video**, **edit**, and **extend**. Default is selected
 whenever the dialog opens and omits `generation_config`, allowing Gemini to
 infer the task from the mixed-media input. Explicit choices send their literal
 value as `generation_config.video_config.task`.
@@ -268,7 +268,7 @@ const input: Interactions.Step[] = [
 ];
 
 await ai.interactions.create({
-  model: "gemini-omni-flash-preview",
+  model: "gemini-omni-1.1-flash",
   input,
   response_format: {
     type: "video",
@@ -457,7 +457,7 @@ Mock `@google/genai`; tests must not call the live API.
   request field and explicit choices set it.
 - The output control offers Default, 4 sec, and 8 sec; Default omits `duration`
   and explicit choices send `4s` or `8s`.
-- The task control offers Default and all four supported explicit modes;
+- The task control offers Default and all five supported explicit modes;
   Default omits task configuration and explicit choices send their literals.
 - Auto-role images produce no macro entry but remain in the media input.
 - Annotated image payloads visibly contain both the source and overlay while
@@ -486,5 +486,5 @@ Mock `@google/genai`; tests must not call the live API.
 5. Output duration offers Default, 4 sec, and 8 sec. Default omits `duration`;
    explicit choices send `4s` or `8s` in `response_format`.
 6. Task type offers Default, `text_to_video`, `image_to_video`,
-   `reference_to_video`, and `edit`. Default relies on model inference by
+   `reference_to_video`, `edit`, and `extend`. Default relies on model inference by
    omitting `generation_config`.

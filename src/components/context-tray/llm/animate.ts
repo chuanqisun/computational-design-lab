@@ -6,7 +6,7 @@ import { progress$ } from "../../progress/progress";
 export type AnimateImageRole = "auto" | "starting-frame" | "reference";
 export type AnimateAspectRatio = "default" | "16:9" | "9:16";
 export type AnimateDuration = "default" | "4s" | "8s";
-export type AnimateTask = "default" | "text_to_video" | "image_to_video" | "reference_to_video" | "edit";
+export type AnimateTask = "default" | "text_to_video" | "image_to_video" | "reference_to_video" | "edit" | "extend";
 
 export type AnimateInput =
   | { kind: "video"; cardId: string; src: string; mimeType?: string; title?: string }
@@ -68,6 +68,18 @@ export function resolveAnimateInputs(items: CanvasItem[]): ResolvedAnimateInputs
   }
 
   return { inputs, omitted };
+}
+
+export function resolveAnimateDefaultRoles(inputs: AnimateInput[]): Record<string, AnimateImageRole> {
+  const images = inputs.filter((input): input is Extract<AnimateInput, { kind: "image" }> => input.kind === "image");
+  const hasVideo = inputs.some((input) => input.kind === "video");
+  const roles: Record<string, AnimateImageRole> = {};
+
+  images.forEach((image, index) => {
+    roles[image.imageId] = hasVideo || index > 0 ? "reference" : "auto";
+  });
+
+  return roles;
 }
 
 export function setAnimateImageRole(
@@ -308,7 +320,7 @@ export function buildAnimateRequest(input: {
   ];
 
   return {
-    model: "gemini-omni-flash-preview",
+    model: "gemini-omni-1.1-flash",
     input: steps,
     response_format: {
       type: "video",

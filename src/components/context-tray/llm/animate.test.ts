@@ -8,6 +8,7 @@ import {
   getAnimateImageTokens,
   getAnimatePreflightErrors,
   prepareAnimateContents,
+  resolveAnimateDefaultRoles,
   resolveAnimateInputs,
   setAnimateImageRole,
 } from "./animate";
@@ -138,12 +139,52 @@ describe("animate request model", () => {
     expect(fourSecondRequest.response_format).toEqual({ type: "video", delivery: "inline", duration: "4s" });
     expect(eightSecondRequest.response_format).toEqual({ type: "video", delivery: "inline", duration: "8s" });
     expect(defaultRequest.generation_config).toBeUndefined();
-    for (const task of ["text_to_video", "image_to_video", "reference_to_video", "edit"] as const) {
+    for (const task of ["text_to_video", "image_to_video", "reference_to_video", "edit", "extend"] as const) {
       expect(buildAnimateRequest({ ...base, aspectRatio: "default", task }).generation_config).toEqual({
         video_config: { task },
       });
     }
+    expect(defaultRequest.model).toBe("gemini-omni-1.1-flash");
     expect(defaultRequest.store).toBe(false);
+  });
+
+  it("assigns reference roles to additional selected images and all images when video is present", () => {
+    const singleImage = resolveAnimateInputs([item({ imageSrc: "one.png" })]).inputs;
+    expect(resolveAnimateDefaultRoles(singleImage)).toEqual({ Image1: "auto" });
+
+    const multiImages = resolveAnimateInputs([
+      item({ imageSrc: "one.png" }),
+      item({ imageSrc: "two.png" }),
+      item({ imageSrc: "three.png" }),
+    ]).inputs;
+    expect(resolveAnimateDefaultRoles(multiImages)).toEqual({
+      Image1: "auto",
+      Image2: "reference",
+      Image3: "reference",
+    });
+
+    const videoWithImages = resolveAnimateInputs([
+      item({ videoSrc: "data:video/mp4;base64,AAA" }),
+      item({ imageSrc: "one.png" }),
+      item({ imageSrc: "two.png" }),
+    ]).inputs;
+    expect(resolveAnimateDefaultRoles(videoWithImages)).toEqual({
+      Image1: "reference",
+      Image2: "reference",
+    });
+
+    const textWithImages = resolveAnimateInputs([
+      item({ title: "Prompt card" }),
+      item({ imageSrc: "one.png" }),
+      item({ imageSrc: "two.png" }),
+    ]).inputs;
+    expect(resolveAnimateDefaultRoles(textWithImages)).toEqual({
+      Image1: "auto",
+      Image2: "reference",
+    });
+
+    const emptyRoles = resolveAnimateInputs([item({ title: "Only text" })]).inputs;
+    expect(resolveAnimateDefaultRoles(emptyRoles)).toEqual({});
   });
 
   it("prepares every inline card in order without re-encoding unannotated media", async () => {
