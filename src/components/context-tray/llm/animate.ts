@@ -1,11 +1,12 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
+import { GEMINI_VIDEO_MODEL } from "../../../lib/gemini-models";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 export type AnimateImageRole = "auto" | "starting-frame" | "reference";
 export type AnimateAspectRatio = "default" | "16:9" | "9:16";
-export type AnimateDuration = "default" | "4s" | "8s";
+export type AnimateDuration = "default" | "4s" | "8s" | "15s";
 export type AnimateTask = "default" | "text_to_video" | "image_to_video" | "reference_to_video" | "edit" | "extend";
 
 export type AnimateInput =
@@ -109,27 +110,25 @@ export function getAnimateImageTokens(
 ): Record<string, AnimateImageTokens> {
   const images = inputs.filter((input): input is Extract<AnimateInput, { kind: "image" }> => input.kind === "image");
   const tokens: Record<string, AnimateImageTokens> = {};
-  let referenceIndex = 0;
 
   for (const image of images) {
-    if (roles[image.imageId] === "starting-frame") tokens[image.imageId] = { primary: "<FIRST_FRAME>" };
-  }
-  for (const role of ["reference", "auto"] as const) {
-    for (const image of images) {
-      if ((roles[image.imageId] || "auto") === role) {
-        tokens[image.imageId] = { primary: `<IMAGE_REF_${referenceIndex++}>` };
-      }
-    }
+    tokens[image.imageId] = { primary: image.imageId };
   }
 
   const annotatedStartingFrame = images.find(
     (image) => roles[image.imageId] === "starting-frame" && annotatedImageIds.has(image.imageId),
   );
   if (annotatedStartingFrame) {
-    tokens[annotatedStartingFrame.imageId].annotation = `<IMAGE_REF_${referenceIndex}>`;
+    tokens[annotatedStartingFrame.imageId].annotation = `Image${images.length + 1}`;
   }
 
   return tokens;
+}
+
+function formatImageList(ids: string[]): string {
+  if (ids.length <= 1) return ids[0] || "";
+  if (ids.length === 2) return `${ids[0]} and ${ids[1]}`;
+  return `${ids.slice(0, -1).join(", ")}, and ${ids.at(-1)}`;
 }
 
 export function buildAnimateMacro(
@@ -145,13 +144,20 @@ export function buildAnimateMacro(
     startingFrame && annotatedImageIds.has(startingFrame.imageId) ? startingFrame : undefined;
   const groups: string[] = [];
 
-  if (startingFrame) groups.push(`[# Sources <FIRST_FRAME>@${startingFrame.imageId}]`);
-  if (references.length || annotatedStartingFrame) {
-    const entries = references.map((image) => `${tokens[image.imageId].primary}@${image.imageId}`);
-    if (annotatedStartingFrame) {
-      entries.push(`${tokens[annotatedStartingFrame.imageId].annotation}@Image${images.length + 1}`);
-    }
-    groups.push(`[# References ${entries.join(" ")}]`);
+  if (startingFrame) {
+    groups.push(`Use ${startingFrame.imageId} as the starting frame.`);
+  }
+  if (references.length === 1) {
+    groups.push(`Use ${references[0].imageId} as a visual reference, not as a starting frame.`);
+  } else if (references.length > 1) {
+    groups.push(
+      `Use ${formatImageList(references.map((image) => image.imageId))} as visual references, not as starting frames.`,
+    );
+  }
+  if (annotatedStartingFrame && tokens[annotatedStartingFrame.imageId].annotation) {
+    groups.push(
+      `Use ${tokens[annotatedStartingFrame.imageId].annotation} as the annotated sketch guide for ${annotatedStartingFrame.imageId}, not as a literal frame.`,
+    );
   }
 
   return groups.join(" ");
@@ -181,13 +187,43 @@ export function normalizeAnimateVideoMimeType(mimeType?: string): string | null 
   return supportedVideoMimeTypes.has(normalized) ? normalized : null;
 }
 
-export function getAnimatePreflightErrors(inputs: AnimateInput[], hasApiKey: boolean): string[] {
+export interface AnimatePreflightOptions {
+  duration?: AnimateDuration;
+  task?: AnimateTask;
+  roles?: Readonly<Record<string, AnimateImageRole>>;
+  annotatedImageIds?: ReadonlySet<string>;
+}
+
+const MAX_ANIMATE_IMAGES = 6;
+const MAX_EXTEND_DURATION_SECONDS = 10;
+
+export function getAnimatePreflightErrors(
+  inputs: AnimateInput[],
+  hasApiKey: boolean,
+  options: AnimatePreflightOptions = {},
+): string[] {
   const errors: string[] = [];
   const videos = inputs.filter((input): input is Extract<AnimateInput, { kind: "video" }> => input.kind === "video");
+  const images = inputs.filter((input): input is Extract<AnimateInput, { kind: "image" }> => input.kind === "image");
+  const hasAnnotatedStartingFrame = Boolean(
+    options.roles &&
+      options.annotatedImageIds &&
+      images.some(
+        (image) =>
+          options.roles?.[image.imageId] === "starting-frame" && options.annotatedImageIds?.has(image.imageId),
+      ),
+  );
+  const totalImageCount = images.length + (hasAnnotatedStartingFrame ? 1 : 0);
+  const durationSeconds =
+    options.duration && options.duration !== "default" ? Number.parseInt(options.duration, 10) : null;
 
   if (!hasApiKey) errors.push("A Gemini API key is required.");
   if (!inputs.length) errors.push("Select at least one card with video, image, or text content.");
   if (videos.length > 1) errors.push("Animate supports one video input at a time.");
+  if (totalImageCount > MAX_ANIMATE_IMAGES) errors.push("Animate supports up to 6 image inputs.");
+  if (options.task === "extend" && durationSeconds !== null && durationSeconds > MAX_EXTEND_DURATION_SECONDS) {
+    errors.push("Video extension supports durations up to 10 seconds.");
+  }
   for (const video of videos) {
     const sourceMimeType = parseDataUrl(video.src)?.mimeType;
     if (
@@ -311,7 +347,7 @@ export function buildAnimateRequest(input: {
   aspectRatio: AnimateAspectRatio;
   duration: AnimateDuration;
   task: AnimateTask;
-}): Interactions.CreateModelInteractionParamsNonStreaming & { stream: false } {
+}): Interactions.InteractionCreateParams.CreateModelInteractionParamsNonStreaming & { stream: false } {
   const steps: Interactions.Step[] = [
     {
       type: "user_input",
@@ -320,7 +356,8 @@ export function buildAnimateRequest(input: {
   ];
 
   return {
-    model: "gemini-omni-1.1-flash",
+    api_version: "v1beta",
+    model: GEMINI_VIDEO_MODEL,
     input: steps,
     response_format: {
       type: "video",
@@ -353,11 +390,11 @@ export function generateAnimatedVideo(input: {
 
     void (async () => {
       try {
-        const ai = new GoogleGenAI({ apiKey: input.apiKey });
+        const ai = new GoogleGenAI({ apiKey: input.apiKey, apiVersion: "v1beta" });
         const interaction = await ai.interactions.create(buildAnimateRequest(input), {
           signal: abortController.signal,
         });
-        subscriber.next(extractAnimateVideo(interaction.steps));
+        subscriber.next(extractAnimateVideo(interaction.steps, interaction.output_video));
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
@@ -366,7 +403,10 @@ export function generateAnimatedVideo(input: {
   });
 }
 
-export function extractAnimateVideo(steps: Interactions.Step[] | undefined): { data: string; mimeType: string } {
+export function extractAnimateVideo(
+  steps: Interactions.Step[] | undefined,
+  outputVideo?: Interactions.VideoContent,
+): { data: string; mimeType: string } {
   for (const step of steps || []) {
     if (step.type !== "model_output") continue;
     for (const content of step.content || []) {
@@ -374,6 +414,9 @@ export function extractAnimateVideo(steps: Interactions.Step[] | undefined): { d
         return { data: content.data, mimeType: content.mime_type || "video/mp4" };
       }
     }
+  }
+  if (outputVideo?.data) {
+    return { data: outputVideo.data, mimeType: outputVideo.mime_type || "video/mp4" };
   }
   throw new Error("Gemini returned no video.");
 }

@@ -3,6 +3,7 @@ import {
   BehaviorSubject,
   combineLatest,
   filter,
+  finalize,
   ignoreElements,
   map,
   mergeMap,
@@ -144,14 +145,13 @@ export const UserTestingTool = createComponent(
             );
           }),
           tap({
-            complete: () => {
-              isRunning$.next(false);
-              progressMsg$.next("");
-            },
             error: () => {
-              isRunning$.next(false);
               progressMsg$.next("Error occurred");
             },
+          }),
+          finalize(() => {
+            isRunning$.next(false);
+            if (progressMsg$.value !== "Error occurred") progressMsg$.next("");
           }),
         );
 

@@ -1,13 +1,14 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
-import { from, map, Observable, switchMap } from "rxjs";
+import { Observable } from "rxjs";
+import { GEMINI_TEXT_MODEL, GEMINI_TEXT_THINKING } from "../../lib/gemini-models";
 import { progress$ } from "../progress/progress";
 
 /**
  * Converts a URL or fetchable resource to a base64 string.
  */
-async function urlToBase64(url: string): Promise<string> {
+async function urlToBase64(url: string, signal?: AbortSignal): Promise<string> {
   if (url.startsWith("data:")) return url;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   const blob = await response.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -58,40 +59,17 @@ function extractInteractionText(
     .join("");
 }
 
-export function getCaption(src: string, apiKey: string): Observable<string> {
-  return from(urlToBase64(src)).pipe(
-    switchMap(async (dataUrl) => {
-      const { mimeType, data } = extractDataFromDataUrl(dataUrl);
-      const ai = new GoogleGenAI({ apiKey });
-
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.6-flash",
-        input: [
-          {
-            type: "user_input",
-            content: [
-              { type: "text", text: "Describe this image in a short caption." },
-              { type: "image", mime_type: mimeType, data },
-            ],
-          },
-        ],
-        response_modalities: ["text"],
-        generation_config: { thinking_level: "minimal" },
-        store: false,
-      });
-      return interaction;
-    }),
-    map((response) => {
-      const text = extractInteractionText(response.steps);
-      if (!text) throw new Error("No caption generated");
-      return text;
-    }),
-  );
-}
-
 export function enhancePrompt(originalPrompt: string, cardContext: string, apiKey: string): Observable<string> {
-  return from(
-    (async () => {
+  return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    const abortController = new AbortController();
+
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
+      abortController.abort();
+    });
+
+    void (async () => {
       const ai = new GoogleGenAI({ apiKey });
       const prompt = `You are an expert prompt engineer. Improve this prompt for an image generator to create a high quality image. 
       
@@ -100,18 +78,24 @@ export function enhancePrompt(originalPrompt: string, cardContext: string, apiKe
       
       Keep it descriptive but concise. Return ONLY the enhanced prompt.`;
 
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.6-flash",
-        input: [{ type: "user_input", content: [{ type: "text", text: prompt }] }],
-        response_modalities: ["text"],
-        store: false,
-      });
+      const interaction = await ai.interactions.create(
+        {
+          model: GEMINI_TEXT_MODEL,
+          input: [{ type: "user_input", content: [{ type: "text", text: prompt }] }],
+          generation_config: { thinking_level: GEMINI_TEXT_THINKING },
+          store: false,
+        },
+        { signal: abortController.signal },
+      );
 
       const text = extractInteractionText(interaction.steps);
       if (!text) throw new Error("No enhanced prompt generated");
-      return text;
-    })(),
-  );
+      subscriber.next(text);
+      subscriber.complete();
+    })().catch((error) => {
+      subscriber.error(error);
+    });
+  });
 }
 
 export interface CardContent {
@@ -124,8 +108,11 @@ export interface CardContent {
 }
 
 export function fillCard(content: CardContent, apiKey: string): Observable<Partial<CardContent>> {
-  return from(
-    (async () => {
+  return new Observable<Partial<CardContent>>((subscriber) => {
+    const abortController = new AbortController();
+    subscriber.add(() => abortController.abort());
+
+    void (async () => {
       const parts: Interactions.Content[] = [];
       let prompt = `I have a card with the following content:
 Title: ${content.title || "(missing)"}
@@ -146,7 +133,7 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
 
       if (content.imageSrc) {
         try {
-          const dataUrl = await urlToBase64(content.imageSrc);
+          const dataUrl = await urlToBase64(content.imageSrc, abortController.signal);
           const { mimeType, data } = extractDataFromDataUrl(dataUrl);
           parts.push({
             type: "image",
@@ -161,7 +148,7 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
 
       if (content.videoSrc) {
         try {
-          const dataUrl = await urlToBase64(content.videoSrc);
+          const dataUrl = await urlToBase64(content.videoSrc, abortController.signal);
           const extracted = extractDataFromDataUrl(dataUrl);
           const mimeType =
             normalizeGeminiVideoMimeType(extracted.mimeType) ?? normalizeGeminiVideoMimeType(content.videoMimeType);
@@ -178,15 +165,23 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.6-flash",
-        input: [{ type: "user_input", content: parts }],
-        response_format: { type: "text", mime_type: "application/json" },
-        store: false,
-      });
+      const interaction = await ai.interactions.create(
+        {
+          model: GEMINI_TEXT_MODEL,
+          input: [{ type: "user_input", content: parts }],
+          response_format: { type: "text", mime_type: "application/json" },
+          generation_config: { thinking_level: GEMINI_TEXT_THINKING },
+          store: false,
+        },
+        { signal: abortController.signal },
+      );
 
       const text = extractInteractionText(interaction.steps);
-      if (!text) return {};
+      if (!text) {
+        subscriber.next({});
+        subscriber.complete();
+        return;
+      }
 
       try {
         const parsed = JSON.parse(text) as Partial<CardContent>;
@@ -196,13 +191,16 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
         if (!content.videoSrc && !content.imagePrompt && typeof parsed.imagePrompt === "string") {
           updates.imagePrompt = parsed.imagePrompt;
         }
-        return updates;
+        subscriber.next(updates);
       } catch (e) {
         console.error("Failed to parse JSON response from AI", text);
-        return {};
+        subscriber.next({});
       }
-    })(),
-  );
+      subscriber.complete();
+    })().catch((error) => {
+      subscriber.error(error);
+    });
+  });
 }
 
 export function generateRefinedCardText(input: {
@@ -212,16 +210,22 @@ export function generateRefinedCardText(input: {
   oldBody: string;
   apiKey: string;
 }): Observable<{ title: string; body: string }> {
-  return from(
-    (async () => {
-      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
-      try {
-        const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const parts: Interactions.Content[] = [];
+  return new Observable<{ title: string; body: string }>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    const abortController = new AbortController();
 
-        parts.push({
-          type: "text",
-          text: `You are an AI assistant helping to refine a card's content after an image modification.
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
+      abortController.abort();
+    });
+
+    void (async () => {
+      const ai = new GoogleGenAI({ apiKey: input.apiKey });
+      const parts: Interactions.Content[] = [];
+
+      parts.push({
+        type: "text",
+        text: `You are an AI assistant helping to refine a card's content after an image modification.
 We modified an original image based on user drawing and feedback to produce a refined image.
 Original Card Title: "${input.oldTitle || ""}"
 Original Card Body: "${input.oldBody || ""}"
@@ -235,69 +239,75 @@ Your output must be a JSON object with two fields:
 
 Return ONLY the JSON object. Do not include any other text or markdown formatting.
 Example: {"title": "...", "body": "..."}`,
-        });
+      });
 
-        if (input.oldImageSrc) {
-          try {
-            const dataUrl = await urlToBase64(input.oldImageSrc);
-            const { mimeType, data } = extractDataFromDataUrl(dataUrl);
-            parts.push({
-              type: "text",
-              text: "This is the original (old) image before modification.",
-            });
-            parts.push({
-              type: "image",
-              mime_type: mimeType,
-              data,
-            });
-          } catch (e) {
-            console.error("Failed to process old image for text generation", e);
-          }
+      if (input.oldImageSrc) {
+        try {
+          const dataUrl = await urlToBase64(input.oldImageSrc, abortController.signal);
+          const { mimeType, data } = extractDataFromDataUrl(dataUrl);
+          parts.push({
+            type: "text",
+            text: "This is the original (old) image before modification.",
+          });
+          parts.push({
+            type: "image",
+            mime_type: mimeType,
+            data,
+          });
+        } catch (e) {
+          console.error("Failed to process old image for text generation", e);
         }
+      }
 
-        if (input.newImageSrc) {
-          try {
-            const dataUrl = await urlToBase64(input.newImageSrc);
-            const { mimeType, data } = extractDataFromDataUrl(dataUrl);
-            parts.push({
-              type: "text",
-              text: "This is the refined (new) image after modification.",
-            });
-            parts.push({
-              type: "image",
-              mime_type: mimeType,
-              data,
-            });
-          } catch (e) {
-            console.error("Failed to process new image for text generation", e);
-          }
+      if (input.newImageSrc) {
+        try {
+          const dataUrl = await urlToBase64(input.newImageSrc, abortController.signal);
+          const { mimeType, data } = extractDataFromDataUrl(dataUrl);
+          parts.push({
+            type: "text",
+            text: "This is the refined (new) image after modification.",
+          });
+          parts.push({
+            type: "image",
+            mime_type: mimeType,
+            data,
+          });
+        } catch (e) {
+          console.error("Failed to process new image for text generation", e);
         }
+      }
 
-        const interaction = await ai.interactions.create({
-          model: "gemini-3.6-flash",
+      const interaction = await ai.interactions.create(
+        {
+          model: GEMINI_TEXT_MODEL,
           input: [{ type: "user_input", content: parts }],
           response_format: { type: "text", mime_type: "application/json" },
+          generation_config: { thinking_level: GEMINI_TEXT_THINKING },
           store: false,
-        });
+        },
+        { signal: abortController.signal },
+      );
 
-        const text = extractInteractionText(interaction.steps);
-        if (!text) {
-          return { title: input.oldTitle || "Untitled", body: input.oldBody || "" };
-        }
-
-        try {
-          const parsed = JSON.parse(text);
-          return {
-            title: parsed.title || input.oldTitle || "Untitled",
-            body: parsed.body || input.oldBody || "",
-          };
-        } catch (e) {
-          console.error("Failed to parse JSON response from AI for sketch refinement", text);
-          return { title: input.oldTitle || "Untitled", body: input.oldBody || "" };
-        }
-      } finally {
-        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
+      const text = extractInteractionText(interaction.steps);
+      if (!text) {
+        subscriber.next({ title: input.oldTitle || "Untitled", body: input.oldBody || "" });
+        subscriber.complete();
+        return;
       }
-    })(),
-  );
+
+      try {
+        const parsed = JSON.parse(text);
+        subscriber.next({
+          title: parsed.title || input.oldTitle || "Untitled",
+          body: parsed.body || input.oldBody || "",
+        });
+      } catch (e) {
+        console.error("Failed to parse JSON response from AI for sketch refinement", text);
+        subscriber.next({ title: input.oldTitle || "Untitled", body: input.oldBody || "" });
+      }
+      subscriber.complete();
+    })().catch((error) => {
+      subscriber.error(error);
+    });
+  });
 }

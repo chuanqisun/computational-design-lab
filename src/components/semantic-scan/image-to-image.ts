@@ -1,27 +1,34 @@
 import { GoogleGenAI } from "@google/genai";
-import { Observable, from } from "rxjs";
+import { Observable } from "rxjs";
+import { GEMINI_IMAGE_EDIT_MODEL, GEMINI_IMAGE_THINKING } from "../../lib/gemini-models";
 import { progress$ } from "../progress/progress";
 
 export function imageToimage(input: { instruction: string; image: string; apiKey: string }): Observable<string> {
-  return from(
-    (async () => {
-      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
-      try {
-        const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-3.1-flash-lite-image";
+  return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen + 1 });
+    const abortController = new AbortController();
 
-        // Helper to parse data URL
-        const parseDataUrl = (dataUrl: string) => {
-          const [header, data] = dataUrl.split(",");
-          const mimeType = header.split(":")[1].split(";")[0];
-          return { mimeType, data };
-        };
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, imageGen: Math.max(0, progress$.value.imageGen - 1) });
+      abortController.abort();
+    });
 
-        // Add the image to parts
-        const { mimeType, data } = parseDataUrl(input.image);
+    void (async () => {
+      const ai = new GoogleGenAI({ apiKey: input.apiKey });
 
-        const response = await ai.interactions.create({
-          model,
+      // Helper to parse data URL
+      const parseDataUrl = (dataUrl: string) => {
+        const [header, data] = dataUrl.split(",");
+        const mimeType = header.split(":")[1].split(";")[0];
+        return { mimeType, data };
+      };
+
+      // Add the image to parts
+      const { mimeType, data } = parseDataUrl(input.image);
+
+      const response = await ai.interactions.create(
+        {
+          model: GEMINI_IMAGE_EDIT_MODEL,
           input: [
             {
               type: "user_input",
@@ -31,27 +38,30 @@ export function imageToimage(input: { instruction: string; image: string; apiKey
               ],
             },
           ],
-          response_modalities: ["image"],
+          response_format: { type: "image" },
+          generation_config: { thinking_level: GEMINI_IMAGE_THINKING },
           store: false,
           stream: true,
+        },
+        { signal: abortController.signal },
+      );
+
+      const images = new Map<number, { mimeType: string; data: string }>();
+      for await (const event of response) {
+        if (event.event_type !== "step.delta" || event.delta.type !== "image" || !event.delta.data) continue;
+
+        const current = images.get(event.index);
+        images.set(event.index, {
+          mimeType: event.delta.mime_type || current?.mimeType || "image/png",
+          data: `${current?.data || ""}${event.delta.data}`,
         });
-
-        const images = new Map<number, { mimeType: string; data: string }>();
-        for await (const event of response) {
-          if (event.event_type !== "step.delta" || event.delta.type !== "image" || !event.delta.data) continue;
-
-          const current = images.get(event.index);
-          images.set(event.index, {
-            mimeType: event.delta.mime_type || current?.mimeType || "image/png",
-            data: `${current?.data || ""}${event.delta.data}`,
-          });
-        }
-
-        const image = images.values().next().value;
-        return image ? `data:${image.mimeType};base64,${image.data}` : "";
-      } finally {
-        progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
       }
-    })(),
-  );
+
+      const image = images.values().next().value;
+      subscriber.next(image ? `data:${image.mimeType};base64,${image.data}` : "");
+      subscriber.complete();
+    })().catch((error) => {
+      subscriber.error(error);
+    });
+  });
 }

@@ -61,7 +61,7 @@ const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
     categories: ["canvas", "mixed-to-json", "concept-extraction"],
     inputType: "mixed",
     outputType: "json",
-    model: "gemini-3.6-flash",
+    model: "gemini-4-hydrogen",
     outputSchema,
     slots: {
       instruction: {

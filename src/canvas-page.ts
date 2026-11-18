@@ -33,7 +33,6 @@ import {
 import { ContextTrayComponent } from "./components/context-tray/context-tray.component";
 import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
-import { GenerativeVideoElement } from "./components/generative-video/generative-video";
 import { hasActiveTasks, progressText, stopTasks } from "./components/progress/progress";
 import { ResizerComponent } from "./components/resizer/resizer";
 import { createComponent } from "./sdk/create-component";
@@ -41,10 +40,6 @@ import { observe } from "./sdk/observe-directive";
 
 // Register custom elements
 GenerativeImageElement.define(() => ({
-  gemini: { apiKey: loadApiKeys().gemini || "" },
-}));
-
-GenerativeVideoElement.define(() => ({
   gemini: { apiKey: loadApiKeys().gemini || "" },
 }));
 

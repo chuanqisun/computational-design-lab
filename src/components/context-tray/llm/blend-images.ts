@@ -1,10 +1,11 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
+import { GEMINI_IMAGE_MODEL, GEMINI_IMAGE_THINKING } from "../../../lib/gemini-models";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 /**
- * Use Google Gen AI gemini flash 2.5 image model to blend items based on user provided instruction.
+ * Use Google Gen AI Gemini Nano Banana 2.1 to blend items based on user provided instruction.
  * Returns the observable of image data url
  */
 export function blendImages(input: { instruction: string; items: CanvasItem[]; apiKey: string }): Observable<string> {
@@ -14,14 +15,14 @@ export function blendImages(input: { instruction: string; items: CanvasItem[]; a
     const abortController = new AbortController();
 
     subscriber.add(() => {
-      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+      progress$.next({ ...progress$.value, imageGen: Math.max(0, progress$.value.imageGen - 1) });
       abortController.abort();
     });
 
     (async () => {
       try {
         const ai = new GoogleGenAI({ apiKey: input.apiKey });
-        const model = "gemini-3.1-flash-image";
+        const model = GEMINI_IMAGE_MODEL;
         const parts: Interactions.Content[] = [
           {
             type: "text",
@@ -58,7 +59,8 @@ export function blendImages(input: { instruction: string; items: CanvasItem[]; a
           {
             model,
             input: [{ type: "user_input", content: parts }],
-            response_modalities: ["image"],
+            response_format: { type: "image" },
+            generation_config: { thinking_level: GEMINI_IMAGE_THINKING },
             store: false,
             stream: true,
           },

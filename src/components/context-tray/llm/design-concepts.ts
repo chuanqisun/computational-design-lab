@@ -1,6 +1,7 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
+import { GEMINI_REASONING_MODEL, GEMINI_REASONING_THINKING } from "../../../lib/gemini-models";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
@@ -22,6 +23,14 @@ export function designConcepts$(inputs: {
   apiKey: string;
 }): Observable<DesignConcept> {
   return new Observable<DesignConcept>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    const abortController = new AbortController();
+
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
+      abortController.abort();
+    });
+
     const ai = new GoogleGenAI({ apiKey: inputs.apiKey });
     const parser = new JSONParser();
 
@@ -37,7 +46,6 @@ export function designConcepts$(inputs: {
     };
 
     (async () => {
-      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const schema = {
           type: "object",
@@ -92,15 +100,18 @@ For each design, provide:
 
         contents.push({ type: "text", text: userPrompt });
 
-        const stream = await ai.interactions.create({
-          model: "gemini-3.6-flash",
-          input: [{ type: "user_input", content: contents }],
-          system_instruction: systemPrompt,
-          response_format: { type: "text", mime_type: "application/json", schema },
-          generation_config: { thinking_level: "minimal" },
-          store: false,
-          stream: true,
-        });
+        const stream = await ai.interactions.create(
+          {
+            model: GEMINI_REASONING_MODEL,
+            input: [{ type: "user_input", content: contents }],
+            system_instruction: systemPrompt,
+            response_format: { type: "text", mime_type: "application/json", schema },
+            generation_config: { thinking_level: GEMINI_REASONING_THINKING },
+            store: false,
+            stream: true,
+          },
+          { signal: abortController.signal },
+        );
 
         for await (const event of stream) {
           if (event.event_type === "step.delta" && event.delta.type === "text") {
@@ -114,8 +125,6 @@ For each design, provide:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
-      } finally {
-        progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
       }
     })();
   });

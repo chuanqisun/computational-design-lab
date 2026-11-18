@@ -3,6 +3,7 @@ import {
   BehaviorSubject,
   combineLatest,
   filter,
+  finalize,
   ignoreElements,
   map,
   mergeWith,
@@ -74,10 +75,7 @@ export const IterateTool = createComponent(
             };
             items$.next([...items$.value, card]);
           }),
-          tap({
-            complete: () => isGenerating$.next(false),
-            error: () => isGenerating$.next(false),
-          }),
+          finalize(() => isGenerating$.next(false)),
         );
 
         submitTask(task$);

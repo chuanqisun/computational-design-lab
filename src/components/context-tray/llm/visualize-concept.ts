@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable, map, mergeMap } from "rxjs";
+import { GEMINI_TEXT_MODEL, GEMINI_TEXT_THINKING } from "../../../lib/gemini-models";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
 import { progress$ } from "../../progress/progress";
 import type { Concept } from "./scan-concepts";
@@ -33,9 +34,15 @@ export function visualizeConcept$(props: VisualizeConceptProps): Observable<stri
  */
 export function createRenderPrompt(props: VisualizeConceptProps): Observable<string> {
   return new Observable<string>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
     const abortController = new AbortController();
     const ai = new GoogleGenAI({ apiKey: props.geminiApiKey });
     const parser = new JSONParser();
+
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
+      abortController.abort();
+    });
 
     // Wire up parser event to emit prompts
     parser.onValue = (entry) => {
@@ -51,8 +58,6 @@ export function createRenderPrompt(props: VisualizeConceptProps): Observable<str
 
     (async () => {
       try {
-        progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
-
         const prompt = `
 Create detailed prompts for image generation based on the following concept and instruction.
 
@@ -82,10 +87,10 @@ Respond in JSON format:
 
         const responseStream = await ai.interactions.create(
           {
-            model: "gemini-3.6-flash",
+            model: GEMINI_TEXT_MODEL,
             input: [{ type: "user_input", content: [{ type: "text", text: prompt }] }],
             response_format: { type: "text", mime_type: "application/json", schema },
-            generation_config: { thinking_level: "minimal" },
+            generation_config: { thinking_level: GEMINI_TEXT_THINKING },
             store: false,
             stream: true,
           },
@@ -102,13 +107,7 @@ Respond in JSON format:
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
-      } finally {
-        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
-
-    return () => {
-      abortController.abort();
-    };
   });
 }

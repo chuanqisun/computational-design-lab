@@ -1,23 +1,7 @@
-import type { Interactions } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
+import { GEMINI_IMAGE_MODEL, GEMINI_SEARCH_IMAGE_THINKING } from "../../../lib/gemini-models";
 import { progress$ } from "../../progress/progress";
-
-interface ImageBlock {
-  type?: string;
-  data?: string;
-  mime_type?: string;
-}
-
-interface SearchStep {
-  content?: ImageBlock[];
-  google_search_result?: { search_suggestions?: string };
-}
-
-interface SearchResponse {
-  steps?: SearchStep[];
-  output_image?: ImageBlock;
-  error?: { message?: string };
-}
 
 export interface SearchImagesResult {
   url: string;
@@ -40,48 +24,45 @@ export function searchImages(apiKey: string, prompt: string, images: string[] = 
       abortController.abort();
     });
 
-    const content: Interactions.Content[] = [...images.map(toImageContent), { type: "text", text: prompt }];
-    const input: Interactions.Step[] = [{ type: "user_input", content }];
+    void (async () => {
+      const content: Interactions.Content[] = [...images.map(toImageContent), { type: "text", text: prompt }];
+      const input: Interactions.Step[] = [{ type: "user_input", content }];
+      const ai = new GoogleGenAI({ apiKey });
 
-    void fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        model: "gemini-3.1-flash-image",
-        input,
-        tools: [{ type: "google_search", search_types: ["web_search", "image_search"] }],
-        response_format: {
-          type: "image",
-          mime_type: "image/jpeg",
-          aspect_ratio: "1:1",
-          image_size: "2K",
+      const interaction = await ai.interactions.create(
+        {
+          model: GEMINI_IMAGE_MODEL,
+          input,
+          tools: [{ type: "google_search", search_types: ["web_search", "image_search"] }],
+          response_format: {
+            type: "image",
+            mime_type: "image/jpeg",
+            aspect_ratio: "1:1",
+            image_size: "2K",
+          },
+          generation_config: { thinking_level: GEMINI_SEARCH_IMAGE_THINKING },
+          store: false,
         },
-        store: false,
-      }),
-      signal: abortController.signal,
-    })
-      .then(async (response) => {
-        const result = (await response.json()) as SearchResponse;
-        if (!response.ok) throw new Error(result.error?.message || "Search image query failed.");
+        { signal: abortController.signal },
+      );
 
-        const image = result.steps
-          ?.flatMap((step) => step.content || [])
-          .find((block) => block.type === "image" && block.data);
-        const output = image || result.output_image;
-        if (!output?.data) throw new Error("Search did not return an image.");
+      const stepImage = interaction.steps
+        .filter((step): step is Interactions.ModelOutputStep => step.type === "model_output")
+        .flatMap((step) => step.content || [])
+        .find((block): block is Interactions.ImageContent => block.type === "image" && Boolean(block.data));
+      const output = stepImage || interaction.output_image;
+      if (!output?.data) throw new Error("Search did not return an image.");
 
-        subscriber.next({
-          url: `data:${output.mime_type || "image/jpeg"};base64,${output.data}`,
-          searchSuggestions:
-            result.steps?.flatMap((step) =>
-              step.google_search_result?.search_suggestions ? [step.google_search_result.search_suggestions] : [],
-            ) || [],
-        });
-        subscriber.complete();
-      })
-      .catch((error) => subscriber.error(error));
+      const searchSuggestions = interaction.steps
+        .filter((step): step is Interactions.GoogleSearchResultStep => step.type === "google_search_result")
+        .flatMap((step) => step.result || [])
+        .flatMap((item) => (item.search_suggestions ? [item.search_suggestions] : []));
+
+      subscriber.next({
+        url: `data:${output.mime_type || "image/jpeg"};base64,${output.data}`,
+        searchSuggestions,
+      });
+      subscriber.complete();
+    })().catch((error) => subscriber.error(error));
   });
 }

@@ -55,7 +55,7 @@ describe("animate request model", () => {
     ]);
   });
 
-  it("reassigns the unique starting frame and builds contiguous reference macros", () => {
+  it("reassigns the unique starting frame and builds natural-language role instructions", () => {
     const { inputs } = resolveAnimateInputs([
       item({ imageSrc: "one.png" }),
       item({ imageSrc: "two.png" }),
@@ -66,14 +66,14 @@ describe("animate request model", () => {
 
     expect(roles.Image1).toBe("auto");
     expect(buildAnimateMacro(inputs, roles)).toBe(
-      "[# Sources <FIRST_FRAME>@Image3] [# References <IMAGE_REF_0>@Image2]",
+      "Use Image3 as the starting frame. Use Image2 as a visual reference, not as a starting frame.",
     );
     expect(combineAnimateInstruction(buildAnimateMacro(inputs, roles), "  Orbit around the product. ")).toContain(
       "Orbit around the product.",
     );
   });
 
-  it("keeps copyable role tags aligned with annotated starting-frame macros", () => {
+  it("keeps copyable positional image tokens aligned with annotated starting-frame prompts", () => {
     const { inputs } = resolveAnimateInputs([
       item({ imageSrc: "one.png" }),
       item({ imageSrc: "two.png" }),
@@ -83,16 +83,16 @@ describe("animate request model", () => {
     const annotated = new Set(["Image2"]);
 
     expect(getAnimateImageTokens(inputs, roles, annotated)).toEqual({
-      Image1: { primary: "<IMAGE_REF_1>" },
-      Image2: { primary: "<FIRST_FRAME>", annotation: "<IMAGE_REF_2>" },
-      Image3: { primary: "<IMAGE_REF_0>" },
+      Image1: { primary: "Image1" },
+      Image2: { primary: "Image2", annotation: "Image4" },
+      Image3: { primary: "Image3" },
     });
     expect(buildAnimateMacro(inputs, roles, annotated)).toBe(
-      "[# Sources <FIRST_FRAME>@Image2] [# References <IMAGE_REF_0>@Image3 <IMAGE_REF_2>@Image4]",
+      "Use Image2 as the starting frame. Use Image3 as a visual reference, not as a starting frame. Use Image4 as the annotated sketch guide for Image2, not as a literal frame.",
     );
   });
 
-  it("validates API key, empty input, multiple videos, and unsupported video MIME types", () => {
+  it("validates API key, empty input, image limit, extend duration limit, multiple videos, and unsupported video MIME types", () => {
     expect(getAnimatePreflightErrors([], false)).toEqual([
       "A Gemini API key is required.",
       "Select at least one card with video, image, or text content.",
@@ -111,6 +111,21 @@ describe("animate request model", () => {
       item({ title: "Inline", videoSrc: "data:video/mp4;base64,AAA", videoMimeType: "application/octet-stream" }),
     ]).inputs;
     expect(getAnimatePreflightErrors(inlineVideo, true)).toEqual([]);
+    expect(getAnimatePreflightErrors(inlineVideo, true, { task: "extend", duration: "15s" })).toEqual([
+      "Video extension supports durations up to 10 seconds.",
+    ]);
+    expect(getAnimatePreflightErrors(inlineVideo, true, { task: "extend", duration: "8s" })).toEqual([]);
+
+    const sixImages = resolveAnimateInputs(
+      Array.from({ length: 6 }, (_, index) => item({ imageSrc: `img-${index + 1}.png` })),
+    ).inputs;
+    expect(getAnimatePreflightErrors(sixImages, true)).toEqual([]);
+    expect(
+      getAnimatePreflightErrors(sixImages, true, {
+        roles: { Image1: "starting-frame" },
+        annotatedImageIds: new Set(["Image1"]),
+      }),
+    ).toEqual(["Animate supports up to 6 image inputs."]);
   });
 
   it("builds one explicit user input step and controls output option omission", () => {
@@ -124,6 +139,7 @@ describe("animate request model", () => {
     const portraitRequest = buildAnimateRequest({ ...base, aspectRatio: "9:16" });
     const fourSecondRequest = buildAnimateRequest({ ...base, aspectRatio: "default", duration: "4s" });
     const eightSecondRequest = buildAnimateRequest({ ...base, aspectRatio: "default", duration: "8s" });
+    const fifteenSecondRequest = buildAnimateRequest({ ...base, aspectRatio: "default", duration: "15s" });
 
     expect(defaultRequest.input).toEqual([
       {
@@ -138,13 +154,15 @@ describe("animate request model", () => {
     expect(portraitRequest.response_format).toEqual({ type: "video", delivery: "inline", aspect_ratio: "9:16" });
     expect(fourSecondRequest.response_format).toEqual({ type: "video", delivery: "inline", duration: "4s" });
     expect(eightSecondRequest.response_format).toEqual({ type: "video", delivery: "inline", duration: "8s" });
+    expect(fifteenSecondRequest.response_format).toEqual({ type: "video", delivery: "inline", duration: "15s" });
     expect(defaultRequest.generation_config).toBeUndefined();
     for (const task of ["text_to_video", "image_to_video", "reference_to_video", "edit", "extend"] as const) {
       expect(buildAnimateRequest({ ...base, aspectRatio: "default", task }).generation_config).toEqual({
         video_config: { task },
       });
     }
-    expect(defaultRequest.model).toBe("gemini-omni-1.1-flash");
+    expect(defaultRequest.api_version).toBe("v1beta");
+    expect(defaultRequest.model).toBe("gemini-omni-1.2-flash");
     expect(defaultRequest.store).toBe(false);
   });
 
@@ -201,12 +219,19 @@ describe("animate request model", () => {
     ]);
   });
 
-  it("extracts the first inline model-output video and rejects missing output", () => {
+  it("extracts the first inline model-output video, supports output_video fallback, and rejects missing output", () => {
     expect(
       extractAnimateVideo([
         { type: "model_output", content: [{ type: "video", data: "AAA", mime_type: "video/webm" }] },
       ]),
     ).toEqual({ data: "AAA", mimeType: "video/webm" });
+    expect(
+      extractAnimateVideo([], {
+        type: "video",
+        data: "BBB",
+        mime_type: "video/mp4",
+      }),
+    ).toEqual({ data: "BBB", mimeType: "video/mp4" });
     expect(() => extractAnimateVideo([{ type: "model_output", content: [{ type: "text", text: "none" }] }])).toThrow(
       "Gemini returned no video.",
     );

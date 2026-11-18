@@ -84,8 +84,8 @@ describe("AnimateTool component", () => {
     expect(dialogTmpl).toBeDefined();
 
     const values = dialogTmpl.values;
-    const macroValue = values.find((v) => typeof v === "string" && v.includes("[# References"));
-    expect(macroValue).toBe("[# References <IMAGE_REF_0>@Image2 <IMAGE_REF_1>@Image3]");
+    const macroValue = values.find((v) => typeof v === "string" && v.includes("Use Image"));
+    expect(macroValue).toBe("Use Image2 and Image3 as visual references, not as starting frames.");
 
     sub.unsubscribe();
   });
@@ -111,8 +111,8 @@ describe("AnimateTool component", () => {
     expect(dialogTmpl).not.toBe(nothing);
 
     const values = dialogTmpl.values;
-    const macroValue = values.find((v) => typeof v === "string" && v.includes("[# References"));
-    expect(macroValue).toBe("[# References <IMAGE_REF_0>@Image1]");
+    const macroValue = values.find((v) => typeof v === "string" && v.includes("Use Image"));
+    expect(macroValue).toBe("Use Image1 as a visual reference, not as a starting frame.");
 
     sub.unsubscribe();
   });
@@ -153,8 +153,8 @@ describe("AnimateTool component", () => {
     setStartingFrame();
 
     dialogTmpl = latest?.values[3] as TemplateResult;
-    let macroValue = dialogTmpl.values.find((v) => typeof v === "string" && v.includes("[# Sources"));
-    expect(macroValue).toBe("[# Sources <FIRST_FRAME>@Image1] [# References <IMAGE_REF_0>@Image2]");
+    let macroValue = dialogTmpl.values.find((v) => typeof v === "string" && v.includes("Use Image"));
+    expect(macroValue).toBe("Use Image1 as the starting frame. Use Image2 as a visual reference, not as a starting frame.");
 
     // Now set Image2 as starting-frame: Image1 returns to auto, Image2 becomes starting-frame
     const img2Tmpl = (dialogTmpl.values[3] as TemplateResult[])[1];
@@ -165,8 +165,8 @@ describe("AnimateTool component", () => {
     setImg2StartingFrame();
 
     dialogTmpl = latest?.values[3] as TemplateResult;
-    macroValue = dialogTmpl.values.find((v) => typeof v === "string" && v.includes("[# Sources"));
-    expect(macroValue).toBe("[# Sources <FIRST_FRAME>@Image2]");
+    macroValue = dialogTmpl.values.find((v) => typeof v === "string" && v.includes("Use Image"));
+    expect(macroValue).toBe("Use Image2 as the starting frame.");
 
     sub.unsubscribe();
   });
@@ -195,10 +195,10 @@ describe("AnimateTool component", () => {
     const setPortrait = aspectTmpls[2].values[1] as () => void;
     setPortrait();
 
-    // values[9]: duration templates array ["default", "4s", "8s"]
+    // values[9]: duration templates array ["default", "4s", "8s", "15s"]
     dialogTmpl = latest?.values[3] as TemplateResult;
     const durationTmpls = dialogTmpl.values[9] as TemplateResult[];
-    expect(durationTmpls.length).toBe(3);
+    expect(durationTmpls.length).toBe(4);
     const setFourSec = durationTmpls[1].values[1] as () => void;
     setFourSec();
 
@@ -211,6 +211,16 @@ describe("AnimateTool component", () => {
 
     dialogTmpl = latest?.values[3] as TemplateResult;
     expect(dialogTmpl).toBeDefined();
+    expect((dialogTmpl.values[11] as TemplateResult[]).length).toBe(0);
+    expect(dialogTmpl.values[13]).toBe(false);
+
+    // Setting duration to 15s while task is extend triggers a preflight error and disables Generate
+    const setFifteenSec = (dialogTmpl.values[9] as TemplateResult[])[3].values[1] as () => void;
+    setFifteenSec();
+
+    dialogTmpl = latest?.values[3] as TemplateResult;
+    expect((dialogTmpl.values[11] as TemplateResult[]).length).toBe(1);
+    expect(dialogTmpl.values[13]).toBe(true);
 
     sub.unsubscribe();
   });

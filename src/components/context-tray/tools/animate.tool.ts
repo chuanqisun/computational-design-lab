@@ -185,7 +185,18 @@ export const AnimateToolView = ({
   const handleGenerate = async () => {
     const state = dialogState$.value;
     const apiKey = apiKeys$.value.gemini;
-    if (!state || !apiKey || getAnimatePreflightErrors(state.inputs, true).length) return;
+    if (
+      !state ||
+      !apiKey ||
+      getAnimatePreflightErrors(state.inputs, true, {
+        duration: state.duration,
+        task: state.task,
+        roles: state.roles,
+        annotatedImageIds: state.annotatedImageIds,
+      }).length
+    ) {
+      return;
+    }
     updateState({ preparing: true, preparationError: "" });
 
     const annotatedImages = new Map<string, HTMLCanvasElement>();
@@ -240,7 +251,14 @@ export const AnimateToolView = ({
       const selectedInputs = resolveAnimateInputs(selected).inputs;
       const macro = state ? buildAnimateMacro(state.inputs, state.roles, state.annotatedImageIds) : "";
       const imageTokens = state ? getAnimateImageTokens(state.inputs, state.roles, state.annotatedImageIds) : {};
-      const preflightErrors = state ? getAnimatePreflightErrors(state.inputs, !!apiKeys.gemini) : [];
+      const preflightErrors = state
+        ? getAnimatePreflightErrors(state.inputs, !!apiKeys.gemini, {
+            duration: state.duration,
+            task: state.task,
+            roles: state.roles,
+            annotatedImageIds: state.annotatedImageIds,
+          })
+        : [];
 
       return html`
         <div class="animate-tool">
@@ -395,7 +413,7 @@ export const AnimateToolView = ({
 
                     <fieldset class="animate-segments">
                       <legend>Duration</legend>
-                      ${(["default", "4s", "8s"] as const).map(
+                      ${(["default", "4s", "8s", "15s"] as const).map(
                           (duration) =>
                             html`<label>
                               <input
@@ -404,7 +422,7 @@ export const AnimateToolView = ({
                                 .checked=${state.duration === duration}
                                 @change=${() => updateState({ duration })}
                               />
-                              ${duration === "default" ? "Default" : duration === "4s" ? "4 sec" : "8 sec"}
+                              ${duration === "default" ? "Default" : `${Number.parseInt(duration, 10)} sec`}
                             </label>`,
                         )}
                     </fieldset>

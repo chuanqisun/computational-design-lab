@@ -5,6 +5,7 @@ import {
   Subject,
   catchError,
   combineLatest,
+  finalize,
   fromEvent,
   ignoreElements,
   map,
@@ -296,11 +297,10 @@ export const CanvasComponent = createComponent(
             generateImage(connection, { prompt: enhancedPrompt, width: 512, height: 512 }).pipe(
               tap((result) => {
                 updateCard$.next({ id: cardId, updates: { imageSrc: result.url, imagePrompt: enhancedPrompt } });
-                isRegenerating$.next(false);
               }),
-              tap({ error: () => isRegenerating$.next(false) }),
             ),
           ),
+          finalize(() => isRegenerating$.next(false)),
         );
 
         submitTask(task$);

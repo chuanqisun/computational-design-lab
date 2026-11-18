@@ -1,5 +1,6 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
+import { GEMINI_IMAGE_MODEL, GEMINI_IMAGE_THINKING } from "../../lib/gemini-models";
 import { progress$ } from "../progress/progress";
 
 export interface GeminiConnection {
@@ -29,7 +30,7 @@ export function generateImage(
     const abortController = new AbortController();
 
     subscriber.add(() => {
-      progress$.next({ ...progress$.value, imageGen: progress$.value.imageGen - 1 });
+      progress$.next({ ...progress$.value, imageGen: Math.max(0, progress$.value.imageGen - 1) });
       abortController.abort();
     });
 
@@ -43,7 +44,7 @@ export function generateImage(
         apiKey: connection.apiKey,
       });
 
-      const model = options.model || "gemini-3.1-flash-image";
+      const model = options.model || GEMINI_IMAGE_MODEL;
       const input: Interactions.Content[] = [
         ...(options.images?.map((image) => {
           const [mimeTypePart, data] = image.split(",");
@@ -57,10 +58,11 @@ export function generateImage(
         {
           model,
           input: [{ type: "user_input", content: input }],
-          response_modalities: ["image"],
-          ...(options.aspectRatio
-            ? { response_format: { type: "image" as const, aspect_ratio: options.aspectRatio } }
-            : {}),
+          response_format: {
+            type: "image",
+            ...(options.aspectRatio ? { aspect_ratio: options.aspectRatio } : {}),
+          },
+          generation_config: { thinking_level: GEMINI_IMAGE_THINKING },
           store: false,
           stream: true,
         },

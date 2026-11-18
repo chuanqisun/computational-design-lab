@@ -1,6 +1,7 @@
 import { GoogleGenAI, type Interactions } from "@google/genai";
 import { JSONParser } from "@streamparser/json";
 import { Observable } from "rxjs";
+import { GEMINI_TEXT_MODEL, GEMINI_TEXT_THINKING } from "../../../lib/gemini-models";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
@@ -17,6 +18,14 @@ export function scanConcepts$(inputs: {
   apiKey: string;
 }): Observable<Concept> {
   return new Observable<Concept>((subscriber) => {
+    progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
+    const abortController = new AbortController();
+
+    subscriber.add(() => {
+      progress$.next({ ...progress$.value, textGen: Math.max(0, progress$.value.textGen - 1) });
+      abortController.abort();
+    });
+
     const ai = new GoogleGenAI({ apiKey: inputs.apiKey });
     const parser = new JSONParser();
 
@@ -32,7 +41,6 @@ export function scanConcepts$(inputs: {
     };
 
     (async () => {
-      progress$.next({ ...progress$.value, textGen: progress$.value.textGen + 1 });
       try {
         const schema = {
           type: "object",
@@ -67,15 +75,18 @@ export function scanConcepts$(inputs: {
           }
         }
 
-        const response = await ai.interactions.create({
-          model: "gemini-3.6-flash",
-          input: [{ type: "user_input", content: parts }],
-          system_instruction: developerPrompt,
-          response_format: { type: "text", mime_type: "application/json", schema },
-          generation_config: { thinking_level: "minimal" },
-          store: false,
-          stream: true,
-        });
+        const response = await ai.interactions.create(
+          {
+            model: GEMINI_TEXT_MODEL,
+            input: [{ type: "user_input", content: parts }],
+            system_instruction: developerPrompt,
+            response_format: { type: "text", mime_type: "application/json", schema },
+            generation_config: { thinking_level: GEMINI_TEXT_THINKING },
+            store: false,
+            stream: true,
+          },
+          { signal: abortController.signal },
+        );
 
         for await (const event of response) {
           if (event.event_type === "step.delta" && event.delta.type === "text") parser.write(event.delta.text);
@@ -83,8 +94,6 @@ export function scanConcepts$(inputs: {
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);
-      } finally {
-        progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
       }
     })();
   });

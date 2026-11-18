@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { from, Observable } from "rxjs";
+import { GEMINI_TEXT_MODEL, GEMINI_TEXT_THINKING } from "../../lib/gemini-models";
 import type { ApiKeys } from "./storage";
 
 export interface TestConnectionRequest {
@@ -38,34 +39,41 @@ export function testOpenAIConnection(apiKey: string): Observable<string> {
 }
 
 export function testGeminiConnection(apiKey: string): Observable<string> {
-  const request = async (): Promise<string> => {
-    const ai = new GoogleGenAI({
-      apiKey,
-    });
-    const model = "gemini-2.5-flash-lite";
-    const stream = await ai.interactions.create({
-      model,
-      input: [
+  return new Observable<string>((subscriber) => {
+    const abortController = new AbortController();
+    subscriber.add(() => abortController.abort());
+
+    void (async () => {
+      const ai = new GoogleGenAI({ apiKey });
+      const stream = await ai.interactions.create(
         {
-          type: "user_input",
-          content: [{ type: "text", text: "Please respond with exactly 'Gemini test success!'" }],
+          model: GEMINI_TEXT_MODEL,
+          input: [
+            {
+              type: "user_input",
+              content: [{ type: "text", text: "Please respond with exactly 'Gemini test success!'" }],
+            },
+          ],
+          generation_config: { thinking_level: GEMINI_TEXT_THINKING },
+          store: false,
+          stream: true,
         },
-      ],
-      store: false,
-      stream: true,
-    });
+        { signal: abortController.signal },
+      );
 
-    let fullText = "";
-    for await (const event of stream) {
-      if (event.event_type === "step.delta" && event.delta.type === "text") {
-        fullText += event.delta.text;
+      let fullText = "";
+      for await (const event of stream) {
+        if (event.event_type === "step.delta" && event.delta.type === "text") {
+          fullText += event.delta.text;
+        }
       }
-    }
 
-    return fullText || "No response received from Gemini";
-  };
-
-  return from(request());
+      subscriber.next(fullText || "No response received from Gemini");
+      subscriber.complete();
+    })().catch((error) => {
+      subscriber.error(error);
+    });
+  });
 }
 
 export function testConnection({ provider, apiKeys }: TestConnectionRequest): Observable<string> {
