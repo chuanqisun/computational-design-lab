@@ -1,6 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Interactions } from "@google/genai";
 import { Observable } from "rxjs";
-import type { GenerateVideosParameters } from "../connections/gemini-video.types";
+import { GEMINI_VIDEO_MODEL } from "../../lib/gemini-models";
 import { progress$ } from "../progress/progress";
 
 export interface GeminiConnection {
@@ -9,13 +9,59 @@ export interface GeminiConnection {
 
 export interface GenerateVideoOptions {
   prompt: string;
-  model: string;
+  model?: string;
   aspectRatio?: "16:9" | "9:16";
+  duration?: "4s" | "8s" | "15s";
   startFrameUrl?: string;
 }
 
 export interface GenerateVideoResult {
   url: string;
+}
+
+function parseDataUrl(src: string): { mimeType: string; data: string } | null {
+  const match = /^data:([^;,]+);base64,(.+)$/s.exec(src);
+  return match ? { mimeType: match[1], data: match[2] } : null;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      const parsed = parseDataUrl(String(reader.result));
+      parsed ? resolve(parsed.data) : reject(new Error("Could not encode media."));
+    });
+    reader.addEventListener("error", () => reject(reader.error || new Error("Could not read media.")));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function sourceToInline(src: string): Promise<{ mimeType: string; data: string }> {
+  const inline = parseDataUrl(src);
+  if (inline) return inline;
+
+  const response = await fetch(src);
+  if (!response.ok) throw new Error(`Media request failed with status ${response.status}.`);
+  const blob = await response.blob();
+  return { mimeType: blob.type || "image/png", data: await blobToBase64(blob) };
+}
+
+function extractVideo(
+  steps: Interactions.Step[] | undefined,
+  outputVideo?: Interactions.VideoContent,
+): { data: string; mimeType: string } {
+  for (const step of steps || []) {
+    if (step.type !== "model_output") continue;
+    for (const content of step.content || []) {
+      if (content.type === "video" && content.data) {
+        return { data: content.data, mimeType: content.mime_type || "video/mp4" };
+      }
+    }
+  }
+  if (outputVideo?.data) {
+    return { data: outputVideo.data, mimeType: outputVideo.mime_type || "video/mp4" };
+  }
+  throw new Error("Gemini returned no video.");
 }
 
 export function generateVideo(
@@ -34,94 +80,53 @@ export function generateVideo(
       abortController.abort();
     });
 
-    (async () => {
+    void (async () => {
       try {
         const ai = new GoogleGenAI({
           apiKey: connection.apiKey,
+          apiVersion: "v1beta",
         });
 
-        const params: GenerateVideosParameters = {
-          model: options.model,
-          prompt: options.prompt,
-          config: {
-            aspectRatio: options.aspectRatio || "16:9",
-            resolution: "720p",
-            durationSeconds: 4,
-          },
-        };
+        const model = options.model && !options.model.startsWith("veo-") ? options.model : GEMINI_VIDEO_MODEL;
+        const contents: Interactions.Content[] = [];
 
         if (options.startFrameUrl) {
-          if (options.startFrameUrl.startsWith("data:")) {
-            const [mimeTypePart, data] = options.startFrameUrl.split(",");
-            const mimeType = mimeTypePart.split(":")[1].split(";")[0];
-            params.image = {
-              imageBytes: data,
-              mimeType,
-            };
-          } else {
-            // Fetch external image
-            const response = await fetch(options.startFrameUrl);
-            const blob = await response.blob();
-            const reader = new FileReader();
-            const dataUrl = await new Promise<string>((resolve) => {
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-            const [, data] = dataUrl.split(",");
-            params.image = {
-              imageBytes: data,
-              mimeType: blob.type,
-            };
-          }
-        }
-
-        let operation = await (ai as any).models.generateVideos(params);
-
-        while (!operation.done && !isAborted) {
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          if (isAborted) break;
-          operation = await (ai as any).operations.getVideosOperation({
-            operation: operation,
+          const startFrame = await sourceToInline(options.startFrameUrl);
+          contents.push({
+            type: "image",
+            mime_type: startFrame.mimeType || "image/png",
+            data: startFrame.data,
           });
         }
 
+        const promptText = options.startFrameUrl
+          ? `Use Image1 as the starting frame. ${options.prompt.trim()}`
+          : options.prompt.trim();
+
+        contents.push({ type: "text", text: promptText });
+
+        const interaction = await ai.interactions.create(
+          {
+            api_version: "v1beta",
+            model,
+            input: [{ type: "user_input", content: contents }],
+            response_format: {
+              type: "video",
+              delivery: "inline",
+              aspect_ratio: options.aspectRatio || "16:9",
+              duration: options.duration ?? "4s",
+            },
+            store: false,
+            stream: false,
+          },
+          { signal: abortController.signal },
+        );
+
         if (isAborted) return;
 
-        if (operation.response && operation.response.generatedVideos && operation.response.generatedVideos.length > 0) {
-          const generatedVideo = operation.response.generatedVideos[0];
-          const vidData = generatedVideo.video;
-
-          if (!vidData) {
-            subscriber.error(new Error("Video data missing in response"));
-            return;
-          }
-
-          let videoUrl: string;
-
-          if (vidData.videoBytes) {
-            // Handle base64 video bytes
-            videoUrl = `data:${vidData.mimeType || "video/mp4"};base64,${vidData.videoBytes}`;
-          } else if (vidData.uri) {
-            // Handle video URI - requires API key in header
-            const response = await fetch(vidData.uri, {
-              headers: { "x-goog-api-key": connection.apiKey },
-              redirect: "follow",
-            });
-            if (!response.ok) {
-              throw new Error(`Failed to download video: ${response.status} ${response.statusText}`);
-            }
-            const blob = await response.blob();
-            videoUrl = URL.createObjectURL(blob);
-          } else {
-            subscriber.error(new Error("Video data is missing both videoBytes and uri"));
-            return;
-          }
-
-          subscriber.next({ url: videoUrl });
-          subscriber.complete();
-        } else {
-          subscriber.error(new Error("Invalid operation response"));
-        }
+        const video = extractVideo(interaction.steps, interaction.output_video);
+        subscriber.next({ url: `data:${video.mimeType};base64,${video.data}` });
+        subscriber.complete();
       } catch (error) {
         if (!isAborted) {
           subscriber.error(error);

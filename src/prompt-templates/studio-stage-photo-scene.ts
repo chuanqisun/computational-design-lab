@@ -91,7 +91,7 @@ const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "
     categories: ["studio", "text-to-xml", "photo-staging"],
     inputType: "text",
     outputType: "xml",
-    model: "gemini-3.6-flash",
+    model: "gemini-4-hydrogen",
     slots: {
       currentXml: {
         description: "Current synthesized product scene XML.",

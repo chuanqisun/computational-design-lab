@@ -1,7 +1,7 @@
 export const GEMINI_TEXT_MODEL = "gemini-4-hydrogen";
 export const GEMINI_TEXT_THINKING = "low" as const;
 
-export const GEMINI_REASONING_MODEL = "gemini-4-neon";
+export const GEMINI_REASONING_MODEL = "gemini-4-hydrogen";
 export const GEMINI_REASONING_THINKING = "low" as const;
 
 export const GEMINI_IMAGE_MODEL = "gemini-nano-banana-2.1";

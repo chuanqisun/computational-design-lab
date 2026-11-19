@@ -79,7 +79,7 @@ const template: PromptTemplateModule<
     categories: ["canvas", "mixed-to-json", "ranking"],
     inputType: "mixed",
     outputType: "json",
-    model: "gemini-4-neon",
+    model: "gemini-4-hydrogen",
     outputSchema,
     slots: {
       personaSummary: {

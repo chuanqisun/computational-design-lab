@@ -1,5 +1,6 @@
 import { html, render } from "lit-html";
 import type { BehaviorSubject } from "rxjs";
+import { GEMINI_IMAGE_MODEL, GEMINI_VIDEO_MODEL } from "../../lib/gemini-models";
 import { clearGalleryPersistence } from "../../lib/persistence";
 import { deletePhoto, generateAnimation, generateEdit } from "../../lib/studio-ai";
 import type { PhotoCard } from "../../lib/studio-types";
@@ -125,7 +126,7 @@ export const renderPhotoGallery = (gallery: PhotoCard[], photoGallery$: Behavior
                             <generative-video
                               prompt=${photo.prompt}
                               aspect-ratio="9:16"
-                              model="veo-3.1-generate-preview"
+                              model=${GEMINI_VIDEO_MODEL}
                               start-frame=${photo.startFrameUrl || ""}
                             ></generative-video>
                           `
@@ -135,7 +136,7 @@ export const renderPhotoGallery = (gallery: PhotoCard[], photoGallery$: Behavior
                               width="540"
                               height="960"
                               aspect-ratio="9:16"
-                              model="gemini-3.1-flash-image"
+                              model=${GEMINI_IMAGE_MODEL}
                             ></generative-image>
                           `}
                   </div>

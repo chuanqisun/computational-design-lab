@@ -2,6 +2,7 @@ import { html, render } from "lit-html";
 import { ifDefined } from "lit-html/directives/if-defined.js";
 import { from, merge, of, Subject, timer } from "rxjs";
 import { catchError, distinctUntilChanged, map, share, switchMap, takeUntil } from "rxjs/operators";
+import { GEMINI_VIDEO_MODEL } from "../../lib/gemini-models";
 import { getCachedImage, setCachedImage } from "../../lib/persistence";
 import { generateVideo, type GeminiConnection } from "./generate-video-gemini";
 import "./generative-video.css";
@@ -55,7 +56,7 @@ export class GenerativeVideoElement extends HTMLElement {
     const attributes$ = this.render$.pipe(
       map(() => ({
         prompt: this.getAttribute("prompt") ?? "",
-        model: this.getAttribute("model") ?? "veo-3.1-generate-preview",
+        model: this.getAttribute("model") ?? GEMINI_VIDEO_MODEL,
         aspectRatio: (this.getAttribute("aspect-ratio") as "16:9" | "9:16" | null) ?? "16:9",
         startFrame: this.getAttribute("start-frame") ?? undefined,
         retryCounter: this.retryCounter,

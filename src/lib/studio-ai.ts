@@ -6,6 +6,7 @@ import { colors } from "../components/material-library/colors";
 import { materials } from "../components/material-library/materials";
 import { mechanisms } from "../components/material-library/mechanisms";
 import { shapes } from "../components/material-library/shapes";
+import { GEMINI_REASONING_MODEL, GEMINI_REASONING_THINKING } from "./gemini-models";
 import type { PhotoCard, ScannedPhoto, ScanResult, StudioContent, StudioTurn } from "./studio-types";
 import { colorsByName, materialsById, mechanismsById, shapesById } from "./studio-utils";
 
@@ -152,7 +153,7 @@ Pick only items that are visibly present on the product in the photo. Return emp
 
   try {
     const response = await ai.interactions.create({
-      model: "gemini-3.6-flash",
+      model: GEMINI_REASONING_MODEL,
       input: [
         {
           type: "user_input",
@@ -163,7 +164,7 @@ Pick only items that are visibly present on the product in the photo. Return emp
         },
       ],
       response_format: { type: "text", mime_type: "application/json", schema },
-      generation_config: { thinking_level: "low" },
+      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
       store: false,
       stream: true,
     });
@@ -299,10 +300,10 @@ export async function synthesize(params: SynthesizeParams) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
-      model: "gemini-3.6-flash",
+      model: GEMINI_REASONING_MODEL,
       input: [toInteractionStep(userMessage)],
       system_instruction: getStudioSystemPrompt(brandGuide),
-      generation_config: { thinking_level: "minimal" },
+      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
       store: false,
       stream: true,
     });
@@ -365,10 +366,10 @@ export async function revise(params: ReviseParams) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.interactions.create({
-      model: "gemini-3.6-flash",
+      model: GEMINI_REASONING_MODEL,
       input: contents.map(toInteractionStep),
       system_instruction: getStudioSystemPrompt(brandGuide),
-      generation_config: { thinking_level: "minimal" },
+      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
       store: false,
       stream: true,
     });
@@ -444,10 +445,10 @@ ${currentXml}
 Photo scene: ${scene}`;
 
     const response = await ai.interactions.create({
-      model: "gemini-3.6-flash",
+      model: GEMINI_REASONING_MODEL,
       input: [{ type: "user_input", content: [{ type: "text", text: promptText }] }],
       system_instruction: getPhotoStageSystemPrompt(brandGuide),
-      generation_config: { thinking_level: "minimal" },
+      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
       store: false,
     });
 
@@ -475,7 +476,7 @@ async function generateSoundDescription(
 ) {
   try {
     const response = await ai.interactions.create({
-      model: "gemini-3.6-flash",
+      model: GEMINI_REASONING_MODEL,
       input: [
         {
           type: "user_input",
@@ -492,7 +493,7 @@ Animation prompt: ${animationPrompt}`,
           ],
         },
       ],
-      generation_config: { thinking_level: "minimal" },
+      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
       store: false,
     });
 

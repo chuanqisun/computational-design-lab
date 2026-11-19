@@ -45,7 +45,7 @@ const template: PromptTemplateModule<StudioImportCanvasInstructionsVars, "cardDe
     categories: ["studio", "text-to-text", "input-prep"],
     inputType: "text",
     outputType: "text",
-    model: "gemini-3.6-flash",
+    model: "gemini-4-hydrogen",
     slots: {
       cardDescriptions: {
         description: "Canvas card descriptions merged into studio custom instructions.",
