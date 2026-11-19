@@ -13,7 +13,7 @@ import {
   type Subscription,
 } from "rxjs";
 import type { CanvasItem } from "../../components/canvas/canvas.component";
-import { placeRows } from "../../components/canvas/layout";
+import { placeRows, type Position } from "../../components/canvas/layout";
 import { ActionLog } from "../workflows/action-log";
 import type { Registry } from "./registry";
 import { validateSchema } from "./schema";
@@ -172,6 +172,24 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
             near: near ?? targets.map((target) => target.id),
             viewport: getViewport(),
           }),
+        placer: (near) => {
+          let positions: Position[] | null = null;
+          let index = 0;
+          return () => {
+            positions ??= placeRows(items$.value, 64, {
+              near: near ?? targets.map((target) => target.id),
+              viewport: getViewport(),
+            });
+            const pos = positions[index++ % positions.length];
+            return { ...pos, z: pos.z + Math.floor(index / positions.length) * positions.length };
+          };
+        },
+        background: (task$) => {
+          task$.pipe(takeUntil(stop$), catchError((error) => {
+            console.error(`Background work for ${name} failed`, error);
+            return EMPTY;
+          })).subscribe();
+        },
         newId,
         addCards: (cards) => items$.next([...items$.value, ...cards]),
         updateCard: (id, patch) =>

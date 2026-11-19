@@ -91,6 +91,10 @@ export interface ActionContext {
   /** Resolve cards by id. Throws `card_not_found` for unknown ids. */
   cards(ids: string[]): CanvasItem[];
   place(count: number, near?: string[]): Position[];
+  /** Successive row positions computed from the board as it is now (for streamed results). */
+  placer(near?: string[]): () => Position;
+  /** Keep work running after the action returns (async actions). Cancelled by stop$. */
+  background(task$: Observable<unknown>): void;
   newId(prefix: string): string;
   addCards(cards: CanvasItem[]): void;
   updateCard(id: string, patch: Partial<CanvasItem>): void;
