@@ -10,7 +10,9 @@
 
   .tool-section {
     h2 {
-      padding: 0.5ch 1ch;
+      padding: 0.3ch 1ch;
+      font-size: 1em;
+      letter-spacing: 0.02em;
       background: var(--section-header-background);
       color: var(--section-header-text-color);
     }

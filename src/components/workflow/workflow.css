@@ -122,7 +122,7 @@
   > .trace-line {
     display: grid;
     grid-template-columns: auto minmax(12ch, auto) 1fr auto;
-    align-items: baseline;
+    align-items: center;
     gap: 1ch;
     padding: 0.5ch 0;
     color: inherit;
