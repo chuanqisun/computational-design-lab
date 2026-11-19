@@ -65,9 +65,12 @@ export interface ActionRuntime {
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, width: 1200, height: 800 };
 
+/** Short ids: the agent reads and echoes them, so keep them compact (8 base36 chars ≈ 2.8e12 space). */
 const defaultNewId = (prefix: string) => {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  return uuid ? `${prefix}-${uuid}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const bytes = new Uint8Array(6);
+  globalThis.crypto.getRandomValues(bytes);
+  const suffix = [...bytes].map((b) => b.toString(36).padStart(2, "0")).join("").slice(0, 8);
+  return `${prefix}-${suffix}`;
 };
 
 function errorResult(error: string, reason: string): ActionResult {
