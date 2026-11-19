@@ -35,6 +35,8 @@ import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { hasActiveTasks, progressText, stopTasks } from "./components/progress/progress";
 import { ResizerComponent } from "./components/resizer/resizer";
+import { getActionRuntime } from "./lib/actions/app-runtime";
+import { persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import { observe } from "./sdk/observe-directive";
 
@@ -58,7 +60,14 @@ function restoreViewport(canvasArea: HTMLElement, hasItems: boolean) {
 }
 
 loadCanvasItems().then((loadedItems) => {
-  items$.next(loadedItems);
+  // Pending work does not survive a reload; clear stale markers so cards render normally.
+  items$.next(
+    loadedItems.map((item) =>
+      item.metadata?.pending || item.metadata?.pendingImage
+        ? { ...item, metadata: { ...item.metadata, pending: undefined, pendingImage: undefined } }
+        : item,
+    ),
+  );
   requestAnimationFrame(() => {
     const canvasArea = document.querySelector(".canvas-area") as HTMLElement;
     if (canvasArea) restoreViewport(canvasArea, loadedItems.length > 0);
@@ -136,8 +145,40 @@ const autoSave$ = items$.pipe(
   ),
 );
 
+/** Scroll the canvas so the first new card is visible (new cards are placed below the board). */
+function revealCards(ids: string[]) {
+  const area = document.querySelector(".canvas-area") as HTMLElement | null;
+  const card = items$.value.find((item) => item.id === ids[0]);
+  if (!area || !card) return;
+  const visible =
+    card.x + card.width > area.scrollLeft &&
+    card.x < area.scrollLeft + area.clientWidth &&
+    card.y + card.height > area.scrollTop &&
+    card.y < area.scrollTop + area.clientHeight;
+  if (visible) return;
+  area.scrollTo({
+    left: Math.max(0, card.x - area.clientWidth / 4),
+    top: Math.max(0, card.y - area.clientHeight / 4),
+    behavior: "smooth",
+  });
+}
+
 const Main = createComponent(() => {
   const apiKeys$ = new BehaviorSubject<ApiKeys>(loadApiKeys());
+  const runtime = getActionRuntime(items$, apiKeys$);
+  void persistSubject(runtime.log.records$, "canvas:action-log");
+
+  const revealEffect$ = runtime.created$.pipe(
+    switchMap((event) =>
+      isCanvasIdle$.pipe(
+        filter((isIdle) => isIdle),
+        take(1),
+        map(() => event),
+      ),
+    ),
+    debounceTime(50),
+    tap((event) => requestAnimationFrame(() => revealCards(event.ids))),
+  );
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
   const canvasUI = CanvasComponent({ items$, apiKeys$, interaction$: canvasInteraction$ });
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
@@ -157,7 +198,7 @@ const Main = createComponent(() => {
     ignoreElements(),
   );
 
-  const effects$ = merge(taskRunner$, autoSave$, saveViewport$).pipe(ignoreElements());
+  const effects$ = merge(taskRunner$, autoSave$, saveViewport$, revealEffect$).pipe(ignoreElements());
 
   const template$ = of(html`
     <header class="app-header">

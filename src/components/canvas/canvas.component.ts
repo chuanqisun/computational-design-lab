@@ -1,26 +1,10 @@
 import { html } from "lit-html";
 import { repeat } from "lit-html/directives/repeat.js";
-import {
-  BehaviorSubject,
-  Subject,
-  catchError,
-  combineLatest,
-  finalize,
-  fromEvent,
-  ignoreElements,
-  map,
-  mergeWith,
-  of,
-  switchMap,
-  tap,
-  withLatestFrom,
-} from "rxjs";
+import { BehaviorSubject, Subject, combineLatest, fromEvent, ignoreElements, map, mergeWith, tap } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import { observe } from "../../sdk/observe-directive";
 import type { ApiKeys } from "../connections/storage";
-import { submitTask } from "../context-tray/tasks";
-import { generateImage, type GeminiConnection } from "../design/generate-image-gemini";
-import { enhancePrompt } from "./ai-helpers";
+import { getActionRuntime, runUserAction } from "../../lib/actions/app-runtime";
 import "./canvas.component.css";
 import { CardComponent } from "./card.component";
 import {
@@ -29,7 +13,6 @@ import {
   processClipboardPaste,
   serializeItemsForClipboardText,
 } from "./clipboard";
-import { getViewportCenter } from "./layout";
 import {
   analyzeClick,
   applySingleSelection,
@@ -96,31 +79,15 @@ export const CanvasComponent = createComponent(
     // Internal state
     const items$ = props.items$;
 
-    const makeCardId = (prefix: string) => {
-      const uuid = globalThis.crypto?.randomUUID?.();
-      return uuid ? `${prefix}-${uuid}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    };
-
-    // Helper: Get next z-index atomically
-    const getNextZIndex = () => {
-      const currentItems = props.items$.value;
-      const maxZ = currentItems.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
-      return maxZ + 1;
-    };
-
-    // Actions
-    const pasteImage$ = new Subject<string>();
-    const pasteImageFile$ = new Subject<File>();
-    const pasteText$ = new Subject<string>();
-    const pasteItems$ = new Subject<CanvasItem[]>();
-    const moveItems$ = new Subject<{ moves: { id: string; x: number; y: number }[] }>();
-    const deleteSelected$ = new Subject<void>();
-    const updateCard$ = new Subject<{ id: string; updates: Partial<CanvasItem> }>();
+    // All board changes go through the shared action layer (same path as the AI agent).
+    const runtime = getActionRuntime(props.items$, props.apiKeys$);
+    const act = (name: string, args: Record<string, unknown> = {}) => runUserAction(runtime, name, args);
+    const selectedIdsOf = (items: CanvasItem[]) => items.filter((item) => item.isSelected).map((item) => item.id);
+    const selectExactly = (items: CanvasItem[]) =>
+      act("select_cards", { cardIds: selectedIdsOf(items), mode: "replace" });
 
     // Card dialog state
     const openedCardId$ = new BehaviorSubject<string | null>(null);
-    const isRegenerating$ = new BehaviorSubject<boolean>(false);
-    const regenerate$ = new Subject<{ cardId: string; prompt: string }>();
     const marquee$ = new BehaviorSubject<MarqueeRect | null>(null);
 
     // Pan state
@@ -162,151 +129,32 @@ export const CanvasComponent = createComponent(
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    // Effects
-    const pasteEffect$ = pasteImage$.pipe(
-      tap((src) => {
-        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
-        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-        const cardId = makeCardId("img");
-
-        const card: CanvasItem = {
-          id: cardId,
-          imageSrc: src,
-          x: center.x - 100,
-          y: center.y - 150,
-          width: 200,
-          height: 300,
-          zIndex: getNextZIndex(),
-        };
-        props.items$.next([...props.items$.value, card]);
-      }),
-    );
-
-    const pasteTextEffect$ = pasteText$.pipe(
-      tap((text) => {
-        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
-        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-        const cardId = makeCardId("text");
-
-        const card: CanvasItem = {
-          id: cardId,
-          body: text,
-          x: center.x - 100,
-          y: center.y - 150,
-          width: 200,
-          height: 300,
-          zIndex: getNextZIndex(),
-        };
-        props.items$.next([...props.items$.value, card]);
-      }),
-    );
-
-    const pasteImageFileEffect$ = pasteImageFile$.pipe(
-      tap((file) => {
-        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
-        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-        const cardId = makeCardId("img");
-
-        const card: CanvasItem = {
-          id: cardId,
-          x: center.x - 100,
-          y: center.y - 150,
-          width: 200,
-          height: 300,
-          zIndex: getNextZIndex(),
-        };
-        props.items$.next([...props.items$.value, card]);
-
+    const readFileAsDataUrl = (file: File) =>
+      new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-          const src = loadEvent.target?.result;
-          if (typeof src === "string") {
-            updateCard$.next({ id: cardId, updates: { imageSrc: src } });
-          }
-        };
+        reader.onload = () =>
+          typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable file"));
+        reader.onerror = () => reject(new Error("Unreadable file"));
         reader.readAsDataURL(file);
-      }),
-    );
+      });
 
-    const pasteItemsEffect$ = pasteItems$.pipe(
-      tap((pastedItems) => {
-        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement;
-        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
-
-        // Calculate center of pasted items to offset them
-        const avgX = pastedItems.reduce((sum, i) => sum + i.x, 0) / pastedItems.length;
-        const avgY = pastedItems.reduce((sum, i) => sum + i.y, 0) / pastedItems.length;
-        const offsetX = center.x - avgX;
-        const offsetY = center.y - avgY;
-
-        // Deselect all existing items
-        const deselected = props.items$.value.map((item) => ({ ...item, isSelected: false }));
-
-        const newItems: CanvasItem[] = pastedItems.map((item, index) => ({
-          ...item,
-          id: makeCardId(`paste-${index}`),
-          x: item.x + offsetX,
-          y: item.y + offsetY,
-          isSelected: true,
-          zIndex: getNextZIndex() + index,
-        }));
-
-        props.items$.next([...deselected, ...newItems]);
-      }),
-    );
-
-    const moveEffect$ = moveItems$.pipe(
-      tap(({ moves }) => {
-        const currentItems = props.items$.value;
-        const updatedItems = currentItems.map((item) => {
-          const move = moves.find((m) => m.id === item.id);
-          return move ? { ...item, x: move.x, y: move.y } : item;
-        });
-        props.items$.next(updatedItems);
-      }),
-    );
-
-    const deleteEffect$ = deleteSelected$.pipe(
-      tap(() => {
-        const currentItems = props.items$.value;
-        const filteredItems = currentItems.filter((item) => !item.isSelected);
-        props.items$.next(filteredItems);
-      }),
-    );
-
-    const updateCardEffect$ = updateCard$.pipe(
-      tap(({ id, updates }) => {
-        const currentItems = props.items$.value;
-        const updatedItems = currentItems.map((item) => (item.id === id ? { ...item, ...updates } : item));
-        props.items$.next(updatedItems);
-      }),
-    );
-
-    // Regenerate runs independently of dialog — user can close dialog and it still works
-    const regenerateEffect$ = regenerate$.pipe(
-      withLatestFrom(props.apiKeys$),
-      tap(([{ cardId, prompt }, apiKeys]) => {
-        if (!prompt.trim() || !apiKeys.gemini) return;
-
-        isRegenerating$.next(true);
-        const connection: GeminiConnection = { apiKey: apiKeys.gemini };
-
-        const task$ = enhancePrompt(prompt, "User regeneration request", apiKeys.gemini).pipe(
-          catchError(() => of(prompt)),
-          switchMap((enhancedPrompt) =>
-            generateImage(connection, { prompt: enhancedPrompt, width: 512, height: 512 }).pipe(
-              tap((result) => {
-                updateCard$.next({ id: cardId, updates: { imageSrc: result.url, imagePrompt: enhancedPrompt } });
-              }),
-            ),
-          ),
-          finalize(() => isRegenerating$.next(false)),
-        );
-
-        submitTask(task$);
-      }),
-      ignoreElements(),
-    );
+    const pasteImageSrc = (src: string) => act("add_media", { _media: [{ kind: "image", src }] });
+    const pasteImageFile = (file: File) => {
+      void readFileAsDataUrl(file).then(pasteImageSrc, (error) => console.error("Paste image failed", error));
+    };
+    const pasteText = (text: string) => act("add_card", { text });
+    const pasteItems = (pastedItems: CanvasItem[]) => {
+      const existing = new Set(props.items$.value.map((item) => item.id));
+      if (pastedItems.every((item) => existing.has(item.id))) {
+        act("duplicate_cards", { cardIds: pastedItems.map((item) => item.id) });
+      } else {
+        act("add_media", { _items: pastedItems });
+      }
+    };
+    const deleteSelected = () => {
+      const cardIds = selectedIdsOf(props.items$.value);
+      if (cardIds.length) act("delete_cards", { cardIds });
+    };
 
     // Card dialog actions
     const openCard = (item: CanvasItem) => {
@@ -323,8 +171,9 @@ export const CanvasComponent = createComponent(
 
     const findItemById = (id: string) => props.items$.value.find((item) => item.id === id);
 
+    /** Presentation-only update: a legacy <generative-image> finished rendering a card's stored prompt. */
     const handleCardUpdate = (id: string, updates: Partial<CanvasItem>) => {
-      updateCard$.next({ id, updates });
+      props.items$.next(props.items$.value.map((item) => (item.id === id ? { ...item, ...updates } : item)));
     };
 
     const handleCardOpen = (id: string) => {
@@ -384,14 +233,12 @@ export const CanvasComponent = createComponent(
       // Check if the clicked item is selected after update
       const updatedItem = selectedItems.find((i) => i.id === item.id);
 
-      if (!updatedItem?.isSelected) {
-        props.items$.next(selectedItems);
-        return;
-      }
+      selectExactly(selectedItems);
+      if (!updatedItem?.isSelected) return;
 
-      // Bring the clicked item to the top (highest z-index)
-      const nextZ = selectedItems.reduce((max, i) => Math.max(max, i.zIndex || 0), 0) + 1;
-      const updatedItems = selectedItems.map((i) => (i.id === item.id ? { ...i, zIndex: nextZ } : i));
+      // Bring the clicked item to the top (presentation-only stacking order)
+      const nextZ = props.items$.value.reduce((max, i) => Math.max(max, i.zIndex || 0), 0) + 1;
+      const updatedItems = props.items$.value.map((i) => (i.id === item.id ? { ...i, zIndex: nextZ } : i));
       props.items$.next(updatedItems);
 
       // Get all selected items to drag (sorted by z-index for proper visual stacking)
@@ -415,12 +262,10 @@ export const CanvasComponent = createComponent(
         props.interaction$?.next("end");
 
         if (hasMoved) {
-          const newPositions = calculateFinalPositions(draggedData);
-          moveItems$.next({ moves: newPositions });
+          act("move_cards", { moves: calculateFinalPositions(draggedData) });
         } else if (analysis.shouldDeferSingleSelect) {
           // If we didn't move and should switch to single selection, do it now
-          const singleSelectItems = applySingleSelection(props.items$.value, item.id);
-          props.items$.next(singleSelectItems);
+          selectExactly(applySingleSelection(props.items$.value, item.id));
         }
       };
 
@@ -468,9 +313,9 @@ export const CanvasComponent = createComponent(
 
         const marquee = marquee$.value;
         if (hasMoved && marquee) {
-          props.items$.next(selectItemsInMarquee(props.items$.value, marquee, isCtrl || isShift));
-        } else {
-          props.items$.next(deselectAll({ items: props.items$.value }).items);
+          selectExactly(selectItemsInMarquee(props.items$.value, marquee, isCtrl || isShift));
+        } else if (props.items$.value.some((candidate) => candidate.isSelected)) {
+          selectExactly(deselectAll({ items: props.items$.value }).items);
         }
         marquee$.next(null);
       };
@@ -505,7 +350,7 @@ export const CanvasComponent = createComponent(
       if (selected.length === 0) return;
       event.preventDefault();
       copyItemsToClipboard(event, selected);
-      deleteSelected$.next();
+      deleteSelected();
     };
 
     // Handle paste event
@@ -524,7 +369,7 @@ export const CanvasComponent = createComponent(
 
       if (params.canvasItems && params.canvasItems.length > 0) {
         params.event?.preventDefault();
-        pasteItems$.next(params.canvasItems);
+        pasteItems(params.canvasItems);
         return;
       }
 
@@ -537,7 +382,7 @@ export const CanvasComponent = createComponent(
             if (file) {
               if (!handled) params.event?.preventDefault();
               handled = true;
-              pasteImageFile$.next(file);
+              pasteImageFile(file);
             }
           }
         }
@@ -546,7 +391,7 @@ export const CanvasComponent = createComponent(
       const plainText = params.plainText?.trim();
       if (plainText) {
         if (!handled) params.event?.preventDefault();
-        pasteText$.next(plainText);
+        pasteText(plainText);
       }
     };
 
@@ -579,8 +424,8 @@ export const CanvasComponent = createComponent(
 
       processClipboardPaste(event, { includeImages: false }).subscribe((action) => {
         event.preventDefault();
-        if (action.type === "image") pasteImage$.next(action.src);
-        else pasteText$.next(action.content);
+        if (action.type === "image") pasteImageSrc(action.src);
+        else pasteText(action.content);
       });
     };
 
@@ -611,7 +456,7 @@ export const CanvasComponent = createComponent(
         if (key === "x") {
           event.preventDefault();
           void writeSelectedItemsToClipboard().then((didWrite) => {
-            if (didWrite) deleteSelected$.next();
+            if (didWrite) deleteSelected();
           });
           return;
         }
@@ -630,7 +475,7 @@ export const CanvasComponent = createComponent(
 
         if (key === "a") {
           event.preventDefault();
-          props.items$.next(props.items$.value.map((item) => ({ ...item, isSelected: true })));
+          act("select_cards", { mode: "all" });
           return;
         }
       }
@@ -639,7 +484,7 @@ export const CanvasComponent = createComponent(
         const hasSelected = props.items$.value.some((item) => item.isSelected);
         if (hasSelected) {
           event.preventDefault();
-          deleteSelected$.next();
+          deleteSelected();
         }
       }
     };
@@ -662,74 +507,82 @@ export const CanvasComponent = createComponent(
     );
 
     // Card dialog template — editable fields, image on left, text on right
-    const cardDialog$ = combineLatest([openedCardId$, items$, isRegenerating$]).pipe(
-      map(([cardId, items, isRegenerating]) => {
+    const cardDialog$ = combineLatest([openedCardId$, items$]).pipe(
+      map(([cardId, items]) => {
         const card = cardId ? items.find((i) => i.id === cardId) : null;
         if (!card) return html``;
+        const isRegenerating = card.metadata?.pending === "image";
 
-        const handleFieldUpdate = (field: keyof CanvasItem, value: string) => {
-          updateCard$.next({ id: card.id, updates: { [field]: value } });
+        // Commit on change (blur), so the log records one edit_card per field edit, not per keystroke.
+        const handleFieldUpdate = (field: "title" | "body" | "imagePrompt", value: string) => {
+          if ((card[field] ?? "") === value) return;
+          act("edit_card", { cardId: card.id, [field]: value });
         };
 
         return html`
           <div class="card-dialog-body">
             <div class="card-dialog-layout">
               <div class="card-dialog-image-col">
-                ${card.videoSrc
-                  ? html`<video
-                      class="card-dialog-video"
-                      src="${card.videoSrc}"
-                      poster="${card.videoPosterSrc || ""}"
-                      controls
-                      playsinline
-                      preload="metadata"
-                    ></video>`
-                  : html``}
-                ${card.imageSrc
-                  ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
-                  : card.imagePrompt
-                    ? html`<generative-image
-                        class="card-dialog-gen-image"
-                        prompt="${card.imagePrompt}"
-                        width="512"
-                        height="512"
-                        @image-loaded=${(e: CustomEvent) =>
-                          updateCard$.next({ id: card.id, updates: { imageSrc: e.detail.url } })}
-                      ></generative-image>`
-                    : card.videoSrc
-                      ? html``
-                      : html`<div class="card-dialog-placeholder">No media</div>`}
+                ${
+                  card.videoSrc
+                    ? html`<video
+                        class="card-dialog-video"
+                        src="${card.videoSrc}"
+                        poster="${card.videoPosterSrc || ""}"
+                        controls
+                        playsinline
+                        preload="metadata"
+                      ></video>`
+                    : html``
+                }
+                ${
+                  card.imageSrc
+                    ? html`<img class="card-dialog-image" src="${card.imageSrc}" alt="${card.title || "Image"}" />`
+                    : card.imagePrompt
+                      ? html`<generative-image
+                          class="card-dialog-gen-image"
+                          prompt="${card.imagePrompt}"
+                          width="512"
+                          height="512"
+                          @image-loaded=${(e: CustomEvent) => handleCardUpdate(card.id, { imageSrc: e.detail.url })}
+                        ></generative-image>`
+                      : card.videoSrc
+                        ? html``
+                        : html`<div class="card-dialog-placeholder">No media</div>`
+                }
               </div>
               <div class="card-dialog-info-col">
                 <label>Title</label>
                 <input
                   type="text"
                   .value=${card.title || ""}
-                  @input=${(e: Event) => handleFieldUpdate("title", (e.target as HTMLInputElement).value)}
+                  @change=${(e: Event) => handleFieldUpdate("title", (e.target as HTMLInputElement).value)}
                   placeholder="Untitled"
                 />
                 <label>Body</label>
                 <textarea
                   .value=${card.body || ""}
-                  @input=${(e: Event) => handleFieldUpdate("body", (e.target as HTMLTextAreaElement).value)}
+                  @change=${(e: Event) => handleFieldUpdate("body", (e.target as HTMLTextAreaElement).value)}
                   placeholder="No description"
                 ></textarea>
                 <label>Image prompt</label>
                 <textarea
                   .value=${card.imagePrompt || ""}
-                  @input=${(e: Event) => handleFieldUpdate("imagePrompt", (e.target as HTMLTextAreaElement).value)}
+                  @change=${(e: Event) => handleFieldUpdate("imagePrompt", (e.target as HTMLTextAreaElement).value)}
                   placeholder="Describe image to generate..."
                 ></textarea>
                 <menu class="card-dialog-actions">
                   <button
                     ?disabled=${isRegenerating || !(card.imagePrompt || "").trim()}
-                    @click=${() => regenerate$.next({ cardId: card.id, prompt: card.imagePrompt || "" })}
+                    @click=${() => act("regenerate_image", { cardId: card.id })}
                   >
                     ${isRegenerating ? "Generating..." : "Regenerate"}
                   </button>
-                  ${card.imageSrc
-                    ? html`<button @click=${() => downloadImage(card.imageSrc!, card.title)}>Download</button>`
-                    : html``}
+                  ${
+                    card.imageSrc
+                      ? html`<button @click=${() => downloadImage(card.imageSrc!, card.title)}>Download</button>`
+                      : html``
+                  }
                   <button @click=${closeCardDialog}>Close</button>
                 </menu>
               </div>
@@ -794,21 +647,6 @@ export const CanvasComponent = createComponent(
     );
 
     // Combine template with effects
-    return template$.pipe(
-      mergeWith(
-        pasteEffect$.pipe(ignoreElements()),
-        pasteImageFileEffect$.pipe(ignoreElements()),
-        pasteTextEffect$.pipe(ignoreElements()),
-        pasteItemsEffect$.pipe(ignoreElements()),
-        moveEffect$.pipe(ignoreElements()),
-        deleteEffect$.pipe(ignoreElements()),
-        updateCardEffect$.pipe(ignoreElements()),
-        regenerateEffect$,
-        globalPasteEffect$,
-        globalKeydownEffect$,
-        globalKeyupEffect$,
-        globalBlurEffect$,
-      ),
-    );
+    return template$.pipe(mergeWith(globalPasteEffect$, globalKeydownEffect$, globalKeyupEffect$, globalBlurEffect$));
   },
 );
