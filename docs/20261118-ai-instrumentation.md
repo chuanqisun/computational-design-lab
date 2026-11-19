@@ -258,7 +258,14 @@ export interface TraceStep {
 }
 ```
 
-Selected records are copied into a draft `TraceStep[]`, and the log itself is never mutated. In the draft, users can edit args (key fields or raw JSON), write notes, reorder steps, and toggle or remove them.
+Selected records are first **compiled** (`src/lib/workflows/compile-trace.ts`), then copied into a draft `TraceStep[]`; the log itself is never mutated. Compilation:
+- drops failed and unfinished actions;
+- drops empty selections (`select_cards` with mode `none` or no `cardIds`);
+- keeps a selection only if the next non-selection step targets cards without naming them, so selections superseded by the next selection, made redundant by explicit `cardIds`, or trailing are dropped;
+- collapses consecutive identical steps (same action, canonical args) and merges consecutive `move_cards` (last position per card wins) and consecutive `edit_card` on the same card;
+- repeats the merge after selections are removed, because new neighbors can become identical.
+
+The editor's notice reports "Compiled N recorded actions into M steps". In the draft, users can edit args (key fields or raw JSON), write notes, reorder steps, and toggle or remove them.
 
 ### 4.3 Summarizer (`src/lib/workflows/summarize-agents-md.ts`)
 
@@ -449,6 +456,7 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
 | `src/lib/workflows/action-log.ts` | Action log (§4.1) |
 | `src/lib/workflows/summarize-agents-md.ts` | Summarizer (§4.3) |
 | `src/lib/workflows/workflow-storage.ts` | Storage (§4.4) |
+| `src/lib/workflows/compile-trace.ts` | Trace compilation (§4.2) |
 | `src/components/workflow/workflow-section.component.ts` | Tray section (§5.1) |
 | `src/components/workflow/trace-dialog.component.ts` | Trace dialog (§5.3) |
 | `src/components/workflow/workflow-editor.component.ts` | Workflow editor (§5.4) |

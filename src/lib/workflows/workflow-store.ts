@@ -1,6 +1,7 @@
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import type { ActionRecord } from "./action-log";
 import { BUILT_IN_WORKFLOWS } from "./builtin-workflows";
+import { compileTrace } from "./compile-trace";
 import {
   deleteWorkflow,
   getActiveWorkflowId,
@@ -108,12 +109,18 @@ export const editorActions = {
       notice: workflow.builtIn ? "Built-in workflows are read-only; saving creates your own copy." : "",
     });
   },
-  openFromTrace(records: ActionRecord[], isHumanOnly: (action: string) => boolean): void {
+  openFromTrace(
+    records: ActionRecord[],
+    isHumanOnly: (action: string) => boolean,
+    targetsCards: (action: string) => boolean,
+  ): void {
+    const compiled = compileTrace(records, targetsCards);
+    const dropped = records.length - compiled.length;
     editor$.next({
       ...emptyEditor(),
-      steps: recordsToTrace(records, isHumanOnly),
+      steps: recordsToTrace(compiled, isHumanOnly),
       tab: "steps",
-      notice: "Edit the recorded steps, add notes on intent, then generate the instructions.",
+      notice: `Compiled ${records.length} recorded action${records.length === 1 ? "" : "s"} into ${compiled.length} step${compiled.length === 1 ? "" : "s"}${dropped ? " (merged duplicates, removed failed steps and selections with no effect)" : ""}. Add notes on intent, then generate the instructions.`,
     });
   },
   update(patch: Partial<EditorState>): void {

@@ -32,7 +32,11 @@ export const TraceDialogComponent = createComponent(({ runtime }: { runtime: Act
 
   const startWorkflowFromSelection = () => {
     const records = runtime.log.records.filter((record) => checked$.value.has(record.id));
-    editorActions.openFromTrace(records, isHumanOnly);
+    const targetsCards = (action: string) => {
+      const properties = runtime.registry.get(action)?.parameters.properties ?? {};
+      return "cardIds" in properties || "cardId" in properties;
+    };
+    editorActions.openFromTrace(records, isHumanOnly, targetsCards);
   };
 
   const refreshPreview = () =>
