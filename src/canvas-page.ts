@@ -35,6 +35,8 @@ import { taskRunner$ } from "./components/context-tray/tasks";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { hasActiveTasks, progressText, stopTasks } from "./components/progress/progress";
 import { ResizerComponent } from "./components/resizer/resizer";
+import { WorkflowControlComponent } from "./components/workflow/workflow-control.component";
+import { WorkflowDialogComponent } from "./components/workflow/workflow-dialog.component";
 import { getActionRuntime } from "./lib/actions/app-runtime";
 import { persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
@@ -184,6 +186,8 @@ const Main = createComponent(() => {
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$, providers: ["gemini"] });
+  const workflowControlUI = WorkflowControlComponent({ runtime, apiKeys$ });
+  const workflowDialogUI = WorkflowDialogComponent({ runtime, apiKeys$ });
 
   const saveViewport$ = fromEvent(document, "scroll", { capture: true }).pipe(
     filter((e) => (e.target as HTMLElement).classList?.contains("canvas-area")),
@@ -204,6 +208,7 @@ const Main = createComponent(() => {
     <header class="app-header">
       <h1>Computational Mood Board</h1>
       <div class="app-header__right">
+        ${workflowControlUI}
         ${observe(progressText)}
         ${observe(
           hasActiveTasks.pipe(
@@ -218,6 +223,7 @@ const Main = createComponent(() => {
       ${resizerUI}
       <div class="context-tray-area">${contextTrayUI}</div>
     </main>
+    ${workflowDialogUI}
     <dialog class="connection-form" id="connection-dialog">
       <div class="connections-dialog-body">
         ${connectionsUI}
