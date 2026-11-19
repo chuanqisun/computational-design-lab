@@ -1,4 +1,4 @@
-# Spec: Dual-Driver Canvas, Workflow Capture, and Auto-Iterate Agent
+# Spec: Dual-Driver Canvas, Workflows, and the Run Agent
 
 **Date:** 2026-11-18
 **Scope:** Computational Mood Board (`canvas.html` / `src/canvas-page.ts`)
@@ -8,8 +8,8 @@
 1. Either a human or a Gemini agent can drive the board through **one shared action layer**.
 2. The agent can **perceive** the UI state: text, images, video, pending work, and which actions are available right now.
 3. Human and AI actions are recorded into an **editable trace**, which is distilled into an [`AGENTS.md`](https://agents.md/) workflow.
-4. An **Auto-Iterate** mode runs a Gemini agent loop steered by the active `AGENTS.md`.
-5. Workflow controls are in the **top bar**. The detailed workflow UI is in a **declarative `<dialog>`**.
+4. **Run** starts a Gemini agent loop steered by the selected workflow (`AGENTS.md`).
+5. Workflow controls are in a **Workflow section of the context tray**. The trace and the workflow editor are **declarative `<dialog>`s**.
 
 ---
 
@@ -293,42 +293,51 @@ export interface SavedWorkflow {
 
 ## 5. Workflow UI
 
-The context tray contains board actions only. Workflow and agent controls go in the top bar, and the detailed UI goes in a modal dialog. Both follow Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
+Terminology used everywhere in the UI:
+- **Workflow:** one `AGENTS.md`, either built-in or saved by the user.
+- **Run:** the AI following the selected workflow.
+- **Trace:** the recorded actions of the user and the AI.
 
-### 5.1 Top Bar (`.app-header__right` in `src/canvas-page.ts`)
+The top bar keeps only progress, Stop and Setup. Workflow controls live in a **Workflow** section at the top of the context tray. The detailed UI lives in two declarative dialogs, both following Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
 
-Place these controls before the existing progress text, Stop and Setup:
+### 5.1 Workflow Section (`src/components/workflow/workflow-section.component.ts`)
 
-```html
-<div class="workflow-control" role="group" aria-label="Workflow">
-  <select aria-label="Active workflow"><!-- (none) + saved workflows --></select>
-  <button class="auto-iterate" aria-pressed="false">Auto-Iterate</button>
-  <button class="status-pill" commandfor="agent-status-popover" command="toggle-popover">AI · idle</button>
-  <button commandfor="workflow-dialog" command="show-modal">Workflow</button>
-</div>
-<div id="agent-status-popover" popover><!-- last 5 ActionRecords: actor pill, action, summary --></div>
-```
+- **Workflow list:** built-in workflows first (tagged *Built-in*), then saved ones. Each is a radio row with a name and a one-line summary. The selection is the workflow that Run uses (`workflowStore.select`).
+- **Brief:** optional text passed to the run as its focus (persisted).
+- **Actions:**
+  - **Run/Stop:** primary. Disabled with a reason when there is no API key or no workflow selected.
+  - **View/Edit:** opens `#workflow-editor` with `command="show-modal"`. Built-ins are read-only, so saving one creates a copy.
+  - **New:** opens an empty editor.
+- **Status:** `Idle`, `Running · <action> · step n/12`, `Finished`, etc., plus the AI's latest message (clamped).
+- **Trace preview:** the last 4 trace rows and an **Open trace** button (`commandfor="trace-dialog"`).
 
-- **Active workflow select:** calls `setActiveWorkflow`.
-- **Auto-Iterate:** a normal `@click` state toggle that updates `aria-pressed`.
-  - It's disabled, with a `title` explaining why, when there's no Gemini key or no active workflow.
-  - Turning it on starts the agent. Turning it off emits `stop$`.
-- **Status pill:** `AI · <action> · <turn>/<maxTurns>` while running, `AI · idle` otherwise.
-- **Workflow:** opens the dialog.
+### 5.2 Built-in Workflows (`src/lib/workflows/builtin-workflows.ts`)
 
-### 5.2 Workflow Dialog (`src/components/workflow/workflow-dialog.component.ts` + `.css`)
-
-`<dialog id="workflow-dialog">` is rendered once in `canvas-page.ts` next to `connection-dialog`. Its header has the tab buttons, which switch a `tab$` subject, and `<button commandfor="workflow-dialog" command="close">Close</button>`.
-
-| Tab | Contents |
+| Workflow | Tools exercised |
 | :-- | :-- |
-| **Activity** | `actionLog$` timeline: `[User]`/`[AI]` pill, action, summary, output thumbnails, status, checkbox. Button: **Edit selected as trace**. |
-| **Trace** | Draft `TraceStep[]` editor with arg fields or raw JSON, note, ↑/↓, include toggle and remove. Human-only steps are tagged *Human step*. Name and goal inputs, then **Generate AGENTS.md**. |
-| **AGENTS.md** | Markdown editor with validation warnings. **Save**, **Download**, and **Import** (file input + paste area). |
-| **Saved** | Workflow list with **Set active**, **Edit** and **Delete**. Delete opens `<dialog id="workflow-delete-confirm">` with `command="show-modal"`. Its buttons are Cancel (`command="close"`) and Confirm, which deletes and then closes. |
-| **Agent view** | Live `buildObservation()` preview (§3.3), refreshed when the dialog opens and when `items$` changes. |
+| Brief to moodboard | `search_references`, `view_cards`, `scan_concept` (emotions), `visualize_concept` |
+| Design sprint | `design_concepts`, `run_user_testing`, `view_cards`, `iterate_designs` |
+| Material study | `scan_concept` (material, tactility), `blend_images`, `edit_image` (regions) |
+| Persona interview | `run_user_testing` (1 user), `view_cards`, `interview_persona` |
+| Motion teaser | `view_cards`, `render_image`, `animate`, `wait_for_idle` |
 
-### 5.3 Dialog and Popover Rules
+A test checks that every built-in uses only registered tool names, has all standard sections, and never allows `clear_canvas`.
+
+### 5.3 Trace Dialog (`src/components/workflow/trace-dialog.component.ts`)
+
+`<dialog id="trace-dialog">` merges the activity list and the AI status:
+- **AI status bar:** the same status and latest AI message as the tray.
+- **Timeline tab:** newest-first rows (actor badge *You*/*AI*, action, summary, time, output thumbnails) with checkboxes. Buttons: **New workflow from N selected** (opens `#workflow-editor` with the steps), Select all, Clear selection, Clear trace.
+- **AI view tab:** the live `buildObservation()` output (§3.3).
+
+### 5.4 Workflow Editor (`src/components/workflow/workflow-editor.component.ts`)
+
+`<dialog id="workflow-editor">`, with the workflow name in the header:
+- **Steps tab:** the recorded steps from the trace. Each has Include, reorder and remove controls, a "Why this step matters" note, and collapsible arguments (JSON). There's a goal field and **Generate instructions**, which runs the summarizer.
+- **Instructions tab:** the `AGENTS.md` editor with validation warnings, **Import AGENTS.md…** and **Download AGENTS.md**.
+- **Footer:** **Save** (save and select). **Delete** for saved workflows opens `#workflow-delete-confirm` with `command="show-modal"`; its Cancel and Delete buttons use `command="close"`.
+
+### 5.5 Dialog and Popover Rules
 
 - All open and close goes through `commandfor` + `command` (`show-modal`, `close`, `toggle-popover`, `show-popover`, `hide-popover`).
   - No `.showModal()`, `.close()` or `.showPopover()` calls.
@@ -340,13 +349,13 @@ Place these controls before the existing progress text, Stop and Setup:
 - When a popover is hidden from a button inside it, move focus back to the invoker.
 - No polyfills: the app targets the latest Chromium, which supports invoker commands and popover natively.
 
-### 5.4 Meta-Controls
+### 5.6 Meta-Controls
 
-The top-bar and dialog controls (select workflow, toggle Auto-Iterate, edit trace or `AGENTS.md`) drive the agent itself. They aren't board actions: they appear in `HUMAN_ENTRIES` as `meta:*` and aren't exposed to the agent.
+The Workflow section and dialog controls (select a workflow, Run/Stop, edit the trace or `AGENTS.md`) drive the agent itself. They aren't board actions: they appear in `HUMAN_ENTRIES` as `meta:*` and aren't exposed to the agent.
 
 ---
 
-## 6. Auto-Iterate Agent (`src/lib/agent/auto-iterate.ts`)
+## 6. Run Agent (`src/lib/agent/auto-iterate.ts`)
 
 ### 6.1 Model
 
@@ -386,7 +395,7 @@ export interface AgentRunner {
 4. Return one `function_result` per call, with `call_id` and `name` (content as in §3.1), and `is_error: true` when `result.error` is set.
 5. Stop when a turn has no function calls, or on a guardrail, abort or `stop$`.
 
-`AgentEvent` (turn started, action started/finished, message, stopped with reason) feeds the status pill and popover.
+`AgentEvent` (turn started, action started/finished, message, stopped with reason) feeds the Workflow section status and the Trace dialog's AI status bar.
 
 ### 6.4 Guardrails
 
@@ -440,12 +449,14 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
 | `src/lib/workflows/action-log.ts` | Action log (§4.1) |
 | `src/lib/workflows/summarize-agents-md.ts` | Summarizer (§4.3) |
 | `src/lib/workflows/workflow-storage.ts` | Storage (§4.4) |
-| `src/components/workflow/workflow-dialog.component.ts` | Dialog (§5.2) |
-| `src/components/workflow/workflow-control.component.ts` | Top-bar control and status popover (§5.1) |
+| `src/components/workflow/workflow-section.component.ts` | Tray section (§5.1) |
+| `src/components/workflow/trace-dialog.component.ts` | Trace dialog (§5.3) |
+| `src/components/workflow/workflow-editor.component.ts` | Workflow editor (§5.4) |
+| `src/lib/workflows/builtin-workflows.ts` | Built-in workflows (§5.2) |
 | `src/components/context-tray/tasks.ts` | `stop$`, abort signal (§2.3) |
 | `src/components/context-tray/tools/*.tool.ts` | Thin forms calling `dispatch$`, visibility from `isAvailable` |
 | `src/components/canvas/canvas.component.ts`, `card.component.ts` | Gesture-end dispatch, render `pending` (§2.5–2.6) |
-| `src/canvas-page.ts` | Top-bar control, dialog mount |
+| `src/canvas-page.ts` | Dialog mount |
 | `src/lib/gemini-models.ts` | `GEMINI_AGENT_MODEL`, `GEMINI_AGENT_THINKING` |
 
 ---
@@ -466,10 +477,10 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
    - Live spot tests: multimodal `function_result` and `allowed_tools`.
 4. **Workflow capture and UI**
    - Implement the action log, trace draft, summarizer (with its live spot test) and storage.
-   - Build the top-bar control, the status popover, and the Workflow dialog with all five tabs.
-5. **Auto-Iterate**
+   - Build the Workflow tray section, the Trace dialog and the Workflow editor; add the built-in workflows.
+5. **Run agent**
    - Add the model constants and write the `auto-iterate` tests.
-   - Implement the agent prompt, loop and guardrails, then wire the toggle, status pill and Stop.
+   - Implement the agent prompt, loop and guardrails, then wire Run/Stop and the status display.
    - Run the live end-to-end spot test and tune `BASE_AGENT_PROMPT`.
 6. **Docs**
    - Update `.github/copilot-instructions.md` and `src/components/context-tray/context-tray.instructions.md` with the action-layer rule: every new UI capability ships as a registered action with a `humanEntry` and an `agent` mode, or the parity test fails.
