@@ -1,135 +1,233 @@
-# Plan: Dual-Use Tool Instrumentation, Action Workflows, and Auto-Iterate Agent
+# Spec: Dual-Driver Canvas, Workflow Capture, and Auto-Iterate Agent
 
-**Date:** 2026-11-18  
-**Goal:** Track user and AI actions on the Computational Mood Board, let users review and edit individual trace items before summarizing them into a standard [`AGENTS.md`](https://agents.md/) workflow file, and add an **Auto-Iterate** mode that loads `AGENTS.md` to steer a Gemini agent loop over the same UI tools.
+**Date:** 2026-11-18
+**Scope:** Computational Mood Board (`canvas.html` / `src/canvas-page.ts`)
 
----
+## Goal
 
-## Design Principles (Keep It Simple)
-
-1. **Single execution path for UI and AI:** Every design action (human click or AI tool call) goes through one `dispatchTool(name, args, actor)` function. Action logging happens automatically in one place.
-2. **Linear top-to-bottom layout:** Tool outputs append into clean rows stacked linearly top-to-bottom below existing cards, avoiding overlapping cards and manual repositioning during autonomous runs.
-3. **One tool definition = UI runner + Gemini Function declaration:** Each tool defines its JSON Schema once, which is passed directly to `ai.interactions.create({ tools })`.
-4. **Open-standard `AGENTS.md` workflows:** Saved workflows are stored as standard [`AGENTS.md`](https://agents.md/) Markdown documents (plain, high-signal Markdown with no proprietary schema), making them portable across external AI tools (Gemini CLI, Antigravity Managed Agents, Codex, Cursor, Claude Code) and directly loadable back into our own agent.
-5. **Lightweight persistence:** Keep the live action log in an RxJS `BehaviorSubject` (ring buffer of recent actions) and persist saved `AGENTS.md` workflows in `localStorage` (no IndexedDB schema migration needed).
-6. **Safe cancellation:** Run the Auto-Iterate agent loop through the existing `submitTask` / `AbortController` pipeline so toggling Auto-Iterate off or clicking **Stop** aborts in-flight requests cleanly.
+1. Either a human or a Gemini agent can drive the board through **one shared action layer**.
+2. The agent can **perceive** the UI state: text, images, video, pending work, and which actions are available right now.
+3. Human and AI actions are recorded into an **editable trace**, which is distilled into an [`AGENTS.md`](https://agents.md/) workflow.
+4. An **Auto-Iterate** mode runs a Gemini agent loop steered by the active `AGENTS.md`.
+5. Workflow controls are in the **top bar**. The detailed workflow UI is in a **declarative `<dialog>`**.
 
 ---
 
-## Architecture Overview
+## 1. Requirements and Principles
 
-```mermaid
-flowchart TD
-  UI["Context Tray UI & Canvas"] -->|"dispatchTool(name, args, 'user')"| Registry["Shared Tool Registry + Linear Layout"]
-  Agent["Auto-Iterate Agent Loop (Gemini Interactions API)"] -->|"function_call -> dispatchTool(name, args, 'ai')"| Registry
-  Registry -->|"mutates"| Items["items$ (Canvas State)"]
-  Registry -->|"records"| Log["actionLog$ (User + AI Timeline)"]
-  Log -->|"select & edit trace items -> summarize"| AgentsMd["AGENTS.md Workflow (localStorage / export / import)"]
-  AgentsMd -->|"loaded as system_instruction or .agents/AGENTS.md"| Agent
-```
+1. **One action layer, two drivers.** Every board state change goes through `dispatch$(name, args, actor)`.
+   - The UI adapter maps clicks, forms and gestures to args.
+   - The AI adapter maps `function_call` to args.
+   - The core transform is identical for both.
+2. **Parity.** Every step a human can take, the agent can take with the same input→output transform. Where the agent can't operate the human's input device (pen, mic, clipboard), it gets an **equivalent transform**: a different input, the same kind of output, the same effect on the board. If no realistic equivalent exists, the action is **unsupported for the agent** and marked as such with a reason. The agent is never given a fake substitute.
+3. **Perceivable state.** `UiState` is derived from `items$` plus task state. Humans perceive it through the rendered UI. The agent perceives it through `buildObservation()`, which sends text, image and video parts within a size budget.
+4. **One availability predicate.** Each action's `isAvailable(state)` drives both tray visibility and the agent's `allowed_tools`.
+5. **Settle-then-return.** An action resolves only after its effects settle, including card auto-fill. Explicitly async actions are the exception.
+6. **Single cancellation.** One `stop$` cancels UI tasks, in-flight LLM requests and the agent loop.
+7. **TDD only at seams that regress silently:** registry/parity, dispatcher, observation, agent loop and placement. Prompt quality is checked with live spot tests that use `GEMINI_API_KEY` from `.env`.
 
 ---
 
-## Change 1: Instrument Tools for Both UI and AI (with Linear Layout)
+## 2. Action Layer
 
-### 1.1 Shared Tool Contract (`src/lib/canvas-tools/types.ts`)
-
-Define a minimal, framework-agnostic tool interface whose `parameters` field is directly usable as a Gemini Interactions API `function` tool declaration:
+### 2.1 Types (`src/lib/actions/types.ts`)
 
 ```ts
-export type ActionActor = "user" | "ai";
+export type Actor = "user" | "ai";
 
-export interface ToolContext {
+export interface CardView {
+  id: string;
+  kind: "text" | "image" | "video" | "mixed";
+  title?: string;
+  body?: string;
+  isSelected: boolean;
+  pending?: "fill" | "image" | "video" | "search";
+  x: number; y: number; width: number; height: number;
+}
+
+export interface UiState {
+  cards: CardView[];
+  selectedIds: string[];
+  pending: { cardId: string; what: "fill" | "image" | "video" | "search" }[];
+  running: { actionId: string; name: string; actor: Actor }[];
+  viewport: { x: number; y: number; width: number; height: number };
+}
+
+export interface ActionResult {
+  summary: string;                     // one line; shown in timeline and returned to the agent
+  created?: string[];
+  updated?: string[];
+  deleted?: string[];
+  pending?: string[];                  // async actions: cards still settling
+  data?: unknown;                      // e.g. personas, rankings
+  media?: MediaPart[];                 // image/video parts returned to the agent
+  error?: string;
+  reason?: string;                     // unavailable/precondition explanation
+}
+
+export type AgentSupport = "native" | "equivalent" | "perception" | { unsupported: string };
+
+export interface ActionDef<A = Record<string, unknown>> {
+  name: string;                        // snake_case; used as the Gemini function name
+  description: string;                 // written for the model; also used as UI tooltip
+  parameters: JSONSchemaObject;        // used as the Gemini function declaration
+  isAvailable(state: UiState): true | { reason: string };
+  run(args: A, ctx: ActionContext): Observable<ActionResult>;  // completes after settle
+  async?: boolean;                     // returns immediately with `pending`
+  log: "record" | "coalesce" | "skip";
+  humanEntry: string;                  // e.g. "tray:Blend", "canvas:drag", "dialog:Regenerate", "perception"
+  agent: AgentSupport;
+}
+
+export interface ActionContext {
   items$: BehaviorSubject<CanvasItem[]>;
   apiKey: string;
+  actor: Actor;
   signal: AbortSignal;
-  actor: ActionActor;
-}
-
-export interface ToolExecutionResult {
-  summary: string;
-  createdCardIds?: string[];
-  updatedCardIds?: string[];
-  deletedCardIds?: string[];
-  data?: Record<string, unknown>;
-}
-
-export interface CanvasToolDef<TArgs extends Record<string, unknown> = Record<string, unknown>> {
-  name: string;
-  description: string;
-  parameters: {
-    type: "object";
-    properties: Record<string, unknown>;
-    required?: string[];
-  };
-  /** Whether the tool is exposed to the AI agent (defaults to true). */
-  agentVisible?: boolean;
-  run: (args: TArgs, ctx: ToolContext) => Promise<ToolExecutionResult>;
+  place(count: number, near?: string[]): Position[];
 }
 ```
 
-### 1.2 Linear Top-to-Bottom Layout Helper (`src/components/canvas/layout.ts`)
+Add `pending?: CardView["pending"]` to `CanvasItem.metadata` (replacing the ad-hoc `metadata.pendingImage`).
 
-Add a simple `getLinearRowPositions(items, count, options?)` helper:
-- Computes `startY = max(item.y + item.height) + rowGap` (or viewport top when canvas is empty) and aligns to a fixed left margin (`originX`, e.g. viewport left + padding or leftmost existing card).
-- Places up to `columns` (default `3` or `4`) cards left-to-right per row, wrapping cleanly to the next row below.
-- Used by all instrumented tools so a multi-step human or AI session reads naturally from top to bottom like a design storyboard.
+### 2.2 Registry (`src/lib/actions/registry.ts`)
 
-### 1.3 Tool Inventory & Refactoring Scope
+- `registry: Map<string, ActionDef>` collects all actions from `src/lib/actions/defs/*.ts`.
+- `getAgentDeclarations()` returns function declarations for every action whose `agent` is `native`, `equivalent` or `perception`.
+- `availableActionNames(state)` and `unavailableReasons(state)` both come from `isAvailable`.
 
-Refactor each existing tool component into a thin UI form that invokes `dispatchTool(...)` instead of calling LLM helpers and mutating `items$` directly:
+### 2.3 Dispatcher (`src/lib/actions/dispatch.ts`)
 
-| Tool Name | Current File | Args | Notes |
-| :--- | :--- | :--- | :--- |
-| `list_cards` | *(new, AI-only)* | `{ onlySelected?: boolean }` | Returns compact `{ id, title, body, hasImage, hasVideo, isSelected, kind }` list so AI can inspect the board without sending huge base64 blobs. |
-| `select_cards` | `canvas.component.ts` | `{ cardIds: string[] }` | Updates `isSelected` on `items$`; lets AI target specific cards just like a human. |
-| `delete_cards` | `canvas.component.ts` | `{ cardIds: string[] }` | Removes cards by ID. |
-| `write_card` | `new-prompt.tool.ts` | `{ text: string }` | Creates a text card (triggers `CardComponent` auto-fill). |
-| `render_image` | `new-prompt.tool.ts` | `{ prompt: string, cardIds?: string[] }` | Generates an image card via `generateImage`. |
-| `search_references` | `new-prompt.tool.ts` | `{ prompt: string, cardIds?: string[], maxResults?: number }` | Runs the 2-step streaming search (`streamSearchResults$` + `searchImages`). |
-| `visualize_concept` | `visualize.tool.ts` | `{ style: "abstract" \| "concrete", cardIds: string[] }` | Runs `visualizeConcept$`. |
-| `scan_concept` | `conceptual-scan.tool.ts` | `{ lens: ScanLensId, cardIds: string[] }` | Runs `scanConcepts$` (`emotions`, `material`, `shape`, etc.). |
-| `blend_images` | `blend.tool.ts` | `{ instruction: string, cardIds: string[] }` | Requires `>= 2` cards; runs `blendImages`. |
-| `design_concepts` | `design.tool.ts` | `{ requirements: string, brandGuide?: string, count?: number, cardIds: string[] }` | Runs `designConcepts$`. |
-| `iterate_designs` | `iterate.tool.ts` | `{ direction?: string, brandGuide?: string, count?: number, cardIds: string[] }` | Runs `designConcepts$` in iteration mode. |
-| `run_user_testing` | `user-testing.tool.ts` | `{ trait: string, segment?: string, numUsers?: number, cardIds: string[] }` | Generates personas + rankings via `generatePersonas$` + `rankDesigns$`. |
+`dispatch$(name, args, actor): Observable<ActionResult>` runs these steps in order:
 
-**Explicitly deferred (keep UI-only in v1):**
-- `CaptureTool` (requires webcam / file picker), `ExportTool` (file download), `SketchTool` (interactive freehand canvas), `AnimateTool` (slow video gen, optional Phase 2), and Live Voice **Interview** (requires live microphone).
+1. Look up the action. Unknown names return `{ error: "unknown_action" }`.
+2. Validate `args` against `parameters`. Invalid args return `{ error: "invalid_args", reason }`.
+3. If `actor === "ai"` and `agent` is `unsupported`, return `{ error: "unsupported_for_agent", reason }`.
+4. Check `isAvailable(getUiState())`. If unavailable, return `{ error: "unavailable", reason }`.
+5. Append an `ActionRecord` with status `running` to `actionLog$`, honoring the action's `log` mode.
+6. Run `def.run(args, ctx)` with `takeUntil(stop$)` and an `AbortSignal` that aborts on `stop$`.
+7. Update the record to `done` or `error` with `durationMs`, `outputIds` and `outputThumbs`.
 
-### 1.4 Unified Dispatcher (`src/lib/canvas-tools/dispatcher.ts`)
+Errors are returned as data and never thrown into `alert()`.
 
-```ts
-export async function dispatchTool(
-  name: string,
-  args: Record<string, unknown>,
-  options: { actor: ActionActor; items$: BehaviorSubject<CanvasItem[]>; apiKey: string; signal?: AbortSignal },
-): Promise<ToolExecutionResult>
-```
+**Adapters:**
+- UI: `submitTask(dispatch$(name, args, "user"))`. The UI adapter alone shows the alert when `result.error` is set.
+- AI: `await lastValueFrom(dispatch$(name, args, "ai"))`.
 
-Responsibilities:
-1. Look up tool in the registry (throw a structured error if missing or invalid args).
-2. Snapshot `inputCardIds` (from `args.cardIds` or currently selected items).
-3. Emit a `"running"` `ActionRecord` to `actionLog$`.
-4. Execute `tool.run(args, ctx)` (converting RxJS observables via `firstValueFrom` / `lastValueFrom` with `AbortSignal` teardown).
-5. Update the `ActionRecord` to `"done"` (with `outputCardIds`, `summary`, `durationMs`) or `"error"`.
-6. Return `ToolExecutionResult` to the caller (UI or AI agent).
+**`src/components/context-tray/tasks.ts` changes:**
+- Export `stop$`, which replaces the private `stopTasks$`, and `createAbortSignal()`, which is aborted on `stop$`.
+- `stopAllTasks()` emits `stop$`. The existing top-bar **Stop** button keeps calling it.
+- Pass the signal through to the LLM helpers in `components/context-tray/llm/*` that accept one.
+
+### 2.4 Action Inventory (`src/lib/actions/defs/`)
+
+| Action | Human entry | Agent | Args → output | Notes |
+| :-- | :-- | :-- | :-- | :-- |
+| `observe` | the rendered UI | perception | `{}` → observation (§3.1) | `log: skip` |
+| `view_cards` | open card dialog / zoom | perception | `{cardIds, maxPx?}` → full text + image parts + video part or keyframes | ≤6 media parts, default 512px. `log: skip` |
+| `wait_for_idle` | watching progress | perception | `{timeoutS?}` → observation once nothing is pending | `log: skip` |
+| `select_cards` | click, shift-click, marquee, Ctrl+A, background click | native | `{cardIds?, mode: "replace"\|"add"\|"remove"\|"all"\|"none"}` | `log: coalesce` |
+| `move_cards` | drag; Canvas → Gather / Focus | native | `{moves?: [{id,x,y}], arrange?: "gather"\|"focus"\|"rows"}` | `log: coalesce` |
+| `delete_cards` | Delete/Backspace, Cut | native | `{cardIds}` | |
+| `clear_canvas` | Canvas → Destroy | native | `{confirm: true}` | The agent may call it only if `AGENTS.md` explicitly allows it |
+| `duplicate_cards` | copy + paste of cards | equivalent | `{cardIds}` → new card ids | Clipboard replaced by direct duplication |
+| `edit_card` | card dialog field edit | native | `{cardId, title?, body?, imagePrompt?}` | Triggers the same fill/regenerate rules |
+| `regenerate_image` | card dialog → Regenerate | native | `{cardId, prompt?}` | |
+| `add_card` | New → note; paste plain text | native | `{text}` → text card (auto-filled) | |
+| `add_media` | Capture (webcam/file); paste image | **unsupported** | — | Reason: input is the user's physical world or local files; `search_references` covers web imagery |
+| `render_image` | New → render | native | `{prompt, cardIds?}` | |
+| `search_references` | New → search | native | `{prompt, cardIds?, maxResults?}` | Resolves after the stream completes |
+| `visualize_concept` | Visualize | native | `{style: "abstract"\|"concrete", cardIds}` | |
+| `scan_concept` | Scan | native | `{lens, cardIds}` | |
+| `blend_images` | Blend | native | `{instruction, cardIds}` | Available when ≥2 selected cards have images |
+| `design_concepts` | Design | native | `{requirements, brandGuide?, count?, cardIds}` | |
+| `iterate_designs` | Iterate | native | `{direction?, brandGuide?, count?, cardIds}` | |
+| `run_user_testing` | User testing → Run | native | `{trait, segment?, numUsers?, cardIds}` → persona + ranking cards | Rankings in `data`. Keeps `user-testing-layout.ts` |
+| `interview_persona` | User testing → Interview (live voice) | equivalent | `{personaCardId, questions: string[]}` → interview summary card | Text Q&A with the persona instead of live audio; same summary-card output |
+| `edit_image` | Sketch (freehand overlay + instruction) | equivalent | `{cardId, instruction, regions?: [{x,y,w,h,label}]}` → new image card | Regions are rasterized into the same overlay format as freehand strokes, then go through the same `imageToimage` call |
+| `animate` | Animate | native | `{cardIds, prompt, durationS?}` → video card | `async: true` |
+| `export_cards` | Export (download JSON) | **unsupported** | — | Reason: output is a file on the user's disk; the agent reads cards via `observe`/`view_cards` |
+
+**Human-only actions** (`add_media`, `export_cards`) still go through `dispatch$` with `actor: "user"`, so they're logged and can appear in traces. In `AGENTS.md` they're written as *"Human step: …"*. When the agent reaches one, it stops its turn and asks the user to do it.
+
+**Parity manifest** (`src/lib/actions/human-entries.ts`): `HUMAN_ENTRIES` lists every tray section, card-dialog button, canvas gesture and keyboard shortcut, plus `meta:*` entries for workflow controls (§5.4). Every non-meta entry maps to exactly one action, and every action's `humanEntry` (other than `perception`) is in the manifest.
+
+### 2.5 Canvas Gestures
+
+`CanvasComponent` keeps high-frequency local state (drag frames, marquee rectangle, pan) and dispatches only at gesture end:
+
+- drag mouseup → `move_cards`
+- click/marquee end → `select_cards`
+- Ctrl+A → `select_cards {mode: "all"}`
+- Delete/Backspace and Cut → `delete_cards`
+- card dialog field blur → `edit_card`
+- dialog Regenerate → `regenerate_image`
+- paste → `add_card`, `add_media` or `duplicate_cards`, depending on the clipboard content
+
+Viewport scroll and pan stay local and are mirrored into `UiState.viewport`.
+
+`CanvasTool` (Gather/Focus/Destroy) and `ExportTool` call `dispatch$`.
+
+### 2.6 Card Fill and Settle Semantics
+
+- Move the auto-fill effect from `CardComponent` into `src/lib/actions/card-fill.ts` as `fillCard$(cardId, ctx)`. Actions that create or edit cards compose it, and `CardComponent` only renders `metadata.pending`.
+- `run()` completes after created and updated cards have no `pending`.
+- `async` actions complete immediately with `{created, pending}`, and their remaining work keeps running under `stop$`.
+
+### 2.7 Placement (`src/components/canvas/layout.ts`)
+
+`placeRows(items, count, { near?: string[], columns = 4, gap = 24 }): Position[]`:
+- The first row starts at `max(y + height) + gap` over all cards, or at the viewport top-left if the board is empty.
+- `x` starts at the leftmost `x` of the `near` cards, or of all cards. Cards fill left to right and wrap after `columns`.
+- `ctx.place` uses it for every card-creating action except `run_user_testing`, which keeps `user-testing-layout.ts`.
+- This replaces `getNextPositions` for generated cards.
 
 ---
 
-## Change 2: Capture Human & AI Behaviors + Save Workflows
+## 3. Perception
 
-### 2.1 Action Log Store (`src/lib/workflows/action-log.ts`)
+### 3.1 Observation (`src/lib/agent/observe.ts`)
+
+`getUiState(items$, tasks) → UiState` and `buildObservation(state, prev, lastResult, budget) → FunctionResultSubcontent[]`:
+
+- **Text part (always):**
+  - one line per card: `id | kind | title | body (≤120 chars) | selected | pending | x,y`
+  - the `selectedIds`
+  - the `running` actions, with their actor
+  - `available_actions`, plus `unavailable` with a reason for each
+  - a diff against `prev` (`+created`, `~updated`, `-deleted`), including changes made by the user
+- **Media parts:** thumbnails (≤4, 384px JPEG) of cards created by the last action. Anything else is fetched with `view_cards`.
+- **Video:** clips under the size cap are sent as a `VideoContent` part. Larger clips are sent as the poster frame plus first/middle/last keyframes as images, with the duration as text.
+- **Budget:** a byte cap per observation. When over the cap, media is dropped before text, and a note is added: `"(N thumbnails omitted; call view_cards)"`.
+
+Every AI `function_result.result` is `[{type: "text", text: JSON.stringify(result without media)}, ...result.media, ...buildObservation(...)]`.
+
+### 3.2 Exposing Available Actions
+
+- Send the full `getAgentDeclarations()` on every turn.
+- Restrict each turn with `tool_choice: { allowed_tools: { mode: "auto", tools: availableActionNames(state) } }`.
+- The dispatcher re-checks availability, so if the model ignores `allowed_tools` it gets an `unavailable` result back.
+
+### 3.3 Agent View (Human Counterpart)
+
+The **Agent view** tab in the Workflow dialog (§5.2) renders the current `buildObservation()` output: the text table and the media parts exactly as the agent would receive them.
+
+---
+
+## 4. Action Log, Trace and `AGENTS.md`
+
+### 4.1 Action Log (`src/lib/workflows/action-log.ts`)
 
 ```ts
 export interface ActionRecord {
   id: string;
   timestamp: number;
-  actor: "user" | "ai";
-  tool: string;
+  actor: Actor;
+  action: string;
   args: Record<string, unknown>;
-  inputCardIds: string[];
-  outputCardIds: string[];
+  inputIds: string[];
+  outputIds: string[];
+  outputThumbs: string[];              // small data URLs (≤96px)
   summary: string;
   status: "running" | "done" | "error";
   error?: string;
@@ -137,180 +235,244 @@ export interface ActionRecord {
 }
 ```
 
-- `actionLog$ = new BehaviorSubject<ActionRecord[]>([])` (capped at 200 entries).
-- **What gets recorded:**
-  - All tool invocations from `dispatchTool(...)` (both `"user"` and `"ai"`).
-  - Meaningful direct canvas actions from `CanvasComponent`:
-    - Card selection changes (debounced/coalesced into a single `select_cards` event so marquee drags don't spam the log).
-    - Card text edits (`edit_card` on save/blur).
-    - Card deletions (`delete_cards`).
-  - **Excluded from log:** raw pointer moves, viewport scrolling, and card drag coordinate frames (too noisy, not semantically useful for workflows).
+- `actionLog$: BehaviorSubject<ActionRecord[]>` is persisted with `persistSubject` (IndexedDB) and capped at 500 records.
+- `coalesce` merges consecutive records of the same action and actor that are within 1.5s of each other.
+- `skip` records nothing.
 
-### 2.2 Editable Trace Builder & `AGENTS.md` Summarization (`src/lib/workflows/workflow-storage.ts`, `src/lib/workflows/summarize-agents-md.ts`)
+### 4.2 Trace Draft
 
 ```ts
-export interface EditableTraceStep {
+export interface TraceStep {
   id: string;
-  tool: string;
+  action: string;
+  actor: Actor;
   args: Record<string, unknown>;
   note: string;
   included: boolean;
+  humanOnly: boolean;
+  thumbs: string[];
 }
+```
 
+Selected records are copied into a draft `TraceStep[]`, and the log itself is never mutated. In the draft, users can edit args (key fields or raw JSON), write notes, reorder steps, and toggle or remove them.
+
+### 4.3 Summarizer (`src/lib/workflows/summarize-agents-md.ts`)
+
+`summarizeTraceToAgentsMd$(name, goal, steps, apiKey): Observable<string>`
+- Model: `GEMINI_TEXT_MODEL`.
+- Input: multimodal. The included steps plus their thumbnails.
+- The output is plain Markdown with these sections:
+  1. `# <Name>`: objective
+  2. `## Tools`: the registry action names used and their parameter conventions
+  3. `## Workflow`: ordered, generalized steps with no raw card ids, using intent-based selection such as "the top-ranked designs from the previous step". Human-only steps appear as `Human step: …`.
+  4. `## Aesthetic & Quality Criteria`
+  5. `## Guardrails & Stop Conditions`: turn and card limits, whether `clear_canvas` is allowed, and when to stop
+- A post-check, `validateAgentsMd(md)`, warns on action names that aren't in the registry.
+
+### 4.4 Storage (`src/lib/workflows/workflow-storage.ts`)
+
+```ts
 export interface SavedWorkflow {
   id: string;
   name: string;
   createdAt: number;
   updatedAt: number;
-  /** Canonical industry-standard AGENTS.md Markdown (https://agents.md/) */
   agentsMd: string;
-  /** Optional edited trace snapshot kept for reference/re-editing */
-  sourceSteps?: EditableTraceStep[];
+  sourceSteps?: TraceStep[];
 }
 ```
 
-- **Editable trace before saving:**
-  - Selecting actions from `actionLog$` copies them into an editable draft list (`EditableTraceStep[]`) without mutating the immutable raw `actionLog$`.
-  - For each trace item, the user can:
-    - Edit its key arguments inline (e.g., prompt/instruction text, scan lens, count, trait) or raw JSON args,
-    - Add or edit a short **note / rationale** explaining *why* that step matters (e.g., *"Focus on tactile matte materials"*),
-    - Reorder (move up/down) or toggle/remove individual items.
-- **Summarizing the edited trace into `AGENTS.md` (`summarizeTraceToAgentsMd$`):**
-  - On **Save Workflow**, `gemini-4-hydrogen` (`GEMINI_TEXT_MODEL`, `thinking_level: "low"`, `store: false`) synthesizes the edited trace + workflow name/goal into a concise, high-signal [`AGENTS.md`](https://agents.md/) Markdown file following open-standard conventions:
-    - Plain Markdown with no mandatory frontmatter or proprietary schema.
-    - High signal-to-noise ratio focused strictly on operational instructions that change agent behavior:
-      1. `# <Workflow Name>` — concise overview & design objective.
-      2. `## Available Canvas Tools` — exact tool names and key parameter conventions used by the workflow.
-      3. `## Design Workflow` — ordered, generalizable step-by-step procedure distilled from the edited trace (ephemeral `cardIds` generalized into intent-based selection rules like *"select the top-ranked designs from the previous step"*).
-      4. `## Aesthetic & Quality Guidelines` — recurring visual, brand, or evaluation criteria inferred from the user's prompts and notes.
-      5. `## Guardrails & Never Rules` — stopping criteria, card/turn limits, and explicit things to avoid.
-  - The generated `AGENTS.md` is editable in-place by the user, persisted in `localStorage` (`"moodboard-saved-workflows"`), and supports:
-    - **Export / Download `AGENTS.md`** (interoperable with external `agents.md`-compatible tools).
-    - **Import / Load `AGENTS.md`** (upload a `.md` file or paste Markdown to create/load a workflow directly without recording a trace first).
-
-### 2.3 Review, Edit & Save Workflow UI (`src/components/context-tray/tools/workflow.tool.ts`)
-
-Add a compact **Workflow** section in the Context Tray (or a slide-over modal triggered from the header):
-- **Activity timeline:** Chronological list of `actionLog$` items showing `[User]` / `[AI]` pill, tool name, compact summary, and a checkbox.
-- **Trace Editor (inline draft view):** When actions are selected, opens an editable list where each trace item's arguments and note can be edited, reordered, or removed before saving.
-- **Save as `AGENTS.md`:** Workflow name input + **Generate & Save `AGENTS.md`** button (runs `summarizeTraceToAgentsMd$`), followed by a Markdown preview/editor with **Download `AGENTS.md`** and **Import `AGENTS.md`** buttons.
-- **Saved `AGENTS.md` workflows list:** Dropdown/selector of saved or imported `AGENTS.md` workflows (with edit and delete actions).
+- `localStorage` key `"moodboard-saved-workflows"`. The active workflow id is stored under `"moodboard-active-workflow"`.
+- Functions: `loadWorkflows`, `saveWorkflow`, `deleteWorkflow`, `setActiveWorkflow`, `exportAgentsMd` (download `AGENTS.md`), `importAgentsMd` (file or pasted text).
 
 ---
 
-## Change 3: Auto-Iterate Mode & Gemini Agent Loop
+## 5. Workflow UI
 
-### 3.1 API Research: Direct Model Loop vs. Managed Custom Agent
+The context tray contains board actions only. Workflow and agent controls go in the top bar, and the detailed UI goes in a modal dialog. Both follow Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
 
-Per [Building managed agents (`custom-agents`)](https://aistudio.google.com/docs/custom-agents?codelanguage=javascript) and the Interactions API function-calling guide in `@google/genai@^3.6.0`, there are two ways to run the agent loop — and **both consume the exact same `AGENTS.md` file, `tools` declarations, and `function_call` / `function_result` protocol**:
+### 5.1 Top Bar (`.app-header__right` in `src/canvas-page.ts`)
 
-| Approach | Interactions API Call | How `AGENTS.md` Is Loaded | Pros / Trade-offs |
-| :--- | :--- | :--- | :--- |
-| **Option A (Recommended v1): Direct Model Agent Loop** | `ai.interactions.create({ model: "gemini-4-neon", tools, system_instruction, input, previous_interaction_id, store: true })` | Loaded directly into `system_instruction` alongside the live canvas tool contract & guardrails. | Zero sandbox cold start (~1–2s per turn), GA `v1`, works directly in the browser with no remote environment overhead. |
-| **Option B (Optional Upgrade): Managed Antigravity Agent** | `ai.interactions.create({ agent: "antigravity-preview-09-2026", environment: { type: "remote", sources: [{ type: "inline", target: ".agents/AGENTS.md", content: workflow.agentsMd }] }, tools, previous_interaction_id })` | Mounted natively at `.agents/AGENTS.md` (loaded automatically on startup per `custom-agents.md`). | Preview agent (`antigravity-preview-09-2026`), remote sandbox startup latency; resumes via `status === "requires_action"` + `environment: interaction.environment_id`. |
+Place these controls before the existing progress text, Stop and Setup:
 
-**Recommendation:** Implement **Option A** first with `GEMINI_REASONING_MODEL` (`gemini-4-neon`, `thinking_level: "low"` or `"medium"`) loading the selected `AGENTS.md` into `system_instruction`, and keep the runner behind a small adapter interface so switching to `agent: "antigravity-preview-09-2026"` with `.agents/AGENTS.md` mounted inline is a drop-in configuration swap.
+```html
+<div class="workflow-control" role="group" aria-label="Workflow">
+  <select aria-label="Active workflow"><!-- (none) + saved workflows --></select>
+  <button class="auto-iterate" aria-pressed="false">Auto-Iterate</button>
+  <button class="status-pill" commandfor="agent-status-popover" command="toggle-popover">AI · idle</button>
+  <button commandfor="workflow-dialog" command="show-modal">Workflow</button>
+</div>
+<div id="agent-status-popover" popover><!-- last 5 ActionRecords: actor pill, action, summary --></div>
+```
 
-### 3.2 Agent Loop Implementation (`src/lib/agent/auto-iterate-agent.ts`)
+- **Active workflow select:** calls `setActiveWorkflow`.
+- **Auto-Iterate:** a normal `@click` state toggle that updates `aria-pressed`.
+  - It's disabled, with a `title` explaining why, when there's no Gemini key or no active workflow.
+  - Turning it on starts the agent. Turning it off emits `stop$`.
+- **Status pill:** `AI · <action> · <turn>/<maxTurns>` while running, `AI · idle` otherwise.
+- **Workflow:** opens the dialog.
+
+### 5.2 Workflow Dialog (`src/components/workflow/workflow-dialog.component.ts` + `.css`)
+
+`<dialog id="workflow-dialog">` is rendered once in `canvas-page.ts` next to `connection-dialog`. Its header has the tab buttons, which switch a `tab$` subject, and `<button commandfor="workflow-dialog" command="close">Close</button>`.
+
+| Tab | Contents |
+| :-- | :-- |
+| **Activity** | `actionLog$` timeline: `[User]`/`[AI]` pill, action, summary, output thumbnails, status, checkbox. Button: **Edit selected as trace**. |
+| **Trace** | Draft `TraceStep[]` editor with arg fields or raw JSON, note, ↑/↓, include toggle and remove. Human-only steps are tagged *Human step*. Name and goal inputs, then **Generate AGENTS.md**. |
+| **AGENTS.md** | Markdown editor with validation warnings. **Save**, **Download**, and **Import** (file input + paste area). |
+| **Saved** | Workflow list with **Set active**, **Edit** and **Delete**. Delete opens `<dialog id="workflow-delete-confirm">` with `command="show-modal"`. Its buttons are Cancel (`command="close"`) and Confirm, which deletes and then closes. |
+| **Agent view** | Live `buildObservation()` preview (§3.3), refreshed when the dialog opens and when `items$` changes. |
+
+### 5.3 Dialog and Popover Rules
+
+- All open and close goes through `commandfor` + `command` (`show-modal`, `close`, `toggle-popover`, `show-popover`, `hide-popover`).
+  - No `.showModal()`, `.close()` or `.showPopover()` calls.
+  - No click listeners whose only job is to open or close.
+- Don't put `popovertarget` and `commandfor` on the same button.
+- To react to opening or closing, listen for `command`, `toggle` or `close` on the **target element**. The `command` event doesn't bubble.
+- Set the `popover` attribute with `setAttribute`, never with the `.popover` property.
+- Popover CSS selectors use `[popover]:is(:popover-open, .\:popover-open)`.
+- When a popover is hidden from a button inside it, move focus back to the invoker.
+- Polyfills: add `invokers-polyfill` and `@oddbird/popover-polyfill` to `dependencies`, and load them conditionally at the top of `src/canvas-page.ts`:
+  ```ts
+  if (!("commandForElement" in HTMLButtonElement.prototype)) import("invokers-polyfill");
+  if (!Object.hasOwn(HTMLElement.prototype, "popover")) import("@oddbird/popover-polyfill");
+  ```
+- The status pill's `aria-expanded` is synced from the popover's `toggle` event, because the invokers polyfill doesn't manage ARIA state.
+
+### 5.4 Meta-Controls
+
+The top-bar and dialog controls (select workflow, toggle Auto-Iterate, edit trace or `AGENTS.md`) drive the agent itself. They aren't board actions: they appear in `HUMAN_ENTRIES` as `meta:*` and aren't exposed to the agent.
+
+---
+
+## 6. Auto-Iterate Agent (`src/lib/agent/auto-iterate.ts`)
+
+### 6.1 Model
+
+Add to `src/lib/gemini-models.ts`:
 
 ```ts
-// Core turn loop (Interactions API, @google/genai@^3.6.0)
-const systemInstruction = buildAgentSystemInstruction(workflow.agentsMd);
-let input: Interactions.Step[] | string = buildInitialAgentPrompt(boardSnapshot);
-let previousId: string | undefined;
+export const GEMINI_AGENT_MODEL = "gemini-4-neon";
+export const GEMINI_AGENT_THINKING = "medium" as const;
+```
 
-for (let turn = 0; turn < maxTurns; turn++) {
-  if (signal.aborted) break;
+The agent loop uses `GEMINI_AGENT_MODEL`. The actions it calls keep their own models (`GEMINI_TEXT_MODEL`, `GEMINI_IMAGE_MODEL`, `GEMINI_VIDEO_MODEL`, etc.).
 
-  const interaction = await ai.interactions.create(
-    {
-      model: GEMINI_REASONING_MODEL,
-      system_instruction: systemInstruction,
-      input,
-      tools: getAgentToolDeclarations(),
-      previous_interaction_id: previousId,
-      generation_config: { thinking_level: GEMINI_REASONING_THINKING },
-      store: true, // required for previous_interaction_id chaining
-    },
-    { signal },
-  );
+### 6.2 System Instruction (`src/lib/agent/agent-prompt.ts`)
 
-  const executedCallIds = new Set(
-    (interaction.steps || [])
-      .filter((s): s is Interactions.FunctionResultStep => s.type === "function_result")
-      .map((s) => s.call_id),
-  );
-  const pendingCalls = (interaction.steps || []).filter(
-    (s): s is Interactions.FunctionCallStep => s.type === "function_call" && !executedCallIds.has(s.id),
-  );
+`buildAgentSystemInstruction(agentsMd)` = `BASE_AGENT_PROMPT` + `\n\n---\n\n` + `agentsMd`.
 
-  if (pendingCalls.length === 0) break;
+`BASE_AGENT_PROMPT` covers:
+- the role (a design assistant operating a mood board through tools)
+- how to read observations
+- calling `view_cards` before judging visuals
+- acting only on ids that appear in the latest observation
+- doing human-only steps by stopping and asking the user
+- respecting the guardrails
+- ending with a short text summary when the workflow's stop conditions are met
 
-  const functionResults: Interactions.Step[] = [];
-  for (const call of pendingCalls) {
-    if (signal.aborted) break;
-    try {
-      const result = await dispatchTool(call.name, (call.arguments ?? {}) as Record<string, unknown>, {
-        actor: "ai",
-        items$,
-        apiKey,
-        signal,
-      });
-      functionResults.push({
-        type: "function_result",
-        name: call.name,
-        call_id: call.id,
-        result: [{ type: "text", text: JSON.stringify(result) }],
-      });
-    } catch (error) {
-      functionResults.push({
-        type: "function_result",
-        name: call.name,
-        call_id: call.id,
-        is_error: true,
-        result: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
-      });
-    }
-  }
+### 6.3 Loop
 
-  input = functionResults;
-  previousId = interaction.id;
+```ts
+export interface AgentRunner {
+  run(opts: { agentsMd: string; goal?: string; maxTurns: number; signal: AbortSignal }): Observable<AgentEvent>;
 }
 ```
 
-### 3.3 Auto-Iterate Toggle & Guardrails
+1. The first input is the goal (or "Follow the workflow") plus the initial observation.
+2. Each turn calls `ai.interactions.create({ model: GEMINI_AGENT_MODEL, system_instruction, input, tools: getAgentDeclarations(), tool_choice: allowed_tools(state), previous_interaction_id, generation_config: { thinking_level: GEMINI_AGENT_THINKING }, store: true }, { signal })`.
+3. Collect the `function_call` steps that have no matching `function_result`, and run them **sequentially** through `dispatch$(name, args, "ai")`.
+4. Return one `function_result` per call, with `call_id` and `name` (content as in §3.1), and `is_error: true` when `result.error` is set.
+5. Stop when a turn has no function calls, or on a guardrail, abort or `stop$`.
 
-- **UI Control:** In the app header (or top of the Workflow section), show:
-  - Active `AGENTS.md` workflow selector dropdown (plus quick **Import `AGENTS.md`** option)
-  - **Auto-Iterate** toggle switch (disabled if no Gemini API key or no `AGENTS.md` workflow loaded)
-  - Live status pill showing current AI step (e.g. `AI: running design_concepts (step 3/12)`).
-- **Guardrails:**
-  - Hard turn cap per round (`MAX_TURNS = 12`) and max cards cap (e.g. pause if canvas grows by `> 25` new cards in a session) to prevent runaway API spend.
-  - Turning the toggle OFF immediately aborts the `AbortController` and stops any in-flight tool/LLM calls.
-  - Every AI tool call runs through `dispatchTool(..., { actor: "ai" })`, so AI actions visibly mutate the canvas in real time and appear in `actionLog$` tagged `[AI]`.
-  - If the user manually interacts with the canvas during Auto-Iterate, `list_cards` / next turn sees the latest `items$.value` automatically.
+`AgentEvent` (turn started, action started/finished, message, stopped with reason) feeds the status pill and popover.
+
+### 6.4 Guardrails
+
+- `maxTurns = 12`.
+- Pause after 25 new cards in a run.
+- Separate budgets for image generations and video generations per run.
+- `clear_canvas` is refused unless `AGENTS.md` contains an explicit allow rule.
+- Toggle-off, Stop, or closing the page emits `stop$`, which aborts in-flight requests.
+- Human edits during a run show up in the next observation diff. Calls that reference deleted cards return `card_not_found`.
 
 ---
 
-## Phased Implementation Plan
+## 7. Testing
 
-### Phase 1: Tool Registry + Linear Layout
-- [ ] Add `getLinearRowPositions` in `src/components/canvas/layout.ts` + unit tests.
-- [ ] Create `src/lib/canvas-tools/types.ts`, `src/lib/canvas-tools/registry.ts`, and `src/lib/canvas-tools/dispatcher.ts`.
-- [ ] Extract core tool handlers (`write_card`, `render_image`, `search_references`, `visualize_concept`, `scan_concept`, `blend_images`, `design_concepts`, `iterate_designs`, `run_user_testing`, plus `list_cards`, `select_cards`, `delete_cards`).
-- [ ] Refactor UI tool components in `src/components/context-tray/tools/` to call `dispatchTool(..., { actor: "user" })`.
+### 7.1 Unit Tests (written before implementation)
 
-### Phase 2: Action Log, Editable Trace Builder & `AGENTS.md` Workflows
-- [ ] Create `src/lib/workflows/action-log.ts` and hook `dispatcher.ts` + `canvas.component.ts` (selection/edit/delete) into `actionLog$`.
-- [ ] Create `src/lib/workflows/summarize-agents-md.ts` (`summarizeTraceToAgentsMd$` using `gemini-4-hydrogen` to produce standard [`AGENTS.md`](https://agents.md/) Markdown) + unit tests.
-- [ ] Create `src/lib/workflows/workflow-storage.ts` (`loadWorkflows`, `saveWorkflow`, `deleteWorkflow`, `exportAgentsMd`, `importAgentsMd`) + unit tests.
-- [ ] Create `src/components/context-tray/tools/workflow.tool.ts` (+ `.css`) with activity timeline, inline trace item editor (edit args/notes, reorder, remove), `AGENTS.md` editor/export/import, and saved workflow selector.
+| File | Covers |
+| :-- | :-- |
+| `src/lib/actions/registry.test.ts` | Valid JSON Schema, unique names, `humanEntry` and `agent` set on every action. `HUMAN_ENTRIES` ⇄ registry match both ways. Unsupported actions have reasons and are absent from `getAgentDeclarations()`. |
+| `src/lib/actions/dispatch.test.ts` | Unknown action, invalid args, unsupported-for-agent, unavailable. Log lifecycle and coalescing. `stop$` cancels and aborts the signal. No `alert` on the AI path. **Parity:** same action and args with `actor: "user"` vs `"ai"` produce an identical `items$` diff (LLM helpers mocked). |
+| `src/lib/agent/observe.test.ts` | Card table, diff (including user-made changes), available/unavailable lists, budget drops media before text, video keyframe fallback. |
+| `src/lib/agent/auto-iterate.test.ts` | Uses `GEMINI_AGENT_MODEL`. `call_id` threading, `is_error` results, `allowed_tools` computed from state, sequential dispatch, turn/card caps, abort. Mocked `interactions.create`. |
+| `src/components/canvas/layout.test.ts` | `placeRows`: below existing cards, wraps at `columns`, aligns to `near`, empty board. |
 
-### Phase 3: Auto-Iterate Agent Loop Steered by `AGENTS.md`
-- [ ] Create `src/lib/agent/auto-iterate-agent.ts` loading the active `AGENTS.md` into `system_instruction` and running the Gemini Interactions API `function_call` / `function_result` loop with `AbortController`, turn cap, and error recovery + unit tests (mocked `ai.interactions.create`).
-- [ ] Wire the **Auto-Iterate** toggle + `AGENTS.md` workflow selector in `src/components/context-tray/tools/workflow.tool.ts` (and status/stop integration with `tasks.ts` / `progress.ts`).
-- [ ] (Optional) Add a `useManagedAgent` flag in `auto-iterate-agent.ts` to run the same loop against `agent: "antigravity-preview-09-2026"` with `workflow.agentsMd` mounted inline at `.agents/AGENTS.md`.
+The existing tests (`animate`, `search-images`, `user-testing-layout`, `interview`, `gemini-voices`) must stay green.
 
-### Phase 4: Verification & Docs
-- [ ] Add unit tests for `dispatcher.ts`, `summarize-agents-md.ts`, `workflow-storage.ts`, `auto-iterate-agent.ts`, and `getLinearRowPositions`.
-- [ ] Update `.github/copilot-instructions.md` and `src/components/context-tray/context-tray.instructions.md` to document the shared tool registry, action log, `AGENTS.md` workflows, and Auto-Iterate agent loop.
+### 7.2 Live Spot Tests (`npm run test:live`)
+
+`vitest` with the `*.live.test.ts` pattern. Reads `GEMINI_API_KEY` from `.env` and is skipped when the key is unset. Not run by `npm test`.
+
+- `GEMINI_AGENT_MODEL` correctly answers questions about image parts and a video part inside a `function_result`.
+- `allowed_tools` restricts which functions are called.
+- `BASE_AGENT_PROMPT` + a sample `AGENTS.md` on a seeded board yields a sensible 3–5 action sequence.
+- The summarizer output contains the §4.3 sections and passes `validateAgentsMd`.
+
+---
+
+## 8. File Map
+
+| Path | Purpose |
+| :-- | :-- |
+| `src/lib/actions/types.ts` | Types (§2.1) |
+| `src/lib/actions/registry.ts` | Registry and declarations (§2.2) |
+| `src/lib/actions/dispatch.ts` | Dispatcher (§2.3) |
+| `src/lib/actions/human-entries.ts` | Parity manifest (§2.4) |
+| `src/lib/actions/card-fill.ts` | `fillCard$` (§2.6) |
+| `src/lib/actions/defs/*.ts` | One file per action group: `board`, `generate`, `analyze`, `media`, `perception` |
+| `src/lib/agent/observe.ts` | `getUiState`, `buildObservation` (§3.1) |
+| `src/lib/agent/agent-prompt.ts` | System instruction (§6.2) |
+| `src/lib/agent/auto-iterate.ts` | Agent loop (§6.3) |
+| `src/lib/workflows/action-log.ts` | Action log (§4.1) |
+| `src/lib/workflows/summarize-agents-md.ts` | Summarizer (§4.3) |
+| `src/lib/workflows/workflow-storage.ts` | Storage (§4.4) |
+| `src/components/workflow/workflow-dialog.component.ts` | Dialog (§5.2) |
+| `src/components/workflow/workflow-control.component.ts` | Top-bar control and status popover (§5.1) |
+| `src/components/context-tray/tasks.ts` | `stop$`, abort signal (§2.3) |
+| `src/components/context-tray/tools/*.tool.ts` | Thin forms calling `dispatch$`, visibility from `isAvailable` |
+| `src/components/canvas/canvas.component.ts`, `card.component.ts` | Gesture-end dispatch, render `pending` (§2.5–2.6) |
+| `src/canvas-page.ts` | Polyfills, top-bar control, dialog mount |
+| `src/lib/gemini-models.ts` | `GEMINI_AGENT_MODEL`, `GEMINI_AGENT_THINKING` |
+
+---
+
+## 9. Implementation Order
+
+1. **Action layer**
+   - Write `registry`, `dispatch` and `layout` tests.
+   - Implement the types, registry, dispatcher, `getUiState`, and the `stop$`/abort changes in `tasks.ts`.
+   - Implement the board actions (`select`, `move`, `delete`, `clear`, `duplicate`, `edit_card`, `add_card`) and the human-only `export_cards`/`add_media`.
+   - Rewire `CanvasComponent`, `CanvasTool` and `ExportTool`.
+2. **Generative actions**
+   - Extract `fillCard$` and the `pending` state.
+   - Port `render_image`, `search_references`, `visualize_concept`, `scan_concept`, `blend_images`, `design_concepts`, `iterate_designs`, `run_user_testing`, `regenerate_image`, `edit_image`, `animate` and `interview_persona`.
+   - The tray derives its visibility from `isAvailable`.
+3. **Perception**
+   - Write the `observe` tests, then implement `observe.ts`, `view_cards` and `wait_for_idle`.
+   - Live spot tests: multimodal `function_result` and `allowed_tools`.
+4. **Workflow capture and UI**
+   - Implement the action log, trace draft, summarizer (with its live spot test) and storage.
+   - Add the polyfills.
+   - Build the top-bar control, the status popover, and the Workflow dialog with all five tabs.
+5. **Auto-Iterate**
+   - Add the model constants and write the `auto-iterate` tests.
+   - Implement the agent prompt, loop and guardrails, then wire the toggle, status pill and Stop.
+   - Run the live end-to-end spot test and tune `BASE_AGENT_PROMPT`.
+6. **Docs**
+   - Update `.github/copilot-instructions.md` and `src/components/context-tray/context-tray.instructions.md` with the action-layer rule: every new UI capability ships as a registered action with a `humanEntry` and an `agent` mode, or the parity test fails.
+   - Add the §5.3 dialog/popover rules.
