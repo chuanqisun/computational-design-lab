@@ -12,7 +12,6 @@ import { CaptureTool } from "./tools/capture.tool";
 import { ConceptualScanTool } from "./tools/conceptual-scan.tool";
 import { DesignTool } from "./tools/design.tool";
 import { ExportTool } from "./tools/export.tool";
-import { IterateTool } from "./tools/iterate.tool";
 import { NewPromptTool } from "./tools/new-prompt.tool";
 import { SketchTool } from "./tools/sketch.tool";
 import { interviewState$, UserTestingTool } from "./tools/user-testing.tool";
@@ -29,7 +28,6 @@ export const ContextTrayComponent = createComponent(
     const visualizeUI = VisualizeTool({ selectedWithText$, items$, apiKeys$ });
     const blendToolUI = BlendTool({ selected$, items$, apiKeys$ });
     const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
-    const iterateUI = IterateTool({ selected$, items$, apiKeys$ });
     const newPromptToolUI = NewPromptTool({ selected$, items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$, apiKeys$ });
     const canvasToolUI = CanvasTool({ items$, apiKeys$ });
@@ -60,16 +58,24 @@ export const ContextTrayComponent = createComponent(
           ${section("visualize_concept", "Visualize", visualizeUI)}
           ${section("scan_concept", "Scan", conceptualScanUI)}
           ${section("blend_images", "Blend", blendToolUI)}
-          ${section("design_concepts", "Design", designToolUI)}
+          ${section(
+            "design_concepts",
+            "Design",
+            designToolUI,
+            isTrayVisible(runtime, "design_concepts") || isTrayVisible(runtime, "iterate_designs"),
+          )}
           ${section(
             "run_user_testing",
             "User testing",
             userTestingUI,
             isTrayVisible(runtime, "run_user_testing") || interviewState !== "idle",
           )}
-          ${section("iterate_designs", "Iterate", iterateUI)}
-          ${section("edit_image", "Sketch", sketchToolUI)}
-          ${section("animate", "Animate", animateToolUI)}
+          ${section(
+            "animate",
+            "Media",
+            html`<div class="media-tools">${sketchToolUI}${animateToolUI}</div>`,
+            isTrayVisible(runtime, "edit_image") || isTrayVisible(runtime, "animate"),
+          )}
           <section class="tool-section">
             <h2>Canvas</h2>
             <div class="tool-body">${canvasToolUI}</div>

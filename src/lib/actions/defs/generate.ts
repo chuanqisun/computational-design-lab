@@ -281,7 +281,7 @@ export const designConceptsAction: ActionDef<{
       label: "Designed",
     }),
   log: "record",
-  humanEntry: "tray:Design",
+  humanEntry: "tray:Design/Create",
   agent: "native",
 };
 
@@ -314,7 +314,7 @@ export const iterateDesigns: ActionDef<{
       label: "Iterated",
     }),
   log: "record",
-  humanEntry: "tray:Iterate",
+  humanEntry: "tray:Design/Iterate",
   agent: "native",
 };
 
@@ -444,7 +444,7 @@ export const editImage: ActionDef<{
     );
   },
   log: "record",
-  humanEntry: "tray:Sketch",
+  humanEntry: "tray:Media/Sketch",
   agent: "equivalent",
 };
 

@@ -1,32 +1,36 @@
 .design-tool {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 0.5ch;
+
+  textarea {
+    field-sizing: content;
+    resize: none;
+  }
+
+  .brand-guide-input {
+    max-height: 12rem;
+    overflow-y: auto;
+  }
+
+  .design-row {
+    display: grid;
+    grid-template-columns: auto 6ch 1fr 1fr;
+    gap: 0.5ch;
+    align-items: center;
+  }
 }
 
-.design-tool .design-input,
-.design-tool .brand-guide-input {
-  field-sizing: content;
-  resize: none;
-}
-
-.design-tool .brand-guide-input {
-  max-height: 12rem;
-  overflow-y: auto;
-}
-
-.design-tool .generate-row {
+.media-tools {
   display: flex;
-  gap: 8px;
-  align-items: center;
-}
+  gap: 0.5ch;
+  flex-wrap: wrap;
 
-.design-tool .generate-btn:hover:not(:disabled) {
-  background: var(--primary-color-hover);
-}
+  > * {
+    flex: 1;
+  }
 
-.design-tool .generate-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  button {
+    width: 100%;
+  }
 }

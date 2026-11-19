@@ -142,12 +142,12 @@ Errors are returned as data and never thrown into `alert()`.
 | `visualize_concept` | Visualize | native | `{style: "abstract"\|"concrete", cardIds}` | |
 | `scan_concept` | Scan | native | `{lens, cardIds}` | |
 | `blend_images` | Blend | native | `{instruction, cardIds}` | Available when ≥2 selected cards have images |
-| `design_concepts` | Design | native | `{requirements, brandGuide?, count?, cardIds}` | |
-| `iterate_designs` | Iterate | native | `{direction?, brandGuide?, count?, cardIds}` | |
+| `design_concepts` | Design → Create | native | `{requirements, brandGuide?, count?, cardIds}` | |
+| `iterate_designs` | Design → Iterate | native | `{direction?, brandGuide?, count?, cardIds}` | |
 | `run_user_testing` | User testing → Run | native | `{trait, segment?, numUsers?, cardIds}` → persona + ranking cards | Rankings in `data`. Keeps `user-testing-layout.ts` |
 | `interview_persona` | User testing → Interview (live voice) | equivalent | `{cardIds (exactly one persona + context), questions: string[]}` → interview summary card | Text Q&A with the persona instead of live audio; same summary-card output |
-| `edit_image` | Sketch (freehand overlay + instruction) | equivalent | `{cardIds, instruction, regions?: [{x,y,w,h,label}]}` → new image card | Regions are rasterized into the same overlay format as freehand strokes, then go through the same `imageToimage` call |
-| `animate` | Animate | native | `{cardIds, instruction?, aspectRatio?, duration?, task?, roles?: [{imageId, role}]}` → video card | `async: true`; the human dialog also passes its drawn annotations as `humanArgs` |
+| `edit_image` | Media → Sketch (freehand overlay + instruction) | equivalent | `{cardIds, instruction, regions?: [{x,y,w,h,label}]}` → new image card | Regions are rasterized into the same overlay format as freehand strokes, then go through the same `imageToimage` call |
+| `animate` | Media → Animate | native | `{cardIds, instruction?, aspectRatio?, duration?, task?, roles?: [{imageId, role}]}` → video card | `async: true`; the human dialog also passes its drawn annotations as `humanArgs` |
 | `export_cards` | Export (Open in Studio) | **unsupported** | — | Reason: output opens a new Studio browser tab for the user; the agent reads cards via `observe`/`view_cards` |
 
 **Human-only actions** (`add_media`, `export_cards`) still go through `dispatch$` with `actor: "user"`, so they're logged and can appear in traces. In `AGENTS.md` they're written as *"Human step: …"*. When the agent reaches one, it stops its turn and asks the user to do it.

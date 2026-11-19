@@ -145,7 +145,7 @@ export const animate: ActionDef<{
     );
   },
   log: "record",
-  humanEntry: "tray:Animate",
+  humanEntry: "tray:Media/Animate",
   agent: "native",
 };
 

@@ -8,6 +8,8 @@ Tray tools are thin forms. Each one calls `runUserAction(runtime, "<action>", { 
 
 ## Layout
 
+Sections: New, Visualize, Scan, Blend, Design (**Create** = `design_concepts`, **Iterate** = `iterate_designs`, sharing one requirements/feedback box, brand guide and count), User testing, Media (**Sketch** = `edit_image`, **Animate** = `animate`), Canvas, Export, Workflow.
+
 Vertical stack of tools. Each tool can expand/collapse like an accordion.
 The left edge can be dragged to resize the width of the tray. Initial width is 240px.
 
