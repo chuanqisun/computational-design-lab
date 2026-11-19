@@ -101,7 +101,7 @@ export const CardComponent = createComponent(
         signature: getGenerationSignature(item),
       })),
       filter(({ item, apiKey }) => {
-        if (!apiKey) return false;
+        if (!apiKey || item.metadata?.pendingImage) return false;
 
         const hasContent = !!(item.title || item.body || item.imageSrc || item.imagePrompt || item.videoSrc);
         const missingText = !item.title || !item.body;

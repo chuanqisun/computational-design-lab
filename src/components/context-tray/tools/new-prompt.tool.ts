@@ -1,13 +1,15 @@
 import { html } from "lit-html";
 import {
   BehaviorSubject,
+  catchError,
   combineLatest,
+  EMPTY,
   filter,
   ignoreElements,
   map,
   merge,
+  mergeMap,
   mergeWith,
-  switchMap,
   tap,
   withLatestFrom,
   type Observable,
@@ -18,12 +20,9 @@ import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
-import { segmentGridImage } from "../grid-fitting";
-import { searchImages } from "../llm/search-images";
+import { searchImages, streamSearchResults$ } from "../llm/search-images";
 import { submitTask } from "../tasks";
 import "./new-prompt.tool.css";
-
-const GRID_PROMPT = `Search online to find the 9 most representative images for the request below. Display the images on a basic 3x3 grid. Each grid cell has #FFFFFF background. The grid gap is #000000. Page background is #000000. No text labels. Flat unstyled. \nRequest:`;
 
 export const NewPromptTool = createComponent(
   ({
@@ -119,28 +118,36 @@ export const NewPromptTool = createComponent(
       filter(([_, prompt, __, apiKeys]) => Boolean(prompt.trim() && apiKeys.gemini)),
       tap(([_, prompt, selected, apiKeys]) => {
         const apiKey = apiKeys.gemini!;
+        const trimmedPrompt = prompt.trim();
         const cardContext = selected
           .flatMap((card) => [card.title, card.body, card.imagePrompt])
           .filter(Boolean)
           .join("\n");
-        const fullPrompt = `${GRID_PROMPT}\n${prompt.trim()}${cardContext ? `\nUse these selected cards as additional context:\n${cardContext}` : ""}`;
         const images = selected.flatMap((card) => (card.imageSrc ? [card.imageSrc] : []));
 
-        const task$ = searchImages(apiKey, fullPrompt, images).pipe(
-          switchMap(async (result) => ({ result, tiles: await segmentGridImage(result.url) })),
-          tap(({ result, tiles }) => {
-            const canvas = document.querySelector("[data-canvas]") as HTMLElement | null;
-            const center = canvas ? getViewportCenter(canvas) : { x: 400, y: 300 };
-            const cardWidth = 200;
-            const cardHeight = 300;
-            const gap = 16;
-            const gridWidth = cardWidth * 3 + gap * 2;
-            const gridHeight = cardHeight * 3 + gap * 2;
-            const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
-            const sourceId = `search-${crypto.randomUUID()}`;
-            const additions: CanvasItem[] = tiles.map((tile, index) => ({
-              id: `${sourceId}-${index + 1}`,
-              imageSrc: tile.imageSrc,
+        const canvas = document.querySelector("[data-canvas]") as HTMLElement | null;
+        const center = canvas ? getViewportCenter(canvas) : { x: 400, y: 300 };
+        const cardWidth = 200;
+        const cardHeight = 300;
+        const gap = 16;
+        const gridWidth = cardWidth * 3 + gap * 2;
+        const gridHeight = cardHeight * 3 + gap * 2;
+        const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+        const sourceId = `search-${crypto.randomUUID()}`;
+
+        const task$ = streamSearchResults$({
+          apiKey,
+          prompt: trimmedPrompt,
+          contextText: cardContext,
+          images,
+          maxResults: 9,
+        }).pipe(
+          mergeMap((result, index) => {
+            const cardId = `${sourceId}-${index + 1}`;
+            const card: CanvasItem = {
+              id: cardId,
+              title: result.title,
+              body: result.details,
               x: center.x - gridWidth / 2 + (index % 3) * (cardWidth + gap),
               y: center.y - gridHeight / 2 + Math.floor(index / 3) * (cardHeight + gap),
               width: cardWidth,
@@ -150,12 +157,41 @@ export const NewPromptTool = createComponent(
               metadata: {
                 source: "gemini-image-search",
                 sourceId,
-                prompt: prompt.trim(),
-                tile: { index, x: tile.x, y: tile.y, width: tile.width, height: tile.height, fill: tile.fill },
-                searchSuggestions: result.searchSuggestions,
+                prompt: trimmedPrompt,
+                pendingImage: true,
               },
-            }));
-            items$.next([...items$.value, ...additions]);
+            };
+            items$.next([...items$.value, card]);
+
+            const imagePrompt = `Search for and generate a clear, representative visual reference image of "${result.title}". ${result.details}\nSearch topic: ${trimmedPrompt}. Clean single-subject presentation, no text labels or watermarks.`;
+            return searchImages(apiKey, imagePrompt).pipe(
+              tap((imageResult) => {
+                items$.next(
+                  items$.value.map((item) =>
+                    item.id === cardId
+                      ? {
+                          ...item,
+                          imageSrc: imageResult.url,
+                          metadata: {
+                            ...item.metadata,
+                            pendingImage: false,
+                            searchSuggestions: imageResult.searchSuggestions,
+                          },
+                        }
+                      : item,
+                  ),
+                );
+              }),
+              catchError((error) => {
+                console.error(`Search image generation failed for "${result.title}":`, error);
+                items$.next(
+                  items$.value.map((item) =>
+                    item.id === cardId ? { ...item, metadata: { ...item.metadata, pendingImage: false } } : item,
+                  ),
+                );
+                return EMPTY;
+              }),
+            );
           }),
         );
 
