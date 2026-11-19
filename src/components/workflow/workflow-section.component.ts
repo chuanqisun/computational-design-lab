@@ -6,12 +6,9 @@ import { persistSubject } from "../../lib/persistence";
 import { activeWorkflowId$, editorActions, workflowStore, workflows$ } from "../../lib/workflows/workflow-store";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
-import { traceRow } from "./trace-list";
 import "./workflow.css";
 
-const RECENT_TRACE_COUNT = 4;
-
-/** Context-tray section: pick a workflow, run it, and glance at the latest trace. */
+/** Context-tray section: pick a workflow and run it. */
 export const WorkflowSectionComponent = createComponent(
   ({ runtime, apiKeys$ }: { runtime: ActionRuntime; apiKeys$: BehaviorSubject<ApiKeys> }) => {
     const brief$ = new BehaviorSubject("");
@@ -39,11 +36,10 @@ export const WorkflowSectionComponent = createComponent(
       startAgent({ runtime, agentsMd: workflow.agentsMd, apiKey, goal: brief$.value });
     };
 
-    return combineLatest([workflows$, activeWorkflowId$, agentStatus$, apiKeys$, runtime.log.records$, brief$]).pipe(
-      map(([workflows, activeId, status, apiKeys, records, brief]) => {
+    return combineLatest([workflows$, activeWorkflowId$, agentStatus$, apiKeys$, brief$]).pipe(
+      map(([workflows, activeId, status, apiKeys, brief]) => {
         const active = workflows.find((workflow) => workflow.id === activeId);
         const runBlocker = !apiKeys.gemini ? "Add a Gemini API key in Setup" : !active ? "Select a workflow" : "";
-        const recent = records.slice(-RECENT_TRACE_COUNT).reverse();
 
         return html`
           <div class="workflow-section">
@@ -125,20 +121,6 @@ export const WorkflowSectionComponent = createComponent(
               <span class="status-dot"></span>${describeAgentStatus(status)}
             </p>
             ${status.message ? html`<p class="workflow-message" title=${status.message}>${status.message}</p>` : nothing}
-
-            <div class="trace-preview">
-              <div class="trace-preview-header">
-                <span>Trace</span>
-                <button class="link" commandfor="trace-dialog" command="show-modal">Open trace</button>
-              </div>
-              ${
-                recent.length
-                  ? html`<ol class="trace-list compact">
-                      ${recent.map((record) => traceRow(record))}
-                    </ol>`
-                  : html`<p class="empty">Actions by you and the AI will appear here.</p>`
-              }
-            </div>
           </div>
         `;
       }),

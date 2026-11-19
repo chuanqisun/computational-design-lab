@@ -305,7 +305,7 @@ Terminology used everywhere in the UI:
 - **Run:** the AI following the selected workflow.
 - **Trace:** the recorded actions of the user and the AI.
 
-The top bar keeps only progress, Stop and Setup. Workflow controls live in a **Workflow** section at the bottom of the context tray, below Canvas and Export. The detailed UI lives in two declarative dialogs, both following Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
+The top bar keeps only progress, Stop and Setup. The bottom of the context tray reads **Canvas → Workflow → Trace → Export**. Workflow controls live in the **Workflow** section; the **Trace** section (`trace-section.component.ts`) shows the last 4 trace rows with **Open** (`commandfor="trace-dialog" command="show-modal"`) and **Clear** buttons. The detailed UI lives in two declarative dialogs, both following Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
 
 ### 5.1 Workflow Section (`src/components/workflow/workflow-section.component.ts`)
 
@@ -316,7 +316,7 @@ The top bar keeps only progress, Stop and Setup. Workflow controls live in a **W
   - **View/Edit:** opens `#workflow-editor` with `command="show-modal"`. Built-ins are read-only, so saving one creates a copy.
   - **New:** opens an empty editor.
 - **Status:** `Idle`, `Running · <action> · step n/12`, `Finished`, etc., plus the AI's latest message (clamped).
-- **Trace preview:** the last 4 trace rows and an **Open trace** button (`commandfor="trace-dialog"`).
+
 
 ### 5.2 Built-in Workflows (`src/lib/workflows/builtin-workflows.ts`)
 
@@ -458,6 +458,7 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
 | `src/lib/workflows/workflow-storage.ts` | Storage (§4.4) |
 | `src/lib/workflows/compile-trace.ts` | Trace compilation (§4.2) |
 | `src/components/workflow/workflow-section.component.ts` | Tray section (§5.1) |
+| `src/components/workflow/trace-section.component.ts` | Trace tray section (§5) |
 | `src/components/workflow/trace-dialog.component.ts` | Trace dialog (§5.3) |
 | `src/components/workflow/workflow-editor.component.ts` | Workflow editor (§5.4) |
 | `src/lib/workflows/builtin-workflows.ts` | Built-in workflows (§5.2) |

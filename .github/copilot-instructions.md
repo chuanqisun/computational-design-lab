@@ -83,7 +83,7 @@ Spec: `docs/20261118-ai-instrumentation.md`.
 
 - Open and close dialogs and popovers declaratively with `commandfor` + `command` (`show-modal`, `close`, `toggle-popover`, …). Do not call `.showModal()`, `.close()` or `.showPopover()`, and do not add click listeners only to open or close.
 - Never combine `popovertarget` and `commandfor` on one button. Listen to `toggle`/`close`/`command` on the target element, since they do not bubble. No polyfills are needed; the app targets the latest Chromium.
-- UI terms: *Workflow* (an `AGENTS.md`, built-in or saved), *Run* (the AI following it), *Trace* (recorded actions). Workflow controls live in the Workflow section at the bottom of the context tray (`workflow-section.component.ts`). Details live in `#trace-dialog` (Timeline + AI view) and `#workflow-editor` (Steps + Instructions). Built-in workflows are in `src/lib/workflows/builtin-workflows.ts` and must pass `builtin-workflows.test.ts`.
+- UI terms: *Workflow* (an `AGENTS.md`, built-in or saved), *Run* (the AI following it), *Trace* (recorded actions). The tray ends with Canvas → Workflow (`workflow-section.component.ts`) → Trace (`trace-section.component.ts`: recent rows, Open, Clear) → Export. Details live in `#trace-dialog` (Timeline + AI view) and `#workflow-editor` (Steps + Instructions). Built-in workflows are in `src/lib/workflows/builtin-workflows.ts` and must pass `builtin-workflows.test.ts`.
 
 ## `src/components/*`
 

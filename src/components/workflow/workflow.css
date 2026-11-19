@@ -296,20 +296,21 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
 
-  .trace-preview {
-    display: grid;
-    gap: 0.5ch;
-    font-size: 0.9em;
+.trace-section {
+  display: grid;
+  gap: 0.5ch;
+  font-size: 0.9em;
+
+  .empty {
+    color: var(--color-text-secondary);
   }
 
-  .trace-preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    color: var(--color-text-secondary);
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 0.25ch;
+  .trace-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5ch;
   }
 }
 

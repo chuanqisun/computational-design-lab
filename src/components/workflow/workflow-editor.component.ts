@@ -3,7 +3,12 @@ import { BehaviorSubject, combineLatest, finalize, map, tap } from "rxjs";
 import type { ActionRuntime } from "../../lib/actions/runtime";
 import { summarizeTraceToAgentsMd$, type CatalogEntry } from "../../lib/workflows/summarize-agents-md";
 import { editor$, editorActions, workflowStore, type EditorState } from "../../lib/workflows/workflow-store";
-import { exportAgentsMd, validateAgentsMd, workflowNameFromMd, type TraceStep } from "../../lib/workflows/workflow-storage";
+import {
+  exportAgentsMd,
+  validateAgentsMd,
+  workflowNameFromMd,
+  type TraceStep,
+} from "../../lib/workflows/workflow-storage";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
 import { submitTask } from "../context-tray/tasks";
@@ -35,7 +40,8 @@ export const WorkflowEditorComponent = createComponent(
     const updateArgs = (id: string, text: string) => {
       try {
         const parsed = JSON.parse(text);
-        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("Must be a JSON object");
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+          throw new Error("Must be a JSON object");
         updateStep(id, { args: parsed });
         const { [id]: _removed, ...rest } = argErrors$.value;
         argErrors$.next(rest);
@@ -53,10 +59,18 @@ export const WorkflowEditorComponent = createComponent(
       }
       generating$.next(true);
       submitTask(
-        summarizeTraceToAgentsMd$({ name: name.trim() || "Untitled workflow", goal, steps: steps(), catalog: catalog(), apiKey }).pipe(
+        summarizeTraceToAgentsMd$({
+          name: name.trim() || "Untitled workflow",
+          goal,
+          steps: steps(),
+          catalog: catalog(),
+          apiKey,
+        }).pipe(
           tap({
-            next: (md) => editorActions.update({ md, tab: "instructions", notice: "Instructions generated. Review, then save." }),
-            error: (error) => editorActions.update({ notice: error instanceof Error ? error.message : "Generation failed." }),
+            next: (md) =>
+              editorActions.update({ md, tab: "instructions", notice: "Instructions generated. Review, then save." }),
+            error: (error) =>
+              editorActions.update({ notice: error instanceof Error ? error.message : "Generation failed." }),
           }),
           finalize(() => generating$.next(false)),
         ),
@@ -92,42 +106,80 @@ export const WorkflowEditorComponent = createComponent(
     };
 
     const renderSteps = (state: EditorState, errors: Record<string, string>, generating: boolean) => html`
-      ${state.steps.length === 0
-        ? html`<p class="empty">No recorded steps. Open the trace, select actions, and choose “New workflow from selected”.</p>`
-        : html`<ol class="step-list">
-            ${state.steps.map(
-              (step, index) => html`<li class="step ${step.included ? "" : "is-excluded"}">
-                <div class="step-header">
-                  <label class="inline">
-                    <input type="checkbox" .checked=${step.included} @change=${() => updateStep(step.id, { included: !step.included })} />
-                    Include
-                  </label>
-                  <span class="step-index">${index + 1}</span>
-                  ${actorBadge(step.actor)}
-                  <code>${step.action}</code>
-                  ${step.humanOnly ? html`<span class="tag">Human step</span>` : nothing}
-                  <span class="spacer"></span>
-                  <button class="icon" title="Move up" ?disabled=${index === 0} @click=${() => moveStep(index, -1)}>↑</button>
-                  <button class="icon" title="Move down" ?disabled=${index === state.steps.length - 1} @click=${() => moveStep(index, 1)}>↓</button>
-                  <button class="icon" title="Remove step" @click=${() => setSteps(steps().filter((s) => s.id !== step.id))}>✕</button>
-                </div>
-                <label class="field">
-                  <span>Why this step matters</span>
-                  <input type="text" .value=${step.note} placeholder="e.g. Focus on tactile matte materials" @change=${(e: Event) => updateStep(step.id, { note: (e.target as HTMLInputElement).value })} />
-                </label>
-                <details>
-                  <summary>Arguments</summary>
-                  <textarea class="code" .value=${JSON.stringify(step.args, null, 1)} @change=${(e: Event) => updateArgs(step.id, (e.target as HTMLTextAreaElement).value)}></textarea>
-                  ${errors[step.id] ? html`<p class="error">${errors[step.id]}</p>` : nothing}
-                </details>
-                ${step.thumbs.length ? html`<div class="trace-thumbs">${step.thumbs.map((src) => html`<img src=${src} alt="" />`)}</div>` : nothing}
-              </li>`,
-            )}
-          </ol>`}
+      ${
+        state.steps.length === 0
+          ? html`<p class="empty">
+              No recorded steps. Open the trace, select actions, and choose “New workflow from selected”.
+            </p>`
+          : html`<ol class="step-list">
+              ${state.steps.map(
+                (step, index) =>
+                  html`<li class="step ${step.included ? "" : "is-excluded"}">
+                    <div class="step-header">
+                      <label class="inline">
+                        <input
+                          type="checkbox"
+                          .checked=${step.included}
+                          @change=${() => updateStep(step.id, { included: !step.included })}
+                        />
+                        Include
+                      </label>
+                      <span class="step-index">${index + 1}</span>
+                      ${actorBadge(step.actor)}
+                      <code>${step.action}</code>
+                      ${step.humanOnly ? html`<span class="tag">Human step</span>` : nothing}
+                      <span class="spacer"></span>
+                      <button class="icon" title="Move up" ?disabled=${index === 0} @click=${() => moveStep(index, -1)}>
+                        ↑
+                      </button>
+                      <button
+                        class="icon"
+                        title="Move down"
+                        ?disabled=${index === state.steps.length - 1}
+                        @click=${() => moveStep(index, 1)}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        class="icon"
+                        title="Remove step"
+                        @click=${() => setSteps(steps().filter((s) => s.id !== step.id))}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <label class="field">
+                      <span>Why this step matters</span>
+                      <input
+                        type="text"
+                        .value=${step.note}
+                        placeholder="e.g. Focus on tactile matte materials"
+                        @change=${(e: Event) => updateStep(step.id, { note: (e.target as HTMLInputElement).value })}
+                      />
+                    </label>
+                    <details>
+                      <summary>Arguments</summary>
+                      <textarea
+                        class="code"
+                        .value=${JSON.stringify(step.args, null, 1)}
+                        @change=${(e: Event) => updateArgs(step.id, (e.target as HTMLTextAreaElement).value)}
+                      ></textarea>
+                      ${errors[step.id] ? html`<p class="error">${errors[step.id]}</p>` : nothing}
+                    </details>
+                    ${step.thumbs.length ? html`<div class="trace-thumbs">${step.thumbs.map((src) => html`<img src=${src} alt="" />`)}</div>` : nothing}
+                  </li>`,
+              )}
+            </ol>`
+      }
       <div class="form-row">
         <label class="field grow">
           <span>Goal</span>
-          <input type="text" .value=${state.goal} placeholder="What should this workflow achieve?" @input=${(e: Event) => editorActions.update({ goal: (e.target as HTMLInputElement).value })} />
+          <input
+            type="text"
+            .value=${state.goal}
+            placeholder="What should this workflow achieve?"
+            @input=${(e: Event) => editorActions.update({ goal: (e.target as HTMLInputElement).value })}
+          />
         </label>
         <button
           class="primary"
@@ -150,12 +202,14 @@ export const WorkflowEditorComponent = createComponent(
           placeholder="# Workflow name&#10;## Tools&#10;## Workflow&#10;## Aesthetic & Quality Criteria&#10;## Guardrails & Stop Conditions"
           @input=${(e: Event) => editorActions.update({ md: (e.target as HTMLTextAreaElement).value })}
         ></textarea>
-        ${validation && (validation.unknownActions.length || validation.missingSections.length)
-          ? html`<ul class="warnings">
-              ${validation.unknownActions.map((name) => html`<li>Unknown tool <code>${name}</code></li>`)}
-              ${validation.missingSections.map((name) => html`<li>Missing section “${name}”</li>`)}
-            </ul>`
-          : nothing}
+        ${
+          validation && (validation.unknownActions.length || validation.missingSections.length)
+            ? html`<ul class="warnings">
+                ${validation.unknownActions.map((name) => html`<li>Unknown tool <code>${name}</code></li>`)}
+                ${validation.missingSections.map((name) => html`<li>Missing section “${name}”</li>`)}
+              </ul>`
+            : nothing
+        }
         <div class="form-row">
           <label class="file-button">
             Import AGENTS.md…
@@ -187,10 +241,18 @@ export const WorkflowEditorComponent = createComponent(
                 @input=${(e: Event) => editorActions.update({ name: (e.target as HTMLInputElement).value })}
               />
               <nav class="tabs" role="tablist">
-                <button role="tab" aria-selected=${state.tab === "steps"} @click=${() => editorActions.update({ tab: "steps" })}>
+                <button
+                  role="tab"
+                  aria-selected=${state.tab === "steps"}
+                  @click=${() => editorActions.update({ tab: "steps" })}
+                >
                   Steps${state.steps.length ? ` (${state.steps.length})` : ""}
                 </button>
-                <button role="tab" aria-selected=${state.tab === "instructions"} @click=${() => editorActions.update({ tab: "instructions" })}>
+                <button
+                  role="tab"
+                  aria-selected=${state.tab === "instructions"}
+                  @click=${() => editorActions.update({ tab: "instructions" })}
+                >
                   Instructions
                 </button>
               </nav>
@@ -201,11 +263,17 @@ export const WorkflowEditorComponent = createComponent(
               ${state.tab === "steps" ? renderSteps(state, errors, generating) : renderInstructions(state)}
             </section>
             <footer class="dialog-footer">
-              ${isSaved
-                ? html`<button class="danger" commandfor="workflow-delete-confirm" command="show-modal">Delete</button>`
-                : nothing}
+              ${
+                isSaved
+                  ? html`<button class="danger" commandfor="workflow-delete-confirm" command="show-modal">
+                      Delete
+                    </button>`
+                  : nothing
+              }
               <span class="spacer"></span>
-              <button class="primary" ?disabled=${!state.md.trim()} @click=${save}>${isSaved ? "Save" : "Save workflow"}</button>
+              <button class="primary" ?disabled=${!state.md.trim()} @click=${save}>
+                ${isSaved ? "Save" : "Save workflow"}
+              </button>
             </footer>
           </dialog>
           <dialog id="workflow-delete-confirm" class="app-dialog confirm" aria-labelledby="workflow-delete-title">
@@ -214,7 +282,9 @@ export const WorkflowEditorComponent = createComponent(
             <footer class="dialog-footer">
               <span class="spacer"></span>
               <button commandfor="workflow-delete-confirm" command="close">Cancel</button>
-              <button class="danger" commandfor="workflow-delete-confirm" command="close" @click=${confirmDelete}>Delete</button>
+              <button class="danger" commandfor="workflow-delete-confirm" command="close" @click=${confirmDelete}>
+                Delete
+              </button>
             </footer>
           </dialog>
         `;

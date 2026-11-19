@@ -16,18 +16,29 @@ export function traceRow(
 ) {
   const selectable = options.onToggle !== undefined;
   const content = html`
-    ${selectable
-      ? html`<input type="checkbox" .checked=${!!options.checked} @change=${options.onToggle} aria-label="Select step" />`
-      : nothing}
+    ${
+      selectable
+        ? html`<input
+            type="checkbox"
+            .checked=${!!options.checked}
+            @change=${options.onToggle}
+            aria-label="Select step"
+          />`
+        : nothing
+    }
     ${actorBadge(record.actor)}
     <code class="trace-action">${record.action}</code>
-    <span class="trace-summary" title=${record.summary}>${record.status === "running" ? "In progress…" : record.summary}</span>
+    <span class="trace-summary" title=${record.summary}
+      >${record.status === "running" ? "In progress…" : record.summary}</span
+    >
     <time>${timeOf(record.timestamp)}</time>
   `;
   return html`<li class="trace-row status-${record.status} ${selectable ? "selectable" : ""}">
     ${selectable ? html`<label>${content}</label>` : html`<div class="trace-line">${content}</div>`}
-    ${options.thumbs && record.outputThumbs.length
-      ? html`<div class="trace-thumbs">${record.outputThumbs.map((src) => html`<img src=${src} alt="" />`)}</div>`
-      : nothing}
+    ${
+      options.thumbs && record.outputThumbs.length
+        ? html`<div class="trace-thumbs">${record.outputThumbs.map((src) => html`<img src=${src} alt="" />`)}</div>`
+        : nothing
+    }
   </li>`;
 }

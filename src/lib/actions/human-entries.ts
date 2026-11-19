@@ -50,6 +50,7 @@ export const HUMAN_ENTRIES: Record<string, string | { none: string }> = {
   "meta:workflow-run": { none: "Starts/stops the AI run" },
   "meta:workflow-editor": { none: "Creates, edits, imports and deletes workflows" },
   "meta:trace-dialog": { none: "Reviews the trace and what the AI perceives" },
+  "meta:trace-clear": { none: "Clears the recorded trace" },
   "meta:stop": { none: "Cancels all running work" },
   "meta:setup": { none: "API key configuration" },
 };

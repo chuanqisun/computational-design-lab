@@ -1,5 +1,16 @@
 import { html, nothing, type TemplateResult } from "lit-html";
-import { BehaviorSubject, combineLatest, debounceTime, filter, from, ignoreElements, map, mergeWith, switchMap, tap } from "rxjs";
+import {
+  BehaviorSubject,
+  combineLatest,
+  debounceTime,
+  filter,
+  from,
+  ignoreElements,
+  map,
+  mergeWith,
+  switchMap,
+  tap,
+} from "rxjs";
 import { isAgentVisible } from "../../lib/actions/registry";
 import type { ActionRuntime } from "../../lib/actions/runtime";
 import { agentStatus$, describeAgentStatus } from "../../lib/agent/agent-controller";
@@ -92,33 +103,45 @@ export const TraceDialogComponent = createComponent(({ runtime }: { runtime: Act
       </button>
       <button @click=${() => checked$.next(new Set())} ?disabled=${checked.size === 0}>Clear selection</button>
       <span class="spacer"></span>
-      <button class="danger" @click=${() => (runtime.log.clear(), checked$.next(new Set()))} ?disabled=${records.length === 0}>
+      <button
+        class="danger"
+        @click=${() => (runtime.log.clear(), checked$.next(new Set()))}
+        ?disabled=${records.length === 0}
+      >
         Clear trace
       </button>
     </div>
-    ${records.length === 0
-      ? html`<p class="empty">No actions yet. Everything you or the AI do on the board is recorded here.</p>`
-      : html`<ol class="trace-list">
-          ${[...records].reverse().map((record) =>
-            traceRow(record, { checked: checked.has(record.id), onToggle: () => toggle(record.id), thumbs: true }),
-          )}
-        </ol>`}
+    ${
+      records.length === 0
+        ? html`<p class="empty">No actions yet. Everything you or the AI do on the board is recorded here.</p>`
+        : html`<ol class="trace-list">
+            ${[...records]
+              .reverse()
+              .map((record) =>
+                traceRow(record, { checked: checked.has(record.id), onToggle: () => toggle(record.id), thumbs: true }),
+              )}
+          </ol>`
+    }
   `;
 
   const renderAiView = (parts: ObservationPart[] | null) => html`
     <div class="toolbar">
       <button @click=${() => submitTask(refreshPreview())}>Refresh</button>
-      <span class="hint">Exactly what the AI receives after each action. Images shown are from the selected cards.</span>
+      <span class="hint"
+        >Exactly what the AI receives after each action. Images shown are from the selected cards.</span
+      >
     </div>
-    ${parts === null
-      ? html`<p class="empty">Loading…</p>`
-      : html`<div class="ai-view">
-          ${parts.map((part): TemplateResult => {
-            if (part.type === "text") return html`<pre>${part.text}</pre>`;
-            if (part.type === "image") return html`<img src="data:${part.mime_type};base64,${part.data}" alt="" />`;
-            return html`<video controls src="data:${part.mime_type};base64,${part.data}"></video>`;
-          })}
-        </div>`}
+    ${
+      parts === null
+        ? html`<p class="empty">Loading…</p>`
+        : html`<div class="ai-view">
+            ${parts.map((part): TemplateResult => {
+              if (part.type === "text") return html`<pre>${part.text}</pre>`;
+              if (part.type === "image") return html`<img src="data:${part.mime_type};base64,${part.data}" alt="" />`;
+              return html`<video controls src="data:${part.mime_type};base64,${part.data}"></video>`;
+            })}
+          </div>`
+    }
   `;
 
   return combineLatest([tab$, runtime.log.records$, checked$, agentStatus$, preview$]).pipe(
@@ -128,8 +151,12 @@ export const TraceDialogComponent = createComponent(({ runtime }: { runtime: Act
           <header class="dialog-header">
             <h2 id="trace-dialog-title">Trace</h2>
             <nav class="tabs" role="tablist">
-              <button role="tab" aria-selected=${tab === "timeline"} @click=${() => tab$.next("timeline")}>Timeline</button>
-              <button role="tab" aria-selected=${tab === "ai-view"} @click=${() => tab$.next("ai-view")}>AI view</button>
+              <button role="tab" aria-selected=${tab === "timeline"} @click=${() => tab$.next("timeline")}>
+                Timeline
+              </button>
+              <button role="tab" aria-selected=${tab === "ai-view"} @click=${() => tab$.next("ai-view")}>
+                AI view
+              </button>
             </nav>
             <button commandfor="trace-dialog" command="close">Close</button>
           </header>
@@ -138,7 +165,9 @@ export const TraceDialogComponent = createComponent(({ runtime }: { runtime: Act
             <strong>AI ${describeAgentStatus(status).toLowerCase()}</strong>
             ${status.message ? html`<span class="ai-status-message">${status.message}</span>` : nothing}
           </div>
-          <section class="dialog-body">${tab === "timeline" ? renderTimeline(records, checked) : renderAiView(preview)}</section>
+          <section class="dialog-body">
+            ${tab === "timeline" ? renderTimeline(records, checked) : renderAiView(preview)}
+          </section>
         </dialog>
       `,
     ),
