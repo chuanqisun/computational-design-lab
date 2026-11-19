@@ -248,6 +248,8 @@ export const runUserTesting: ActionDef<{ trait: string; segment?: string; numUse
         );
       }),
       last(undefined, null),
+      // Persona and feedback cards get their images through the same fill/render as every other card.
+      switchMap(() => ctx.settle$([...created])),
       map(() => ({
         summary: `User testing on "${trait}" with ${rankings.length} persona(s)`,
         created: [...created],
@@ -320,12 +322,17 @@ export const interviewPersona: ActionDef<{ cardIds?: string[]; questions?: strin
             },
           },
         ]);
-        return {
-          summary: `Interviewed ${personaCard.title || "persona"}: ${summary.title}`,
-          created: [id],
-          data: { transcript },
-        };
+        return { id, title: summary.title, transcript };
       }),
+      switchMap(({ id, title, transcript }) =>
+        ctx.settle$([id]).pipe(
+          map(() => ({
+            summary: `Interviewed ${personaCard.title || "persona"}: ${title}`,
+            created: [id],
+            data: { transcript },
+          })),
+        ),
+      ),
     );
   },
   log: "record",
