@@ -302,7 +302,7 @@ The top bar keeps only progress, Stop and Setup. Workflow controls live in a **W
 
 ### 5.1 Workflow Section (`src/components/workflow/workflow-section.component.ts`)
 
-- **Workflow list:** built-in workflows first (tagged *Built-in*), then saved ones. Each is a radio row with a name and a one-line summary. The selection is the workflow that Run uses (`workflowStore.select`).
+- **Workflow picker:** a button showing the selected workflow's name and summary. It opens a popover menu (`commandfor="workflow-picker-menu" command="toggle-popover"`, anchor-positioned below the button) listing built-in workflows first (tagged *Built-in*), then saved ones. Each option selects the workflow and closes the menu with `command="hide-popover"`; focus returns to the picker. The selection is the workflow that Run uses (`workflowStore.select`).
 - **Brief:** optional text passed to the run as its focus (persisted).
 - **Actions:**
   - **Run/Stop:** primary. Disabled with a reason when there is no API key or no workflow selected.

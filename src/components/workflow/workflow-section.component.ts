@@ -17,6 +17,17 @@ export const WorkflowSectionComponent = createComponent(
     const brief$ = new BehaviorSubject("");
     void persistSubject(brief$, "context-tray:workflow:brief");
 
+    // Hiding the popover from a button inside it drops focus; return it to the picker (listen on the target).
+    const onMenuToggle = (event: Event) => {
+      const menu = event.currentTarget as HTMLElement;
+      if (
+        (event as ToggleEvent).newState === "closed" &&
+        (!document.activeElement || document.activeElement === document.body || menu.contains(document.activeElement))
+      ) {
+        (menu.previousElementSibling as HTMLElement | null)?.focus();
+      }
+    };
+
     const run = () => {
       if (agentStatus$.value.running) {
         stopAgent();
@@ -36,25 +47,45 @@ export const WorkflowSectionComponent = createComponent(
 
         return html`
           <div class="workflow-section">
-            <fieldset class="workflow-list" ?disabled=${status.running}>
-              <legend class="visually-hidden">Workflow</legend>
-              ${workflows.map(
-                (workflow) => html`<label class="workflow-option ${workflow.id === activeId ? "is-active" : ""}">
-                  <input
-                    type="radio"
-                    name="active-workflow"
-                    .checked=${workflow.id === activeId}
-                    @change=${() => workflowStore.select(workflow.id)}
-                  />
-                  <span class="workflow-option-text">
-                    <span class="workflow-option-name">
-                      ${workflow.name} ${workflow.builtIn ? html`<span class="tag">Built-in</span>` : nothing}
-                    </span>
-                    <span class="workflow-option-summary">${workflow.summary}</span>
-                  </span>
-                </label>`,
-              )}
-            </fieldset>
+            <button
+              class="workflow-picker"
+              commandfor="workflow-picker-menu"
+              command="toggle-popover"
+              ?disabled=${status.running}
+              aria-haspopup="listbox"
+            >
+              <span class="workflow-picker-text">
+                <span class="workflow-option-name">
+                  ${active?.name ?? "Choose a workflow"}
+                  ${active?.builtIn ? html`<span class="tag">Built-in</span>` : nothing}
+                </span>
+                ${active ? html`<span class="workflow-option-summary">${active.summary}</span>` : nothing}
+              </span>
+              <span class="chevron" aria-hidden="true">▾</span>
+            </button>
+            <div id="workflow-picker-menu" class="workflow-picker-menu" popover @toggle=${onMenuToggle}>
+              <ul role="listbox" aria-label="Workflows">
+                ${workflows.map(
+                  (workflow) =>
+                    html`<li role="option" aria-selected=${workflow.id === activeId}>
+                      <button
+                        class="workflow-option ${workflow.id === activeId ? "is-active" : ""}"
+                        commandfor="workflow-picker-menu"
+                        command="hide-popover"
+                        @click=${() => workflowStore.select(workflow.id)}
+                      >
+                        <span class="check" aria-hidden="true">${workflow.id === activeId ? "✓" : ""}</span>
+                        <span class="workflow-option-text">
+                          <span class="workflow-option-name">
+                            ${workflow.name} ${workflow.builtIn ? html`<span class="tag">Built-in</span>` : nothing}
+                          </span>
+                          <span class="workflow-option-summary">${workflow.summary}</span>
+                        </span>
+                      </button>
+                    </li>`,
+                )}
+              </ul>
+            </div>
 
             <label class="field">
               <span>Brief</span>
@@ -85,7 +116,9 @@ export const WorkflowSectionComponent = createComponent(
               >
                 ${active?.builtIn ? "View" : "Edit"}
               </button>
-              <button commandfor="workflow-editor" command="show-modal" @click=${() => editorActions.openNew()}>New</button>
+              <button commandfor="workflow-editor" command="show-modal" @click=${() => editorActions.openNew()}>
+                New
+              </button>
             </div>
 
             <p class="workflow-status ${status.running ? "is-running" : ""}" aria-live="polite">
@@ -98,9 +131,13 @@ export const WorkflowSectionComponent = createComponent(
                 <span>Trace</span>
                 <button class="link" commandfor="trace-dialog" command="show-modal">Open trace</button>
               </div>
-              ${recent.length
-                ? html`<ol class="trace-list compact">${recent.map((record) => traceRow(record))}</ol>`
-                : html`<p class="empty">Actions by you and the AI will appear here.</p>`}
+              ${
+                recent.length
+                  ? html`<ol class="trace-list compact">
+                      ${recent.map((record) => traceRow(record))}
+                    </ol>`
+                  : html`<p class="empty">Actions by you and the AI will appear here.</p>`
+              }
             </div>
           </div>
         `;
