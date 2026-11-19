@@ -32,7 +32,7 @@ import {
 
 export interface ActionRuntimeOptions {
   items$: BehaviorSubject<CanvasItem[]>;
-  apiKeys$: BehaviorSubject<{ gemini?: string }>;
+  apiKeys$: { readonly value: { gemini?: string } };
   registry: Registry;
   stop$?: Observable<void>;
   log?: ActionLog;
@@ -51,7 +51,7 @@ export interface RunningAction {
 
 export interface ActionRuntime {
   readonly items$: BehaviorSubject<CanvasItem[]>;
-  readonly apiKeys$: BehaviorSubject<{ gemini?: string }>;
+  readonly apiKeys$: { readonly value: { gemini?: string } };
   readonly registry: Registry;
   readonly log: ActionLog;
   readonly running$: BehaviorSubject<RunningAction[]>;
