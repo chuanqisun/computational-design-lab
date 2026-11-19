@@ -166,7 +166,7 @@ export const duplicateCards: ActionDef<{ cardIds?: string[] }> = {
   isAvailable: needTargets(1),
   run: (_args, ctx) =>
     of(null).pipe(
-      map(() => {
+      switchMap(() => {
         const sources = ctx.targets;
         const positions = ctx.place(sources.length);
         const copies: CanvasItem[] = sources.map((source, index) => ({
@@ -178,7 +178,8 @@ export const duplicateCards: ActionDef<{ cardIds?: string[] }> = {
           isSelected: true,
         }));
         ctx.items$.next([...ctx.items$.value.map((item) => ({ ...item, isSelected: false })), ...copies]);
-        return { summary: `Duplicated ${copies.length} card(s)`, created: copies.map((c) => c.id) };
+        const ids = copies.map((c) => c.id);
+        return ctx.settle$(ids).pipe(map(() => ({ summary: `Duplicated ${copies.length} card(s)`, created: ids })));
       }),
     ),
   log: "record",
