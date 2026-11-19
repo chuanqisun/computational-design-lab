@@ -18,6 +18,46 @@ export interface SortAxisConfig<T, V> {
   getValue: (item: T) => V;
 }
 
+export interface PlaceRowsOptions {
+  /** Card ids whose left edge new rows align to. Defaults to all cards. */
+  near?: string[];
+  columns?: number;
+  gap?: number;
+  cardWidth?: number;
+  cardHeight?: number;
+  /** Used as origin when the board is empty. */
+  viewport?: { x: number; y: number; width: number; height: number };
+}
+
+/**
+ * Shared placement policy for every card-creating action (human or AI).
+ * New cards go in left-to-right rows below the lowest existing card, so a session reads top to bottom.
+ */
+export function placeRows(items: CanvasItem[], count: number, options: PlaceRowsOptions = {}): Position[] {
+  const { near, columns = 4, gap = 24, cardWidth = 200, cardHeight = 300, viewport } = options;
+  if (count <= 0) return [];
+
+  const maxZ = items.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+  let originX: number;
+  let originY: number;
+
+  if (items.length === 0) {
+    originX = (viewport?.x ?? 0) + gap;
+    originY = (viewport?.y ?? 0) + gap;
+  } else {
+    const nearItems = near?.length ? items.filter((item) => near.includes(item.id)) : [];
+    const alignItems = nearItems.length > 0 ? nearItems : items;
+    originX = Math.min(...alignItems.map((item) => item.x));
+    originY = Math.max(...items.map((item) => item.y + item.height)) + gap;
+  }
+
+  return Array.from({ length: count }, (_, index) => ({
+    x: originX + (index % columns) * (cardWidth + gap),
+    y: originY + Math.floor(index / columns) * (cardHeight + gap),
+    z: maxZ + index + 1,
+  }));
+}
+
 /**
  * Returns the center position of the visible portion of a scrollable element.
  * Uses the parent's scroll position and dimensions to find the visible center.
