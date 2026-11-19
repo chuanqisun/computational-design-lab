@@ -116,7 +116,7 @@ export interface ActionDef<A extends Record<string, unknown> = Record<string, an
   /** Returns immediately with `pending`; remaining work keeps running. */
   async?: boolean;
   log: "record" | "coalesce" | "skip";
-  /** Where a human triggers it, e.g. "tray:Blend"; "perception" for agent perception actions. */
+  /** Where a human triggers it, e.g. "tray:Blend". Must be a key of HUMAN_ENTRIES. */
   humanEntry: string;
   agent: AgentSupport;
   /** Whether the action requires a Gemini API key. */
