@@ -3,7 +3,6 @@ import {
   BehaviorSubject,
   combineLatest,
   filter,
-  finalize,
   ignoreElements,
   map,
   mergeWith,
@@ -14,10 +13,8 @@ import {
 import { persistSubject } from "../../../lib/persistence";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { designConcepts$ } from "../llm/design-concepts";
-import { submitTask } from "../tasks";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import "./iterate.tool.css";
 
 export const IterateTool = createComponent(
@@ -34,6 +31,7 @@ export const IterateTool = createComponent(
     const brandGuide$ = new BehaviorSubject<string>("");
     const numDesigns$ = new BehaviorSubject<number>(3);
     const isGenerating$ = new BehaviorSubject(false);
+    const runtime = getActionRuntime(items$, apiKeys$);
     const generate$ = new BehaviorSubject<boolean>(false);
 
     void persistSubject(prompt$, "context-tray:iterate:prompt");
@@ -43,42 +41,16 @@ export const IterateTool = createComponent(
     const effect$ = generate$.pipe(
       filter((v) => v === true),
       tap(() => generate$.next(false)),
-      withLatestFrom(selected$, prompt$, brandGuide$, numDesigns$, apiKeys$),
+      withLatestFrom(selected$, prompt$, brandGuide$, numDesigns$),
       filter(([_, selected]) => selected.length > 0),
-      tap(([_, selected, prompt, brandGuide, numDesigns, apiKeys]) => {
-        if (!apiKeys.gemini) return;
+      tap(([_, selected, prompt, brandGuide, numDesigns]) => {
         isGenerating$.next(true);
-
-        const positionGenerator = getNextPositions(selected);
-
-        const task$ = designConcepts$({
-          items: selected,
-          requirements:
-            prompt.trim() || "Iterate and improve on the existing designs, incorporating any feedback provided.",
-          brandGuide,
-          numDesigns,
-          apiKey: apiKeys.gemini,
-        }).pipe(
-          tap((concept) => {
-            const { x, y, z } = positionGenerator.next().value;
-            const card: CanvasItem = {
-              id: `iterate-${Date.now()}-${Math.random()}`,
-              title: concept.title,
-              body: concept.description,
-              imagePrompt: concept.imagePrompt,
-              x,
-              y,
-              width: 200,
-              height: 300,
-              isSelected: false,
-              zIndex: z,
-            };
-            items$.next([...items$.value, card]);
-          }),
-          finalize(() => isGenerating$.next(false)),
+        runUserAction(
+          runtime,
+          "iterate_designs",
+          { direction: prompt, brandGuide, count: numDesigns, cardIds: selected.map((item) => item.id) },
+          () => isGenerating$.next(false),
         );
-
-        submitTask(task$);
       }),
       ignoreElements(),
     );

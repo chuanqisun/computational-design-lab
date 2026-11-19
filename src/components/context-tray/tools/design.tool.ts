@@ -3,7 +3,6 @@ import {
   BehaviorSubject,
   combineLatest,
   filter,
-  finalize,
   ignoreElements,
   map,
   mergeWith,
@@ -14,10 +13,8 @@ import {
 import { persistSubject } from "../../../lib/persistence";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import { designConcepts$, type DesignInput } from "../llm/design-concepts";
-import { submitTask } from "../tasks";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import "./design.tool.css";
 
 export const DesignTool = createComponent(
@@ -34,6 +31,7 @@ export const DesignTool = createComponent(
     const brandGuide$ = new BehaviorSubject<string>("");
     const numDesigns$ = new BehaviorSubject<number>(1);
     const isGenerating$ = new BehaviorSubject(false);
+    const runtime = getActionRuntime(items$, apiKeys$);
     const performGenerate$ = new BehaviorSubject<boolean>(false);
 
     void persistSubject(inputText$, "context-tray:design:input-text");
@@ -43,41 +41,16 @@ export const DesignTool = createComponent(
     const effect$ = performGenerate$.pipe(
       filter((val) => val === true),
       tap(() => performGenerate$.next(false)),
-      withLatestFrom(selected$, inputText$, brandGuide$, numDesigns$, apiKeys$),
+      withLatestFrom(selected$, inputText$, brandGuide$, numDesigns$),
       filter(([_, selected]) => selected.length > 0),
-      tap(([_, selected, requirements, brandGuide, numDesigns, apiKeys]) => {
-        if (!apiKeys.gemini) return;
+      tap(([_, selected, requirements, brandGuide, numDesigns]) => {
         isGenerating$.next(true);
-
-        const designInputs: DesignInput[] = selected;
-        const positionGenerator = getNextPositions(selected);
-
-        const task$ = designConcepts$({
-          items: designInputs,
-          requirements,
-          brandGuide,
-          numDesigns,
-          apiKey: apiKeys.gemini,
-        }).pipe(
-          tap((concept) => {
-            const { x, y, z } = positionGenerator.next().value;
-            const card: CanvasItem = {
-              id: `design-${Date.now()}-${Math.random()}`,
-              title: concept.title,
-              body: concept.description,
-              imagePrompt: concept.imagePrompt,
-              x,
-              y,
-              width: 200,
-              height: 300,
-              isSelected: false,
-              zIndex: z,
-            };
-            items$.next([...items$.value, card]);
-          }),
-          finalize(() => isGenerating$.next(false)),
+        runUserAction(
+          runtime,
+          "design_concepts",
+          { requirements, brandGuide, count: numDesigns, cardIds: selected.map((item) => item.id) },
+          () => isGenerating$.next(false),
         );
-        submitTask(task$);
       }),
       ignoreElements(),
     );

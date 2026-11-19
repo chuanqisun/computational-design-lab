@@ -1,16 +1,13 @@
 import { html, nothing } from "lit-html";
-import { BehaviorSubject, combineLatest, map, tap, type Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, map, type Observable } from "rxjs";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
 import {
   buildAnimateMacro,
-  combineAnimateInstruction,
-  generateAnimatedVideo,
   getAnimateImageTokens,
   getAnimatePreflightErrors,
-  prepareAnimateContents,
   resolveAnimateDefaultRoles,
   resolveAnimateInputs,
   setAnimateImageRole,
@@ -20,7 +17,6 @@ import {
   type AnimateInput,
   type AnimateTask,
 } from "../llm/animate";
-import { submitTask } from "../tasks";
 import "./animate.tool.css";
 
 interface AnimateDialogState {
@@ -51,6 +47,7 @@ export const AnimateToolView = ({
   apiKeys$: BehaviorSubject<ApiKeys>;
 }) => {
   const dialogState$ = new BehaviorSubject<AnimateDialogState | null>(null);
+  const runtime = getActionRuntime(items$, apiKeys$);
   let activePointerId: number | null = null;
 
   const getDialog = () =>
@@ -197,53 +194,30 @@ export const AnimateToolView = ({
     ) {
       return;
     }
-    updateState({ preparing: true, preparationError: "" });
-
     const annotatedImages = new Map<string, HTMLCanvasElement>();
     getDialog()
       ?.querySelectorAll<HTMLCanvasElement>("canvas[data-annotated='true']")
       .forEach((canvas) => annotatedImages.set(canvas.dataset.imageId || "", canvas));
 
-    try {
-      const contents = await prepareAnimateContents(state.inputs, annotatedImages, state.roles);
-      if (dialogState$.value !== state && !dialogState$.value?.preparing) return;
-
-      const macro = buildAnimateMacro(state.inputs, state.roles, state.annotatedImageIds);
-      const instruction = combineAnimateInstruction(macro, state.instruction) || "Animate the selected content.";
-      const position = getNextPositions(state.snapshot).next().value || { x: 100, y: 100, z: 1 };
-      const cardId = `animate-result-${crypto.randomUUID()}`;
-      const task$ = generateAnimatedVideo({
-        contents,
-        instruction,
+    updateState({ preparing: true, preparationError: "" });
+    runUserAction(
+      runtime,
+      "animate",
+      {
+        cardIds: state.snapshot.map((item) => item.id),
+        instruction: state.instruction,
         aspectRatio: state.aspectRatio,
         duration: state.duration,
         task: state.task,
-        apiKey,
-      }).pipe(
-        tap((video) => {
-          const card: CanvasItem = {
-            id: cardId,
-            videoSrc: `data:${video.mimeType};base64,${video.data}`,
-            videoMimeType: video.mimeType,
-            x: position.x,
-            y: position.y,
-            width: 200,
-            height: 300,
-            isSelected: false,
-            zIndex: position.z,
-          };
-          items$.next([...items$.value, card]);
-        }),
-      );
-
-      closeDialog();
-      submitTask(task$);
-    } catch (error) {
-      updateState({
-        preparing: false,
-        preparationError: error instanceof Error ? error.message : "Animate could not prepare the selected media.",
-      });
-    }
+        roles: Object.entries(state.roles).map(([imageId, role]) => ({ imageId, role })),
+        _annotatedImages: annotatedImages,
+        _annotatedImageIds: state.annotatedImageIds,
+      },
+      (result) => {
+        if (result && !result.error) closeDialog();
+        else updateState({ preparing: false, preparationError: result?.reason ?? "Animate was stopped." });
+      },
+    );
   };
 
   return combineLatest([selected$, apiKeys$, dialogState$]).pipe(

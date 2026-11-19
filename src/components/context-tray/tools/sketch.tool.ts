@@ -1,12 +1,9 @@
 import { html } from "lit-html";
-import { BehaviorSubject, combineLatest, map, switchMap, tap, type Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, map, type Observable } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
-import { generateRefinedCardText } from "../../canvas/ai-helpers";
 import { type CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
 import { type ApiKeys } from "../../connections/storage";
-import { imageToimage } from "../../semantic-scan/image-to-image";
-import { submitTask } from "../tasks";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import "./sketch.tool.css";
 
 const SKETCH_LINE_WIDTH = 4;
@@ -22,6 +19,7 @@ export const SketchTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const isDrawing$ = new BehaviorSubject(false);
+    const runtime = getActionRuntime(items$, apiKeys$);
     let strokeColor = "#ff0000";
     let dialogEl: HTMLDialogElement | null = null;
 
@@ -148,78 +146,14 @@ export const SketchTool = createComponent(
 
       dialog.close();
 
-      const selected = items$.value.filter((item) => item.isSelected);
-      const apiKeys = apiKeys$.value;
-
-      if (!apiKeys.gemini) {
-        alert("Gemini API key is required to use the sketch feedback.");
-        return;
-      }
-
       const selectedItem = items$.value.find((item) => item.isSelected && item.imageSrc);
-      const oldTitle = selectedItem?.title || "";
-      const oldBody = selectedItem?.body || "";
-      const oldImageSrc = selectedItem?.imageSrc || "";
+      if (!selectedItem) return;
 
-      const positionGenerator = getNextPositions(selected);
-      const cardWidth = 200;
-      const geminiApiKey = apiKeys.gemini;
-
-      const cardId = `sketch-result-${crypto.randomUUID()}`;
-      const nextPos = positionGenerator.next();
-      const { x, y, z } = nextPos && nextPos.value ? nextPos.value : { x: 100, y: 100, z: 1 };
-
-      const task$ = imageToimage({
-        instruction: feedbackText.trim() || "Apply the changes indicated by the sketch annotations on this image",
-        image: illustratedImage,
-        apiKey: geminiApiKey,
-      }).pipe(
-        tap((resultImageSrc) => {
-          if (!resultImageSrc) {
-            throw new Error(
-              "Failed to generate refined image from sketch. Please verify your API keys and the input image format.",
-            );
-          }
-          const card: CanvasItem = {
-            id: cardId,
-            imageSrc: resultImageSrc,
-            title: "Analyzing...",
-            body: "Generating text description...",
-            x,
-            y,
-            width: cardWidth,
-            height: cardWidth + 100, // standard card aspect ratio height (200) + text area height (100)
-            isSelected: false,
-            zIndex: z,
-          };
-          items$.next([...items$.value, card]);
-        }),
-        switchMap((resultImageSrc) => {
-          return generateRefinedCardText({
-            oldImageSrc,
-            newImageSrc: resultImageSrc,
-            oldTitle,
-            oldBody,
-            apiKey: geminiApiKey,
-          }).pipe(
-            tap((textResult) => {
-              const updatedItems = items$.value.map((item) => {
-                if (item.id === cardId) {
-                  return {
-                    ...item,
-                    title: textResult.title,
-                    body: textResult.body,
-                  };
-                }
-                return item;
-              });
-              items$.next(updatedItems);
-            }),
-          );
-        }),
-      );
-
-      submitTask(task$);
+      runUserAction(runtime, "edit_image", {
+        cardIds: [selectedItem.id],
+        instruction: feedbackText.trim() || undefined,
+        _annotatedImage: illustratedImage,
+      });
     };
 
     const selectedImageSrc$ = selected$.pipe(

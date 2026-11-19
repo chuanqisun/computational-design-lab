@@ -3,6 +3,7 @@ import { BehaviorSubject, of } from "rxjs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import type { ApiKeys } from "../../connections/storage";
+import * as aiHelpers from "../../canvas/ai-helpers";
 import * as animateLlm from "../llm/animate";
 import { taskRunner$ } from "../tasks";
 import { AnimateTool, AnimateToolView } from "./animate.tool";
@@ -293,6 +294,8 @@ describe("AnimateTool component", () => {
     vi.spyOn(animateLlm, "prepareAnimateContents").mockResolvedValue([
       { type: "image", mime_type: "image/png", data: "ONE" },
     ]);
+    // Card fill runs in the action layer after the video lands; keep it off the network.
+    vi.spyOn(aiHelpers, "fillCard").mockReturnValue(of({ title: "Clip", body: "A generated clip" }));
     vi.spyOn(animateLlm, "generateAnimatedVideo").mockReturnValue(
       of({ data: "GENERATED_VIDEO_BASE64", mimeType: "video/mp4" }),
     );

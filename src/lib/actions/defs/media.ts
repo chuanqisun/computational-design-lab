@@ -37,7 +37,7 @@ export const animate: ActionDef<{
   aspectRatio?: AnimateAspectRatio;
   duration?: AnimateDuration;
   task?: AnimateTask;
-  roles?: Record<string, AnimateImageRole>;
+  roles?: { imageId: string; role: AnimateImageRole }[];
   _annotatedImages?: ReadonlyMap<string, HTMLCanvasElement>;
   _annotatedImageIds?: ReadonlySet<string>;
 }> = {
@@ -56,9 +56,16 @@ export const animate: ActionDef<{
         enum: ["default", "text_to_video", "image_to_video", "reference_to_video", "edit", "extend"],
       },
       roles: {
-        type: "object",
-        description: "Map of image id (Image1, Image2…) to role: auto | starting-frame | reference.",
-        properties: {},
+        type: "array",
+        description: "Role per image id (Image1, Image2… in input order). At most one starting-frame.",
+        items: {
+          type: "object",
+          properties: {
+            imageId: { type: "string" },
+            role: { type: "string", enum: ["auto", "starting-frame", "reference"] },
+          },
+          required: ["imageId", "role"],
+        },
       },
     },
   },
@@ -69,7 +76,10 @@ export const animate: ActionDef<{
     targets.some((card) => card.kind !== "empty") ? true : { reason: "Select a card with video, image, or text content" },
   run: (args, ctx) => {
     const { inputs } = resolveAnimateInputs(ctx.targets);
-    const roles = { ...resolveAnimateDefaultRoles(inputs), ...(args.roles ?? {}) };
+    const roles = {
+      ...resolveAnimateDefaultRoles(inputs),
+      ...Object.fromEntries((args.roles ?? []).map((entry) => [entry.imageId, entry.role])),
+    };
     const options = {
       duration: args.duration ?? "default",
       task: args.task ?? "default",
@@ -79,57 +89,60 @@ export const animate: ActionDef<{
     const errors = getAnimatePreflightErrors(inputs, !!ctx.apiKey, options);
     if (errors.length) throw new ActionError("invalid_args", errors.join(" "));
 
-    const [pos] = ctx.place(1);
-    const id = ctx.newId("animate-result");
-    ctx.addCards([
-      {
-        id,
-        x: pos.x,
-        y: pos.y,
-        width: 200,
-        height: 300,
-        zIndex: pos.z,
-        isSelected: false,
-        title: "Animating…",
-        metadata: { pending: "video" },
-      },
-    ]);
-
     const macro = buildAnimateMacro(inputs, roles, options.annotatedImageIds);
     const instruction = combineAnimateInstruction(macro, args.instruction ?? "") || "Animate the selected content.";
-    const work$ = defer(() => prepareAnimateContents(inputs, args._annotatedImages ?? new Map(), roles)).pipe(
-      switchMap((contents) =>
-        generateAnimatedVideo({
-          contents,
-          instruction,
-          aspectRatio: args.aspectRatio ?? "default",
-          duration: options.duration,
-          task: options.task,
-          apiKey: ctx.apiKey,
-        }),
-      ),
-      tap((video) =>
-        ctx.updateCard(id, {
-          title: undefined,
-          videoSrc: `data:${video.mimeType};base64,${video.data}`,
-          videoMimeType: video.mimeType,
-          metadata: { pending: undefined },
-        }),
-      ),
-      switchMap(() => ctx.settle$([id])),
-      catchError((error) => {
-        console.error("Animate failed", error);
-        ctx.items$.next(ctx.items$.value.filter((item) => item.id !== id));
-        return EMPTY;
-      }),
-      finalize(() => {
-        const card = ctx.items$.value.find((item) => item.id === id);
-        if (card && !card.videoSrc) ctx.items$.next(ctx.items$.value.filter((item) => item.id !== id));
+
+    // Preparing inputs can fail (e.g. tainted media); do it before returning so the caller sees the error.
+    return defer(() => prepareAnimateContents(inputs, args._annotatedImages ?? new Map(), roles)).pipe(
+      map((contents) => {
+        const [pos] = ctx.place(1);
+        const id = ctx.newId("animate-result");
+        ctx.addCards([
+          {
+            id,
+            x: pos.x,
+            y: pos.y,
+            width: 200,
+            height: 300,
+            zIndex: pos.z,
+            isSelected: false,
+            metadata: { pending: "video" },
+          },
+        ]);
+
+        const removePlaceholder = () => {
+          const card = ctx.items$.value.find((item) => item.id === id);
+          if (card && !card.videoSrc) ctx.items$.next(ctx.items$.value.filter((item) => item.id !== id));
+        };
+
+        ctx.background(
+          generateAnimatedVideo({
+            contents,
+            instruction,
+            aspectRatio: args.aspectRatio ?? "default",
+            duration: options.duration,
+            task: options.task,
+            apiKey: ctx.apiKey,
+          }).pipe(
+            tap((video) =>
+              ctx.updateCard(id, {
+                videoSrc: `data:${video.mimeType};base64,${video.data}`,
+                videoMimeType: video.mimeType,
+                metadata: { pending: undefined },
+              }),
+            ),
+            switchMap(() => ctx.settle$([id])),
+            catchError((error) => {
+              console.error("Animate failed", error);
+              return EMPTY;
+            }),
+            finalize(removePlaceholder),
+          ),
+        );
+
+        return { summary: "Started video generation", created: [id], pending: [id] };
       }),
     );
-    ctx.background(work$);
-
-    return of({ summary: "Started video generation", created: [id], pending: [id] });
   },
   log: "record",
   humanEntry: "tray:Animate",

@@ -97,8 +97,10 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
     });
 
   const checkAvailability = (def: ActionDef, state: UiState, targets: CardView[]): Availability => {
+    const available = def.isAvailable({ state, targets });
+    if (available !== true) return available;
     if (def.needsApiKey && !state.hasApiKey) return { reason: "Gemini API key required" };
-    return def.isAvailable({ state, targets });
+    return true;
   };
 
   const availability: ActionRuntime["availability"] = (name, targets) => {

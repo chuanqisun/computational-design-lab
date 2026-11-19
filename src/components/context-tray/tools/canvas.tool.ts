@@ -1,69 +1,32 @@
 import { html } from "lit-html";
 import { BehaviorSubject, map } from "rxjs";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { focusSelectedItems, gatherItemsIntoViewport } from "../../canvas/layout";
+import type { ApiKeys } from "../../connections/storage";
 
-export const CanvasTool = createComponent(({ items$ }: { items$: BehaviorSubject<CanvasItem[]> }) => {
-  const gatherItems = () => {
-    const canvasArea = document.querySelector(".canvas-area") as HTMLElement;
-    if (!canvasArea) return;
+export const CanvasTool = createComponent(
+  ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
+    const runtime = getActionRuntime(items$, apiKeys$);
 
-    const viewport = {
-      width: canvasArea.clientWidth,
-      height: canvasArea.clientHeight,
-      scrollX: canvasArea.scrollLeft,
-      scrollY: canvasArea.scrollTop,
-    };
-
-    const moves = gatherItemsIntoViewport(items$.value, viewport);
-
-    if (moves.length > 0) {
-      const currentItems = items$.value;
-      const updatedItems = currentItems.map((item) => {
-        const move = moves.find((m) => m.id === item.id);
-        return move ? { ...item, x: move.x, y: move.y } : item;
+    const gatherItems = () => runUserAction(runtime, "move_cards", { arrange: "gather" });
+    const focusSelected = () =>
+      runUserAction(runtime, "move_cards", {
+        arrange: "focus",
+        cardIds: items$.value.filter((item) => item.isSelected).map((item) => item.id),
       });
-      items$.next(updatedItems);
-    }
-  };
+    const clearAll = () => runUserAction(runtime, "clear_canvas", { confirm: true });
 
-  const focusSelected = () => {
-    const canvasArea = document.querySelector(".canvas-area") as HTMLElement;
-    if (!canvasArea) return;
+    return items$.pipe(
+      map((items) => {
+        const hasSelection = items.some((item) => item.isSelected);
 
-    const viewport = {
-      width: canvasArea.clientWidth,
-      height: canvasArea.clientHeight,
-      scrollX: canvasArea.scrollLeft,
-      scrollY: canvasArea.scrollTop,
-    };
-
-    const moves = focusSelectedItems(items$.value, viewport);
-
-    if (moves.length > 0) {
-      const currentItems = items$.value;
-      const updatedItems = currentItems.map((item) => {
-        const move = moves.find((m) => m.id === item.id);
-        return move ? { ...item, x: move.x, y: move.y } : item;
-      });
-      items$.next(updatedItems);
-    }
-  };
-
-  const clearAll = () => {
-    items$.next([]);
-  };
-
-  return items$.pipe(
-    map((items) => {
-      const hasSelection = items.some((item) => item.isSelected);
-
-      return html`
-        <button @click=${gatherItems}>Gather</button>
-        <button @click=${focusSelected} ?disabled=${!hasSelection}>Focus</button>
-        <button @click=${clearAll}>Destroy</button>
-      `;
-    }),
-  );
-});
+        return html`
+          <button @click=${gatherItems} ?disabled=${items.length === 0}>Gather</button>
+          <button @click=${focusSelected} ?disabled=${!hasSelection}>Focus</button>
+          <button @click=${clearAll} ?disabled=${items.length === 0}>Destroy</button>
+        `;
+      }),
+    );
+  },
+);

@@ -2,10 +2,8 @@ import { html } from "lit-html";
 import { BehaviorSubject, filter, ignoreElements, map, mergeWith, Observable, tap, withLatestFrom } from "rxjs";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import type { ApiKeys } from "../../connections/storage";
-import { visualizeConcept$ } from "../llm/visualize-concept";
-import { submitTask } from "../tasks";
 import "./visualize.tool.css";
 
 export const VisualizeTool = createComponent(
@@ -19,62 +17,22 @@ export const VisualizeTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const visualizationTypes = [
-      {
-        id: "abstract",
-        label: "Abstract",
-        instruction:
-          "Create abstract, artistic visualizations that capture the essence of the concept in non-literal, symbolic ways. Use diverse artistic styles, colors, and compositions to represent ideas metaphorically.",
-      },
-      {
-        id: "concrete",
-        label: "Concrete",
-        instruction:
-          "Create concrete, realistic visualizations that depict the concept in literal, tangible forms. Focus on detailed, lifelike representations that show the concept as it might appear in reality.",
-      },
-    ];
+      { id: "abstract", label: "Abstract" },
+      { id: "concrete", label: "Concrete" },
+    ] as const;
+    const runtime = getActionRuntime(items$, apiKeys$);
 
     const visualize$ = new BehaviorSubject<(typeof visualizationTypes)[number] | null>(null);
 
     const visualizeEffect$ = visualize$.pipe(
       filter((vizType): vizType is (typeof visualizationTypes)[number] => vizType !== null),
-      withLatestFrom(selectedWithText$, apiKeys$),
-      tap(([vizType, selectedWithText, apiKeys]) => {
-        if (selectedWithText.length === 0) {
-          return;
-        }
-
-        if (!apiKeys.gemini) {
-          console.warn("No Gemini API key provided.");
-          return;
-        }
-
-        const title = "Selected Concept";
-        const description = selectedWithText.map((c) => c.body).join(" ");
-        const concept = { title, description };
-
-        const positionGenerator = getNextPositions(items$.value.filter((item) => item.isSelected));
-        const task$ = visualizeConcept$({
-          concept,
-          instruction: vizType.instruction,
-          geminiApiKey: apiKeys.gemini,
-        }).pipe(
-          tap((url) => {
-            const { x, y, z } = positionGenerator.next().value;
-            const card: CanvasItem = {
-              id: `viz-${crypto.randomUUID()}`,
-              imageSrc: url,
-              x,
-              y,
-              width: 200,
-              height: 300,
-              isSelected: false,
-              zIndex: z,
-            };
-            items$.next([...items$.value, card]);
-          }),
-        );
-
-        submitTask(task$);
+      withLatestFrom(selectedWithText$),
+      tap(([vizType, selectedWithText]) => {
+        if (selectedWithText.length === 0) return;
+        runUserAction(runtime, "visualize_concept", {
+          style: vizType.id,
+          cardIds: selectedWithText.map((item) => item.id),
+        });
       }),
       ignoreElements(),
     );

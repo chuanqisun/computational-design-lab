@@ -1,6 +1,7 @@
 import { html, nothing } from "lit-html";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
+import { getActionRuntime, isTrayVisible } from "../../lib/actions/app-runtime";
 import { hasText, type CanvasItem } from "../canvas/canvas.component";
 import type { ApiKeys } from "../connections/storage";
 import "./context-tray.component.css";
@@ -29,89 +30,49 @@ export const ContextTrayComponent = createComponent(
     const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
     const iterateUI = IterateTool({ selected$, items$, apiKeys$ });
     const newPromptToolUI = NewPromptTool({ selected$, items$, apiKeys$ });
-    const captureToolUI = CaptureTool({ items$ });
-    const canvasToolUI = CanvasTool({ items$ });
-    const exportToolUI = ExportTool({ items$ });
+    const captureToolUI = CaptureTool({ items$, apiKeys$ });
+    const canvasToolUI = CanvasTool({ items$, apiKeys$ });
+    const exportToolUI = ExportTool({ items$, apiKeys$ });
     const sketchToolUI = SketchTool({ selected$, items$, apiKeys$ });
     const animateToolUI = AnimateTool({ selected$, items$, apiKeys$ });
 
-    const template$ = combineLatest([selected$, selectedWithText$, interviewState$]).pipe(
-      map(([selected, _selectedWithText, interviewState]) => {
-        const totalSelected = selected.length;
-        const showUserTesting = totalSelected > 0 || interviewState !== "idle";
+    const runtime = getActionRuntime(items$, apiKeys$);
+    const section = (name: string, title: string, body: unknown, visible = isTrayVisible(runtime, name)) =>
+      visible
+        ? html`<section class="tool-section">
+            <h2>${title}</h2>
+            <div class="tool-body">${body}</div>
+          </section>`
+        : nothing;
 
+    // Section visibility uses each action's isAvailable on the selection: the same predicate that
+    // decides which tools the agent may call.
+    const template$ = combineLatest([items$, apiKeys$, interviewState$]).pipe(
+      map(([_items, _apiKeys, interviewState]) => {
         return html`<aside class="context-tray">
           <section class="tool-section">
             <h2>New</h2>
             <div class="tool-body">${captureToolUI}</div>
             <div class="tool-body">${newPromptToolUI}</div>
           </section>
-          ${
-            totalSelected > 0
-              ? html`
-                  <section class="tool-section">
-                    <h2>Visualize</h2>
-                    <div class="tool-body">${visualizeUI}</div>
-                  </section>
-                  <section class="tool-section">
-                    <h2>Scan</h2>
-                    <div class="tool-body">${conceptualScanUI}</div>
-                  </section>
-                  ${
-                    totalSelected > 1
-                      ? html`<section class="tool-section">
-                          <h2>Blend</h2>
-                          <div class="tool-body">${blendToolUI}</div>
-                        </section>`
-                      : nothing
-                  }
-                  <section class="tool-section">
-                    <h2>Design</h2>
-                    <div class="tool-body">${designToolUI}</div>
-                  </section>
-                `
-              : nothing
-          }
-          ${
-            showUserTesting
-              ? html`
-                  <section class="tool-section">
-                    <h2>User testing</h2>
-                    <div class="tool-body">${userTestingUI}</div>
-                  </section>
-                `
-              : nothing
-          }
-          ${
-            totalSelected > 0
-              ? html`
-                  <section class="tool-section">
-                    <h2>Iterate</h2>
-                    <div class="tool-body">${iterateUI}</div>
-                  </section>
-                  <section class="tool-section">
-                    <h2>Sketch</h2>
-                    <div class="tool-body">${sketchToolUI}</div>
-                  </section>
-                  <section class="tool-section">
-                    <h2>Animate</h2>
-                    <div class="tool-body">${animateToolUI}</div>
-                  </section>
-                `
-              : nothing
-          }
+          ${section("visualize_concept", "Visualize", visualizeUI)}
+          ${section("scan_concept", "Scan", conceptualScanUI)}
+          ${section("blend_images", "Blend", blendToolUI)}
+          ${section("design_concepts", "Design", designToolUI)}
+          ${section(
+            "run_user_testing",
+            "User testing",
+            userTestingUI,
+            isTrayVisible(runtime, "run_user_testing") || interviewState !== "idle",
+          )}
+          ${section("iterate_designs", "Iterate", iterateUI)}
+          ${section("edit_image", "Sketch", sketchToolUI)}
+          ${section("animate", "Animate", animateToolUI)}
           <section class="tool-section">
             <h2>Canvas</h2>
             <div class="tool-body">${canvasToolUI}</div>
           </section>
-          ${
-            totalSelected > 0
-              ? html` <section class="tool-section">
-                  <h2>Export</h2>
-                  <div class="tool-body">${exportToolUI}</div>
-                </section>`
-              : nothing
-          }
+          ${section("export_cards", "Export", exportToolUI)}
         </aside>`;
       }),
     );

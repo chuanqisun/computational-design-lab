@@ -3,35 +3,19 @@ import {
   BehaviorSubject,
   combineLatest,
   filter,
-  finalize,
   ignoreElements,
   map,
-  mergeMap,
   mergeWith,
   type Observable,
   tap,
   withLatestFrom,
 } from "rxjs";
+import { getActionRuntime, runUserAction } from "../../../lib/actions/app-runtime";
 import { persistSubject } from "../../../lib/persistence";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
-import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
-import {
-  resolveInterviewSelection,
-  startLiveInterview,
-  summarizeInterview$,
-  type LiveInterviewSession,
-} from "../llm/interview";
-import { generatePersonas$, rankDesigns$ } from "../llm/synthetic-users";
-import { submitTask } from "../tasks";
-import {
-  buildGridConfig,
-  getFeedbackPosition,
-  getHeaderItemPosition,
-  getPersonaPosition,
-  getRankedItemPosition,
-} from "./user-testing-layout";
+import { resolveInterviewSelection, startLiveInterview, type LiveInterviewSession } from "../llm/interview";
 import "./user-testing.css";
 
 export type InterviewState = "idle" | "connecting" | "active" | "summarizing";
@@ -63,6 +47,7 @@ export const UserTestingTool = createComponent(
     const isRunning$ = new BehaviorSubject<boolean>(false);
     const progressMsg$ = new BehaviorSubject<string>("");
     const startAction$ = new BehaviorSubject<boolean>(false);
+    const runtime = getActionRuntime(items$, apiKeys$);
 
     const handleInterviewClick = async () => {
       if (interviewState$.value === "active" && activeInterview) {
@@ -76,60 +61,18 @@ export const UserTestingTool = createComponent(
           return;
         }
 
-        const apiKey = apiKeys$.value.gemini;
-        if (!apiKey) {
-          interviewState$.next("idle");
-          interviewStatus$.next("Gemini API key required to summarize interview.");
-          return;
-        }
-
         interviewState$.next("summarizing");
         interviewStatus$.next("Summarizing interview...");
 
-        const fallbackPos = {
-          x: current.personaCard.x + current.personaCard.width + 20,
-          y: current.personaCard.y,
-          z: (current.personaCard.zIndex ?? 0) + 1,
-        };
-        const pos = getNextPositions(current.snapshot).next().value || fallbackPos;
-
-        const summaryTask$ = summarizeInterview$({
-          personaCard: current.personaCard,
-          contextItems: current.contextItems,
-          transcript,
-          apiKey,
-        }).pipe(
-          tap((summary) => {
-            const summaryCard: CanvasItem = {
-              id: `interview-summary-${crypto.randomUUID()}`,
-              title: summary.title,
-              body: summary.body,
-              x: pos.x,
-              y: pos.y,
-              width: 200,
-              height: 300,
-              zIndex: pos.z,
-              isSelected: false,
-              metadata: {
-                kind: "interview-summary",
-                personaCardId: current.personaCard.id,
-                personaName: current.personaCard.title || "Synthetic User",
-              },
-            };
-            items$.next([...items$.value, summaryCard]);
-          }),
-          tap({
-            error: () => {
-              interviewStatus$.next("Failed to summarize interview.");
-            },
-          }),
-          finalize(() => {
+        runUserAction(
+          runtime,
+          "interview_persona",
+          { cardIds: [current.personaCard.id, ...current.contextItems.map((item) => item.id)], _transcript: transcript },
+          (result) => {
             interviewState$.next("idle");
-            if (interviewStatus$.value !== "Failed to summarize interview.") interviewStatus$.next("");
-          }),
+            interviewStatus$.next(result && !result.error ? "" : "Failed to summarize interview.");
+          },
         );
-
-        submitTask(summaryTask$);
         return;
       }
 
@@ -177,117 +120,21 @@ export const UserTestingTool = createComponent(
     const startEffect$ = startAction$.pipe(
       filter((v) => v === true),
       tap(() => startAction$.next(false)),
-      withLatestFrom(selected$, trait$, segment$, numUsers$, apiKeys$),
-      tap(([_, selectedItems, trait, segment, numUsers, apiKeys]) => {
-        if (selectedItems.length === 0 || !apiKeys.gemini || !trait.trim()) return;
+      withLatestFrom(selected$, trait$, segment$, numUsers$),
+      tap(([_, selectedItems, trait, segment, numUsers]) => {
+        if (selectedItems.length === 0 || !trait.trim()) return;
 
         isRunning$.next(true);
-        progressMsg$.next("Generating personas...");
-
-        const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex ?? 0), 0);
-        const origin = {
-          x: Math.min(...selectedItems.map((i) => i.x)),
-          y: Math.min(...selectedItems.map((i) => i.y)),
-        };
-        const config = buildGridConfig(selectedItems, numUsers, origin, { colGap: 20, rowGap: 20 });
-
-        // Move original items to header row positions
-        const movedItems = items$.value.map((item) => {
-          const idx = selectedItems.findIndex((s) => s.id === item.id);
-          if (idx >= 0) {
-            const pos = getHeaderItemPosition(idx, config);
-            return { ...item, x: pos.x, y: pos.y, width: pos.width, height: pos.height };
-          }
-          return item;
-        });
-        items$.next(movedItems);
-
-        const task$ = generatePersonas$({
-          trait: trait.trim(),
-          segment: segment || "All",
-          numUsers,
-          apiKey: apiKeys.gemini,
-        }).pipe(
-          mergeMap((persona, userIndex) => {
-            progressMsg$.next(`Ranking for ${persona.name}...`);
-
-            const personaPos = getPersonaPosition(userIndex, config);
-            const personaCard: CanvasItem = {
-              id: `persona-${Date.now()}-${Math.random()}`,
-              title: persona.name,
-              body: `${persona.occupation}, age ${persona.age}\nVoice: ${persona.voiceName}\n${persona.description}`,
-              x: personaPos.x,
-              y: personaPos.y,
-              width: personaPos.width,
-              height: personaPos.height,
-              zIndex: maxZ + 1 + userIndex,
-              isSelected: false,
-              metadata: {
-                kind: "synthetic-user",
-                gender: persona.gender,
-                voiceName: persona.voiceName,
-                persona,
-              },
-            };
-            items$.next([...items$.value, personaCard]);
-
-            return rankDesigns$({
-              persona,
-              items: selectedItems,
-              trait: trait.trim(),
-              apiKey: apiKeys.gemini!,
-            }).pipe(
-              tap((ranking) => {
-                const newCards: CanvasItem[] = [];
-
-                ranking.rankedItemIds.forEach((itemId, rankPosition) => {
-                  const original = selectedItems.find((i) => i.id === itemId);
-                  if (!original) return;
-                  const pos = getRankedItemPosition(userIndex, rankPosition, config);
-                  newCards.push({
-                    id: `ranked-${Date.now()}-${Math.random()}`,
-                    title: original.title,
-                    body: original.body,
-                    imageSrc: original.imageSrc,
-                    imagePrompt: original.imagePrompt,
-                    x: pos.x,
-                    y: pos.y,
-                    width: pos.width,
-                    height: pos.height,
-                    zIndex: maxZ + 10 + userIndex * 10 + rankPosition,
-                    isSelected: false,
-                  });
-                });
-
-                const feedbackPos = getFeedbackPosition(userIndex, config);
-                newCards.push({
-                  id: `feedback-${Date.now()}-${Math.random()}`,
-                  title: `${persona.name}'s Feedback`,
-                  body: ranking.feedback,
-                  x: feedbackPos.x,
-                  y: feedbackPos.y,
-                  width: feedbackPos.width,
-                  height: feedbackPos.height,
-                  zIndex: maxZ + 10 + userIndex * 10 + config.numItems,
-                  isSelected: false,
-                });
-
-                items$.next([...items$.value, ...newCards]);
-              }),
-            );
-          }),
-          tap({
-            error: () => {
-              progressMsg$.next("Error occurred");
-            },
-          }),
-          finalize(() => {
+        progressMsg$.next("Generating personas and rankings...");
+        runUserAction(
+          runtime,
+          "run_user_testing",
+          { trait: trait.trim(), segment: segment || "All", numUsers, cardIds: selectedItems.map((item) => item.id) },
+          (result) => {
             isRunning$.next(false);
-            if (progressMsg$.value !== "Error occurred") progressMsg$.next("");
-          }),
+            progressMsg$.next(result?.error ? "Error occurred" : "");
+          },
         );
-
-        submitTask(task$);
       }),
       ignoreElements(),
     );
