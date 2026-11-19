@@ -22,6 +22,6 @@ export function buildAgentSystemInstruction(agentsMd: string): string {
 
 export function buildInitialAgentPrompt(goal?: string): string {
   return goal?.trim()
-    ? `Goal for this run: ${goal.trim()}\n\nHere is the board right now.`
+    ? `Brief for this run: ${goal.trim()}\n\nHere is the board right now.`
     : "Follow the workflow. Here is the board right now.";
 }

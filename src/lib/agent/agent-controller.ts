@@ -28,9 +28,10 @@ const reasonText: Record<AgentStopReason, string> = {
 
 export function describeAgentStatus(status: AgentStatus): string {
   if (status.running) {
-    return `AI · ${status.action ?? "thinking"} · ${status.turn}/${status.maxTurns}`;
+    const step = status.maxTurns ? ` · step ${status.turn}/${status.maxTurns}` : "";
+    return `Running${status.action ? ` · ${status.action}` : " · thinking"}${step}`;
   }
-  return status.stopReason ? `AI · ${reasonText[status.stopReason].toLowerCase()}` : "AI · idle";
+  return status.stopReason ? reasonText[status.stopReason] : "Idle";
 }
 
 export function startAgent(input: { runtime: ActionRuntime; agentsMd: string; apiKey: string; goal?: string }): void {

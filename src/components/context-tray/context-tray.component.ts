@@ -17,6 +17,7 @@ import { NewPromptTool } from "./tools/new-prompt.tool";
 import { SketchTool } from "./tools/sketch.tool";
 import { interviewState$, UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
+import { WorkflowSectionComponent } from "../workflow/workflow-section.component";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
@@ -37,6 +38,7 @@ export const ContextTrayComponent = createComponent(
     const animateToolUI = AnimateTool({ selected$, items$, apiKeys$ });
 
     const runtime = getActionRuntime(items$, apiKeys$);
+    const workflowUI = WorkflowSectionComponent({ runtime, apiKeys$ });
     const section = (name: string, title: string, body: unknown, visible = isTrayVisible(runtime, name)) =>
       visible
         ? html`<section class="tool-section">
@@ -50,6 +52,10 @@ export const ContextTrayComponent = createComponent(
     const template$ = combineLatest([items$, apiKeys$, interviewState$]).pipe(
       map(([_items, _apiKeys, interviewState]) => {
         return html`<aside class="context-tray">
+          <section class="tool-section">
+            <h2>Workflow</h2>
+            <div class="tool-body">${workflowUI}</div>
+          </section>
           <section class="tool-section">
             <h2>New</h2>
             <div class="tool-body">${captureToolUI}</div>

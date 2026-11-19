@@ -45,10 +45,11 @@ export const HUMAN_ENTRIES: Record<string, string | { none: string }> = {
   "tray:Canvas/Destroy": "clear_canvas",
   "tray:Export": "export_cards",
 
-  // Driver meta-controls (top bar + workflow dialog): drive the agent, not the board
-  "meta:workflow-select": { none: "Chooses the active AGENTS.md workflow" },
-  "meta:auto-iterate": { none: "Starts/stops the agent" },
+  // Driver meta-controls (Workflow tray section + dialogs): drive the agent, not the board
+  "meta:workflow-select": { none: "Chooses which workflow (AGENTS.md) the AI follows" },
+  "meta:workflow-run": { none: "Starts/stops the AI run" },
+  "meta:workflow-editor": { none: "Creates, edits, imports and deletes workflows" },
+  "meta:trace-dialog": { none: "Reviews the trace and what the AI perceives" },
   "meta:stop": { none: "Cancels all running work" },
-  "meta:workflow-dialog": { none: "Trace editing and AGENTS.md management" },
   "meta:setup": { none: "API key configuration" },
 };
