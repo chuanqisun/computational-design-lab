@@ -63,6 +63,28 @@ applyTo: "**"
 - For Gemini Omni Animate task type, omit `generation_config` for Default or send the selected explicit mode as `generation_config.video_config.task`.
 - Track text, image, and video LLM calls in `progress$`; decrement counters with observable teardown/finally semantics and wire `AbortController` so errors and `Stop` cancellation are covered.
 
+- The Auto-Iterate agent uses `GEMINI_AGENT_MODEL` (`gemini-4-neon`, `thinking_level: "medium"`) and only the agent loop uses it. Restrict tools per turn with `generation_config.tool_choice.allowed_tools` and `mode: "validated"`. The API rejects `"auto"` there, and `"any"` would force a tool call every turn.
+- Function results may carry `image` and `video` parts (`FunctionResultSubcontent`). The agent perceives the board this way.
+
+## Action layer (human ⇄ AI parity)
+
+Spec: `docs/20261118-ai-instrumentation.md`.
+
+- Every board change goes through `runtime.dispatch$(name, args, actor)` (`src/lib/actions/`). The UI adapter is `runUserAction` in `app-runtime.ts`, which alerts on errors. The AI adapter is the agent loop in `src/lib/agent/auto-iterate.ts`, which never alerts. Components must not mutate `items$` for semantic changes. The only exceptions are presentation-only state (z-order on click, legacy `<generative-image>` completion).
+- Actions live in `src/lib/actions/defs/*.ts`. One `ActionDef` is both the UI behavior and the Gemini function declaration. `isAvailable` drives tray visibility on the selection and the agent's allowed tools on the board, with the same predicate. `cardIds` defaults to the selection.
+- Every action declares `humanEntry` (a key in `src/lib/actions/human-entries.ts`) and `agent`. `native` means the same input. `equivalent` means a different input with the same output transform (e.g. sketch strokes become region boxes, voice interview becomes text Q&A). `perception` covers `observe`, `view_cards` and `wait_for_idle`. `{ unsupported: reason }` means no realistic equivalent. Device-only inputs (drawings, transcripts, files) are passed as `_`-prefixed `humanArgs`; the agent can never send them.
+- A new UI capability must ship as a registered action plus a `HUMAN_ENTRIES` entry, otherwise `registry.test.ts` fails.
+- Card fill and image rendering live in the action layer (`card-fill.ts`, `ctx.settle$`). They are not in `CardComponent`. Actions complete after their cards settle. `metadata.pending` marks in-flight work. `async` actions (e.g. `animate`) return immediately and keep working through `ctx.background`.
+- New cards are placed with `placeRows` (rows below the board) via `ctx.place` or `ctx.placer`. `user-testing-layout.ts` is the only exception.
+- Cancellation: `stop$` in `context-tray/tasks.ts` stops UI tasks, actions and the agent.
+- Tests: TDD for the registry/parity, dispatcher, observation, agent loop and placement (mock all LLM calls). Prompt changes are verified with `npm run test:live` (`*.live.test.ts`, reads `GEMINI_API_KEY` from `.env`, excluded from `npm test`).
+
+## Dialogs and popovers
+
+- Open and close dialogs and popovers declaratively with `commandfor` + `command` (`show-modal`, `close`, `toggle-popover`, …). Do not call `.showModal()`, `.close()` or `.showPopover()`, and do not add click listeners only to open or close.
+- Never combine `popovertarget` and `commandfor` on one button. Listen to `toggle`/`close`/`command` on the target element, since they do not bubble. No polyfills are needed; the app targets the latest Chromium.
+- Workflow and agent controls live in the top bar (`workflow-control.component.ts`). The detailed UI lives in `#workflow-dialog` (`workflow-dialog.component.ts`). The context tray holds board actions only.
+
 ## `src/components/*`
 
 - Use the createComponent utility for reactive components

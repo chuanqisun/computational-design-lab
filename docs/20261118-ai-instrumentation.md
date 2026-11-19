@@ -75,8 +75,10 @@ export interface ActionDef<A = Record<string, unknown>> {
   run(args: A, ctx: ActionContext): Observable<ActionResult>;  // completes after settle
   async?: boolean;                     // returns immediately with `pending`
   log: "record" | "coalesce" | "skip";
-  humanEntry: string;                  // e.g. "tray:Blend", "canvas:drag", "dialog:Regenerate", "perception"
+  humanEntry: string;                  // key of HUMAN_ENTRIES, e.g. "tray:Blend", "canvas:drag", "dialog:open"
   agent: AgentSupport;
+  humanArgs?: string[];                // "_"-prefixed device inputs only the UI may pass (drawings, transcripts, files)
+  needsApiKey?: boolean;
 }
 
 export interface ActionContext {
@@ -143,12 +145,14 @@ Errors are returned as data and never thrown into `alert()`.
 | `design_concepts` | Design | native | `{requirements, brandGuide?, count?, cardIds}` | |
 | `iterate_designs` | Iterate | native | `{direction?, brandGuide?, count?, cardIds}` | |
 | `run_user_testing` | User testing → Run | native | `{trait, segment?, numUsers?, cardIds}` → persona + ranking cards | Rankings in `data`. Keeps `user-testing-layout.ts` |
-| `interview_persona` | User testing → Interview (live voice) | equivalent | `{personaCardId, questions: string[]}` → interview summary card | Text Q&A with the persona instead of live audio; same summary-card output |
-| `edit_image` | Sketch (freehand overlay + instruction) | equivalent | `{cardId, instruction, regions?: [{x,y,w,h,label}]}` → new image card | Regions are rasterized into the same overlay format as freehand strokes, then go through the same `imageToimage` call |
-| `animate` | Animate | native | `{cardIds, prompt, durationS?}` → video card | `async: true` |
-| `export_cards` | Export (download JSON) | **unsupported** | — | Reason: output is a file on the user's disk; the agent reads cards via `observe`/`view_cards` |
+| `interview_persona` | User testing → Interview (live voice) | equivalent | `{cardIds (exactly one persona + context), questions: string[]}` → interview summary card | Text Q&A with the persona instead of live audio; same summary-card output |
+| `edit_image` | Sketch (freehand overlay + instruction) | equivalent | `{cardIds, instruction, regions?: [{x,y,w,h,label}]}` → new image card | Regions are rasterized into the same overlay format as freehand strokes, then go through the same `imageToimage` call |
+| `animate` | Animate | native | `{cardIds, instruction?, aspectRatio?, duration?, task?, roles?: [{imageId, role}]}` → video card | `async: true`; the human dialog also passes its drawn annotations as `humanArgs` |
+| `export_cards` | Export (Open in Studio) | **unsupported** | — | Reason: output opens a new Studio browser tab for the user; the agent reads cards via `observe`/`view_cards` |
 
 **Human-only actions** (`add_media`, `export_cards`) still go through `dispatch$` with `actor: "user"`, so they're logged and can appear in traces. In `AGENTS.md` they're written as *"Human step: …"*. When the agent reaches one, it stops its turn and asks the user to do it.
+
+Card ids are short (`prefix-xxxxxxxx`) so the agent can read and echo them reliably. After an action, created cards are revealed (scrolled into view); for the agent, changed cards are revealed too.
 
 **Parity manifest** (`src/lib/actions/human-entries.ts`): `HUMAN_ENTRIES` lists every tray section, card-dialog button, canvas gesture and keyboard shortcut, plus `meta:*` entries for workflow controls (§5.4). Every non-meta entry maps to exactly one action, and every action's `humanEntry` (other than `perception`) is in the manifest.
 
@@ -205,7 +209,7 @@ Every AI `function_result.result` is `[{type: "text", text: JSON.stringify(resul
 ### 3.2 Exposing Available Actions
 
 - Send the full `getAgentDeclarations()` on every turn.
-- Restrict each turn with `tool_choice: { allowed_tools: { mode: "auto", tools: availableActionNames(state) } }`.
+- Restrict each turn with `generation_config.tool_choice: { allowed_tools: { mode: "validated", tools: availableActionNames(state) } }`. The API accepts only `ANY` or `VALIDATED` for `allowed_tools`; `validated` still lets the model end a turn with text.
 - The dispatcher re-checks availability, so if the model ignores `allowed_tools` it gets an `unavailable` result back.
 
 ### 3.3 Agent View (Human Counterpart)
@@ -377,7 +381,7 @@ export interface AgentRunner {
 ```
 
 1. The first input is the goal (or "Follow the workflow") plus the initial observation.
-2. Each turn calls `ai.interactions.create({ model: GEMINI_AGENT_MODEL, system_instruction, input, tools: getAgentDeclarations(), tool_choice: allowed_tools(state), previous_interaction_id, generation_config: { thinking_level: GEMINI_AGENT_THINKING }, store: true }, { signal })`.
+2. Each turn calls `ai.interactions.create({ model: GEMINI_AGENT_MODEL, system_instruction, input, tools: getAgentDeclarations(), previous_interaction_id, generation_config: { thinking_level: GEMINI_AGENT_THINKING, tool_choice: { allowed_tools: { mode: "validated", tools } } }, store: true }, { signal })`.
 3. Collect the `function_call` steps that have no matching `function_result`, and run them **sequentially** through `dispatch$(name, args, "ai")`.
 4. Return one `function_result` per call, with `call_id` and `name` (content as in §3.1), and `is_error: true` when `result.error` is set.
 5. Stop when a turn has no function calls, or on a guardrail, abort or `stop$`.
