@@ -22,12 +22,11 @@ export const COALESCE_WINDOW_MS = 1500;
 
 export class ActionLog {
   readonly records$: BehaviorSubject<ActionRecord[]>;
+  private readonly now: () => number;
 
-  constructor(
-    initial: ActionRecord[] = [],
-    private readonly now: () => number = () => Date.now(),
-  ) {
+  constructor(initial: ActionRecord[] = [], now: () => number = () => Date.now()) {
     this.records$ = new BehaviorSubject<ActionRecord[]>(initial);
+    this.now = now;
   }
 
   get records(): ActionRecord[] {

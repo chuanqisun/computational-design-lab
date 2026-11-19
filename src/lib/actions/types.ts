@@ -120,10 +120,9 @@ export interface ActionDef<A extends Record<string, unknown> = Record<string, an
 }
 
 export class ActionError extends Error {
-  constructor(
-    public code: string,
-    message: string,
-  ) {
+  readonly code: string;
+  constructor(code: string, message: string) {
     super(message);
+    this.code = code;
   }
 }
