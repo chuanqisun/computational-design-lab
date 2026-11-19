@@ -55,7 +55,7 @@ export interface ActionRuntime {
   readonly registry: Registry;
   readonly log: ActionLog;
   readonly running$: BehaviorSubject<RunningAction[]>;
-  /** Emits created card ids after each action (used to reveal new cards). */
+  /** Emits card ids to reveal after an action: created cards, plus cards the agent changed. */
   readonly created$: Subject<{ ids: string[]; actor: Actor }>;
   dispatch$(name: string, args: Record<string, unknown>, actor: Actor): Observable<ActionResult>;
   getUiState(): UiState;
@@ -253,7 +253,9 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
             });
             if (options.makeThumb && result.created?.length) void attachThumbs(recordId, result.created);
           }
-          if (result.created?.length) created$.next({ ids: result.created, actor });
+          // Reveal new cards; for the agent also reveal cards it changed, so the user can follow along.
+          const revealIds = result.created?.length ? result.created : actor === "ai" ? result.updated : undefined;
+          if (revealIds?.length) created$.next({ ids: revealIds, actor });
           return result;
         }),
         finalize(() => {
