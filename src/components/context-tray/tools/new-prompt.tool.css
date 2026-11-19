@@ -1,4 +1,4 @@
-.search-tool {
+.new-prompt-tool {
   display: grid;
   gap: 0.5ch;
 
@@ -9,7 +9,9 @@
     resize: none;
   }
 
-  button {
-    justify-self: start;
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5ch;
   }
 }

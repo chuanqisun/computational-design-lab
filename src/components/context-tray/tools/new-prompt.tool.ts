@@ -5,6 +5,7 @@ import {
   filter,
   ignoreElements,
   map,
+  merge,
   mergeWith,
   switchMap,
   tap,
@@ -16,14 +17,15 @@ import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { getViewportCenter } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
+import { generateImage, type GeminiConnection } from "../../design/generate-image-gemini";
 import { segmentGridImage } from "../grid-fitting";
 import { searchImages } from "../llm/search-images";
 import { submitTask } from "../tasks";
-import "./search.tool.css";
+import "./new-prompt.tool.css";
 
 const GRID_PROMPT = `Search online to find the 9 most representative images for the request below. Display the images on a basic 3x3 grid. Each grid cell has #FFFFFF background. The grid gap is #000000. Page background is #000000. No text labels. Flat unstyled. \nRequest:`;
 
-export const SearchTool = createComponent(
+export const NewPromptTool = createComponent(
   ({
     selected$,
     items$,
@@ -34,10 +36,83 @@ export const SearchTool = createComponent(
     apiKeys$: BehaviorSubject<ApiKeys>;
   }) => {
     const prompt$ = new BehaviorSubject("");
+    const render$ = new BehaviorSubject(false);
+    const write$ = new BehaviorSubject(false);
     const search$ = new BehaviorSubject(false);
-    void persistSubject(prompt$, "context-tray:search:prompt");
 
-    const effect$ = search$.pipe(
+    void persistSubject(prompt$, "context-tray:new:prompt");
+
+    const renderEffect$ = render$.pipe(
+      filter(Boolean),
+      tap(() => render$.next(false)),
+      withLatestFrom(prompt$, selected$, apiKeys$),
+      tap(([_, prompt, selected, apiKeys]) => {
+        if (!prompt.trim() || !apiKeys.gemini) return;
+
+        const fullPrompt = [prompt, ...selected.filter((c) => c.body).map((c) => c.body)].join(" ");
+        const images = selected.filter((c) => c.imageSrc).map((c) => c.imageSrc!);
+        const connection: GeminiConnection = { apiKey: apiKeys.gemini };
+
+        const task$ = generateImage(connection, {
+          prompt: fullPrompt,
+          width: 512,
+          height: 512,
+          images: images.length > 0 ? images : undefined,
+        }).pipe(
+          map((result) => {
+            const canvasElement = document.querySelector("[data-canvas]") as HTMLElement | null;
+            const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+
+            const card: CanvasItem = {
+              id: `rendered-${Date.now()}`,
+              imageSrc: result.url,
+              x: center.x - 100,
+              y: center.y - 150,
+              width: 200,
+              height: 300,
+              isSelected: false,
+            };
+            items$.next([...items$.value, card]);
+          }),
+        );
+
+        submitTask(task$);
+      }),
+      ignoreElements(),
+    );
+
+    const writeEffect$ = write$.pipe(
+      filter(Boolean),
+      tap(() => write$.next(false)),
+      withLatestFrom(prompt$, apiKeys$),
+      tap(([_, inputText, apiKeys]) => {
+        const trimmed = inputText.trim();
+        if (!trimmed || !apiKeys.gemini) return;
+
+        const isTitle = trimmed.split(/\s+/).length < 5 && !trimmed.includes("\n");
+        const canvasElement = document.querySelector("[data-canvas]") as HTMLElement | null;
+        const center = canvasElement ? getViewportCenter(canvasElement) : { x: 400, y: 300 };
+        const maxZ = items$.value.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+
+        const card: CanvasItem = {
+          id: `writer-${Date.now()}`,
+          title: isTitle ? trimmed : undefined,
+          body: isTitle ? undefined : trimmed,
+          x: center.x - 100,
+          y: center.y - 150,
+          width: 200,
+          height: 300,
+          isSelected: false,
+          zIndex: maxZ + 1,
+        };
+
+        items$.next([...items$.value, card]);
+        prompt$.next("");
+      }),
+      ignoreElements(),
+    );
+
+    const searchEffect$ = search$.pipe(
       filter(Boolean),
       tap(() => search$.next(false)),
       withLatestFrom(prompt$, selected$, apiKeys$),
@@ -83,32 +158,34 @@ export const SearchTool = createComponent(
             items$.next([...items$.value, ...additions]);
           }),
         );
+
         submitTask(task$);
       }),
       ignoreElements(),
     );
 
     return combineLatest([prompt$, apiKeys$]).pipe(
-      map(
-        ([prompt, apiKeys]) => html`
-          <div class="search-tool">
+      map(([prompt, apiKeys]) => {
+        const disabled = !prompt.trim() || !apiKeys.gemini;
+        const disabledTitle = !apiKeys.gemini ? "Gemini API key required" : "";
+
+        return html`
+          <div class="new-prompt-tool">
             <textarea
               rows="2"
-              placeholder="Find representative products, references, or projects..."
+              placeholder="Describe an image to render, write a note, or search references..."
               .value=${prompt}
               @input=${(event: Event) => prompt$.next((event.target as HTMLTextAreaElement).value)}
             ></textarea>
-            <button
-              ?disabled=${!prompt.trim() || !apiKeys.gemini}
-              title=${!apiKeys.gemini ? "Gemini API key required" : ""}
-              @click=${() => search$.next(true)}
-            >
-              Search
-            </button>
+            <div class="actions">
+              <button ?disabled=${disabled} title=${disabledTitle} @click=${() => render$.next(true)}>Render</button>
+              <button ?disabled=${disabled} title=${disabledTitle} @click=${() => write$.next(true)}>Write</button>
+              <button ?disabled=${disabled} title=${disabledTitle} @click=${() => search$.next(true)}>Search</button>
+            </div>
           </div>
-        `,
-      ),
-      mergeWith(effect$),
+        `;
+      }),
+      mergeWith(merge(renderEffect$, writeEffect$, searchEffect$)),
     );
   },
 );

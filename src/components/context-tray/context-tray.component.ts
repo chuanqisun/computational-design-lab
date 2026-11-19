@@ -12,12 +12,10 @@ import { ConceptualScanTool } from "./tools/conceptual-scan.tool";
 import { DesignTool } from "./tools/design.tool";
 import { ExportTool } from "./tools/export.tool";
 import { IterateTool } from "./tools/iterate.tool";
-import { RenderTool } from "./tools/render.tool";
-import { SearchTool } from "./tools/search.tool";
+import { NewPromptTool } from "./tools/new-prompt.tool";
 import { SketchTool } from "./tools/sketch.tool";
 import { interviewState$, UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
-import { WriterTool } from "./tools/writer.tool";
 
 export const ContextTrayComponent = createComponent(
   ({ items$, apiKeys$ }: { items$: BehaviorSubject<CanvasItem[]>; apiKeys$: BehaviorSubject<ApiKeys> }) => {
@@ -30,9 +28,7 @@ export const ContextTrayComponent = createComponent(
     const blendToolUI = BlendTool({ selected$, items$, apiKeys$ });
     const userTestingUI = UserTestingTool({ selected$, items$, apiKeys$ });
     const iterateUI = IterateTool({ selected$, items$, apiKeys$ });
-    const renderToolUI = RenderTool({ selected$, items$, apiKeys$ });
-    const searchToolUI = SearchTool({ selected$, items$, apiKeys$ });
-    const writerToolUI = WriterTool({ items$, apiKeys$ });
+    const newPromptToolUI = NewPromptTool({ selected$, items$, apiKeys$ });
     const captureToolUI = CaptureTool({ items$ });
     const canvasToolUI = CanvasTool({ items$ });
     const exportToolUI = ExportTool({ items$ });
@@ -48,12 +44,7 @@ export const ContextTrayComponent = createComponent(
           <section class="tool-section">
             <h2>New</h2>
             <div class="tool-body">${captureToolUI}</div>
-            <div class="tool-body">${renderToolUI}</div>
-            <div class="tool-body">${writerToolUI}</div>
-          </section>
-          <section class="tool-section">
-            <h2>Search</h2>
-            <div class="tool-body">${searchToolUI}</div>
+            <div class="tool-body">${newPromptToolUI}</div>
           </section>
           ${
             totalSelected > 0
