@@ -1,5 +1,6 @@
 import { finalize, tap, type BehaviorSubject } from "rxjs";
 import type { CanvasItem } from "../../components/canvas/canvas.component";
+import { getWorldViewport } from "../../components/canvas/canvas-viewport";
 import { stop$, submitTask } from "../../components/context-tray/tasks";
 import { browserEncoders, makeThumb } from "../agent/media-encode";
 import { ActionLog } from "../workflows/action-log";
@@ -10,11 +11,9 @@ import type { ActionResult, Viewport } from "./types";
 
 const runtimes = new WeakMap<object, ActionRuntime>();
 
+/** Visible region in world (card) coordinates; the canvas is infinite, so this is not the scroll offset. */
 export function getCanvasViewport(): Viewport {
-  if (typeof document === "undefined") return { x: 0, y: 0, width: 1200, height: 800 };
-  const area = document.querySelector(".canvas-area") as HTMLElement | null;
-  if (!area) return { x: 0, y: 0, width: 1200, height: 800 };
-  return { x: area.scrollLeft, y: area.scrollTop, width: area.clientWidth, height: area.clientHeight };
+  return getWorldViewport();
 }
 
 /** One action runtime per board (`items$`). UI tools and the agent share it. */

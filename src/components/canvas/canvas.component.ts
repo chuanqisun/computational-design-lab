@@ -1,12 +1,34 @@
 import { html } from "lit-html";
 import { repeat } from "lit-html/directives/repeat.js";
-import { BehaviorSubject, Subject, combineLatest, fromEvent, ignoreElements, map, mergeWith, tap } from "rxjs";
+import {
+  BehaviorSubject,
+  Subject,
+  animationFrameScheduler,
+  auditTime,
+  combineLatest,
+  distinctUntilChanged,
+  filter,
+  fromEvent,
+  ignoreElements,
+  map,
+  merge,
+  mergeWith,
+  tap,
+} from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import { observe } from "../../sdk/observe-directive";
 import type { ApiKeys } from "../connections/storage";
 import { getActionRuntime, runUserAction } from "../../lib/actions/app-runtime";
 import "./canvas.component.css";
 import { CardComponent } from "./card.component";
+import {
+  clientToWorld,
+  ensureExtent,
+  itemsBounds,
+  refreshViewport,
+  visibleItemIds,
+  worldView$,
+} from "./canvas-viewport";
 import {
   copyItemsToClipboard,
   parseItemsFromClipboardText,
@@ -119,16 +141,17 @@ export const CanvasComponent = createComponent(
       const canvasEl = document.querySelector("[data-canvas]") as HTMLElement;
       canvasEl?.classList.add("panning-active");
 
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startScrollLeft = scrollContainer.scrollLeft;
-      const startScrollTop = scrollContainer.scrollTop;
+      // Incremental deltas (not start + offset): the extent may grow mid-pan, which shifts scroll positions.
+      let lastX = e.clientX;
+      let lastY = e.clientY;
 
       props.interaction$?.next("start");
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
-        scrollContainer.scrollLeft = startScrollLeft - (moveEvent.clientX - startX);
-        scrollContainer.scrollTop = startScrollTop - (moveEvent.clientY - startY);
+        scrollContainer.scrollLeft -= moveEvent.clientX - lastX;
+        scrollContainer.scrollTop -= moveEvent.clientY - lastY;
+        lastX = moveEvent.clientX;
+        lastY = moveEvent.clientY;
       };
 
       const handleMouseUp = () => {
@@ -298,10 +321,8 @@ export const CanvasComponent = createComponent(
       if (!isCanvasDirectClick(e)) return;
 
       const { isCtrl, isShift } = getModifierKeys(e);
-      const canvasEl = e.currentTarget as HTMLElement;
-      const canvasRect = canvasEl.getBoundingClientRect();
-      const startX = e.clientX - canvasRect.left;
-      const startY = e.clientY - canvasRect.top;
+      // World coordinates, so the marquee matches card positions however the canvas is scrolled or extended.
+      const { x: startX, y: startY } = clientToWorld(e.clientX, e.clientY);
 
       let hasMoved = false;
 
@@ -309,8 +330,7 @@ export const CanvasComponent = createComponent(
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
         hasMoved = true;
-        const currentX = moveEvent.clientX - canvasRect.left;
-        const currentY = moveEvent.clientY - canvasRect.top;
+        const { x: currentX, y: currentY } = clientToWorld(moveEvent.clientX, moveEvent.clientY);
         const rect = {
           x: Math.min(startX, currentX),
           y: Math.min(startY, currentY),
@@ -618,10 +638,39 @@ export const CanvasComponent = createComponent(
       }
     };
 
+    // Viewport: grow the extent on scroll/resize (once per frame) and when cards move near its edge.
+    const scrollEffect$ = merge(
+      fromEvent(document, "scroll", { capture: true }).pipe(
+        filter((e) => (e.target as HTMLElement).classList?.contains("canvas-area")),
+      ),
+      fromEvent(window, "resize"),
+    ).pipe(
+      auditTime(0, animationFrameScheduler),
+      tap(() => refreshViewport()),
+      ignoreElements(),
+    );
+    const itemsExtentEffect$ = items$.pipe(
+      auditTime(0, animationFrameScheduler),
+      tap((items) => {
+        const bounds = itemsBounds(items);
+        ensureExtent(bounds ? [bounds] : []);
+        refreshViewport();
+      }),
+      ignoreElements(),
+    );
+    // First measurement once the canvas is in the DOM.
+    requestAnimationFrame(() => refreshViewport());
+
+    // Virtualization: only cards near the view (plus selected cards) are in the DOM.
+    const renderedIds$ = combineLatest([items$, worldView$]).pipe(
+      map(([items, view]) => visibleItemIds(items, view)),
+      distinctUntilChanged((a, b) => a.length === b.length && a.every((id, index) => id === b[index])),
+    );
+
     // Template
-    const template$ = items$.pipe(
+    const template$ = renderedIds$.pipe(
       map(
-        (items) => html`
+        (renderedIds) => html`
           <div
             class="canvas"
             data-canvas
@@ -630,12 +679,13 @@ export const CanvasComponent = createComponent(
             @cut=${handleCut}
             @mousedown=${handleCanvasMouseDown}
           >
+            <div class="canvas-world">
             ${repeat(
-              items,
-              (item) => item.id,
-              (item) =>
+              renderedIds,
+              (id) => id,
+              (id) =>
                 CardComponent({
-                  id: item.id,
+                  id,
                   items$: props.items$,
                   apiKeys$: props.apiKeys$,
                   onUpdate: handleCardUpdate,
@@ -656,6 +706,7 @@ export const CanvasComponent = createComponent(
                 ),
               ),
             )}
+            </div>
           </div>
           <dialog id="card-detail-dialog" @click=${handleDialogClick} @close=${() => openedCardId$.next(null)}>
             ${observe(cardDialog$)}
@@ -665,6 +716,15 @@ export const CanvasComponent = createComponent(
     );
 
     // Combine template with effects
-    return template$.pipe(mergeWith(globalPasteEffect$, globalKeydownEffect$, globalKeyupEffect$, globalBlurEffect$));
+    return template$.pipe(
+      mergeWith(
+        globalPasteEffect$,
+        globalKeydownEffect$,
+        globalKeyupEffect$,
+        globalBlurEffect$,
+        scrollEffect$,
+        itemsExtentEffect$,
+      ),
+    );
   },
 );

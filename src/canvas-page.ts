@@ -38,6 +38,7 @@ import { ResizerComponent } from "./components/resizer/resizer";
 import { TraceDialogComponent } from "./components/workflow/trace-dialog.component";
 import { WorkflowEditorComponent } from "./components/workflow/workflow-editor.component";
 import { getActionRuntime } from "./lib/actions/app-runtime";
+import { getWorldViewport, refreshViewport, scrollToWorld } from "./components/canvas/canvas-viewport";
 import { persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import { observe } from "./sdk/observe-directive";
@@ -53,12 +54,15 @@ const canvasInteraction$ = new Subject<"start" | "end">();
 
 const CANVAS_CENTER = { centerX: 4000, centerY: 4000 };
 
+/** Saved centers are world coordinates (identical to the legacy fixed board's scroll coordinates). */
 function restoreViewport(canvasArea: HTMLElement, hasItems: boolean) {
   const saved = loadViewportCenter();
   const center = saved ?? (hasItems ? null : CANVAS_CENTER);
-  if (!center) return;
-  canvasArea.scrollLeft = center.centerX - canvasArea.clientWidth / 2;
-  canvasArea.scrollTop = center.centerY - canvasArea.clientHeight / 2;
+  if (!center) {
+    refreshViewport();
+    return;
+  }
+  scrollToWorld(center.centerX - canvasArea.clientWidth / 2, center.centerY - canvasArea.clientHeight / 2);
 }
 
 loadCanvasItems().then((loadedItems) => {
@@ -149,20 +153,16 @@ const autoSave$ = items$.pipe(
 
 /** Scroll the canvas so the first new card is visible (new cards are placed below the board). */
 function revealCards(ids: string[]) {
-  const area = document.querySelector(".canvas-area") as HTMLElement | null;
   const card = items$.value.find((item) => item.id === ids[0]);
-  if (!area || !card) return;
+  if (!card) return;
+  const view = getWorldViewport();
   const visible =
-    card.x + card.width > area.scrollLeft &&
-    card.x < area.scrollLeft + area.clientWidth &&
-    card.y + card.height > area.scrollTop &&
-    card.y < area.scrollTop + area.clientHeight;
+    card.x + card.width > view.x &&
+    card.x < view.x + view.width &&
+    card.y + card.height > view.y &&
+    card.y < view.y + view.height;
   if (visible) return;
-  area.scrollTo({
-    left: Math.max(0, card.x - area.clientWidth / 4),
-    top: Math.max(0, card.y - area.clientHeight / 4),
-    behavior: "smooth",
-  });
+  scrollToWorld(card.x - view.width / 4, card.y - view.height / 4, "smooth");
 }
 
 const Main = createComponent(() => {
@@ -192,12 +192,9 @@ const Main = createComponent(() => {
   const saveViewport$ = fromEvent(document, "scroll", { capture: true }).pipe(
     filter((e) => (e.target as HTMLElement).classList?.contains("canvas-area")),
     debounceTime(300),
-    tap((e) => {
-      const el = e.target as HTMLElement;
-      saveViewportCenter({
-        centerX: el.scrollLeft + el.clientWidth / 2,
-        centerY: el.scrollTop + el.clientHeight / 2,
-      });
+    tap(() => {
+      const view = getWorldViewport();
+      saveViewportCenter({ centerX: view.x + view.width / 2, centerY: view.y + view.height / 2 });
     }),
     ignoreElements(),
   );

@@ -125,11 +125,13 @@ export function deselectAll(currentState: SelectionState): SelectionUpdate {
  * Prepare drag data for selected items
  */
 export function prepareDragData(canvas: HTMLElement, selectedItems: CanvasItem[], mouseEvent: MouseEvent): DragData[] {
-  return selectedItems.map((dragItem) => {
-    const el = canvas.querySelector(`.canvas-card[data-id="${dragItem.id}"]`) as HTMLElement;
+  return selectedItems.flatMap((dragItem) => {
+    // Cards are virtualized; selected cards are always rendered, but skip any without an element defensively.
+    const el = canvas.querySelector(`.canvas-card[data-id="${dragItem.id}"]`) as HTMLElement | null;
+    if (!el) return [];
     const offsetX = mouseEvent.clientX - dragItem.x;
     const offsetY = mouseEvent.clientY - dragItem.y;
-    return { el, offsetX, offsetY, item: dragItem };
+    return [{ el, offsetX, offsetY, item: dragItem }];
   });
 }
 

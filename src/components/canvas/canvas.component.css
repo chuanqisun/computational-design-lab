@@ -1,11 +1,22 @@
 .canvas {
   position: relative;
-  width: 8000px;
-  height: 8000px;
+  /* Sized and offset by canvas-viewport.ts; defaults match the legacy fixed board. */
+  width: var(--canvas-width, 8000px);
+  height: var(--canvas-height, 8000px);
   background: var(--page-background);
   background-image: radial-gradient(circle, var(--color-text-tertiary) 1px, transparent 1px);
   background-size: 20px 20px;
+  background-position: var(--origin-x, 0px) var(--origin-y, 0px);
   outline: none;
+}
+
+/* Cards and the marquee are positioned in world coordinates inside this layer. */
+.canvas-world {
+  position: absolute;
+  left: var(--origin-x, 0px);
+  top: var(--origin-y, 0px);
+  width: 0;
+  height: 0;
 }
 
 .canvas:focus {
