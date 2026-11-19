@@ -403,7 +403,7 @@ export interface AgentRunner {
 - Pause after 25 new cards in a run.
 - Separate budgets for image generations and video generations per run.
 - `clear_canvas` is refused unless `AGENTS.md` contains an explicit allow rule.
-- Toggle-off, Stop, or closing the page emits `stop$`, which aborts in-flight requests.
+- Stop (in the Workflow section or the top bar) or closing the page emits `stop$`, which aborts in-flight requests.
 - Human edits during a run show up in the next observation diff. Calls that reference deleted cards return `card_not_found`.
 
 ---
