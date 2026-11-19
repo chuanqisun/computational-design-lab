@@ -3,20 +3,32 @@ import { catchError, ignoreElements, mergeMap, Observable, of, Subject, takeUnti
 export type Task = Observable<unknown>;
 
 const taskQueue$ = new Subject<Task>();
-const stopTasks$ = new Subject<void>();
+
+/** Single cancellation signal for UI tasks, in-flight actions and the agent loop. */
+export const stop$ = new Subject<void>();
 
 export const submitTask = (task$: Task) => {
   taskQueue$.next(task$);
 };
 
 export const stopAllTasks = () => {
-  stopTasks$.next();
+  stop$.next();
+};
+
+/** AbortSignal that aborts on the next `stop$` emission. */
+export const createAbortSignal = (): AbortSignal => {
+  const controller = new AbortController();
+  const sub = stop$.subscribe(() => {
+    controller.abort();
+    sub.unsubscribe();
+  });
+  return controller.signal;
 };
 
 export const taskRunner$ = taskQueue$.pipe(
   mergeMap((task$) =>
     task$.pipe(
-      takeUntil(stopTasks$),
+      takeUntil(stop$),
       catchError((error) => {
         const message = error instanceof Error ? error.message : "Task failed.";
         console.error(`Task error: ${message}`);

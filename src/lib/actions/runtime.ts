@@ -141,7 +141,11 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
         return of(errorResult("unsupported_for_agent", def.agent.unsupported));
       }
 
-      const cardIds = Array.isArray(args.cardIds) ? (args.cardIds as string[]) : undefined;
+      const cardIds = Array.isArray(args.cardIds)
+        ? (args.cardIds as string[])
+        : typeof args.cardId === "string"
+          ? [args.cardId]
+          : undefined;
       let targets: CanvasItem[];
       try {
         targets = cardIds ? findCards(cardIds) : items$.value.filter((item) => item.isSelected);
