@@ -41,6 +41,7 @@ export const HUMAN_ENTRIES: Record<string, string | { none: string }> = {
   "tray:Media/Sketch": "edit_image",
   "tray:Media/Animate": "animate",
   "tray:Canvas/Gather": "move_cards",
+  "tray:Canvas/Organize": "move_cards",
   "tray:Canvas/Focus": "move_cards",
   "tray:Canvas/Destroy": "clear_canvas",
   "tray:Export": "export_cards",

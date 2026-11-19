@@ -43,7 +43,18 @@ export interface CanvasItem {
   videoSrc?: string;
   videoMimeType?: string;
   videoPosterSrc?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any> & {
+    /** Epoch ms when an action added this card (absent on cards from older boards). */
+    createdAt?: number;
+    /** The action run that added this card; cards sharing a runId were created together. */
+    createdBy?: CardOrigin;
+  };
+}
+
+export interface CardOrigin {
+  runId: string;
+  action: string;
+  actor: "user" | "ai";
 }
 
 export function hasImage(item: CanvasItem): boolean {
@@ -89,6 +100,8 @@ export const CanvasComponent = createComponent(
     // Card dialog state
     const openedCardId$ = new BehaviorSubject<string | null>(null);
     const marquee$ = new BehaviorSubject<MarqueeRect | null>(null);
+    /** While marquee-dragging: the ids that would be selected on release (null when not dragging). */
+    const selectionPreview$ = new BehaviorSubject<ReadonlySet<string> | null>(null);
 
     // Pan state
     let isSpaceHeld = false;
@@ -298,12 +311,15 @@ export const CanvasComponent = createComponent(
         hasMoved = true;
         const currentX = moveEvent.clientX - canvasRect.left;
         const currentY = moveEvent.clientY - canvasRect.top;
-        marquee$.next({
+        const rect = {
           x: Math.min(startX, currentX),
           y: Math.min(startY, currentY),
           width: Math.abs(currentX - startX),
           height: Math.abs(currentY - startY),
-        });
+        };
+        marquee$.next(rect);
+        const preview = selectItemsInMarquee(props.items$.value, rect, isCtrl || isShift);
+        selectionPreview$.next(new Set(preview.filter((item) => item.isSelected).map((item) => item.id)));
       };
 
       const handleMouseUp = () => {
@@ -318,6 +334,7 @@ export const CanvasComponent = createComponent(
           selectExactly(deselectAll({ items: props.items$.value }).items);
         }
         marquee$.next(null);
+        selectionPreview$.next(null);
       };
 
       document.addEventListener("mousemove", handleMouseMove);
@@ -624,6 +641,7 @@ export const CanvasComponent = createComponent(
                   onUpdate: handleCardUpdate,
                   onOpen: handleCardOpen,
                   onMouseDown: handleCardMouseDown,
+                  selectionPreview$,
                 }),
             )}
             ${observe(

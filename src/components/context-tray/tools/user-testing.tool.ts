@@ -18,7 +18,7 @@ import type { ApiKeys } from "../../connections/storage";
 import { resolveInterviewSelection, startLiveInterview, type LiveInterviewSession } from "../llm/interview";
 import "./user-testing.css";
 
-export type InterviewState = "idle" | "connecting" | "active" | "summarizing";
+export type InterviewState = "idle" | "connecting" | "active";
 
 interface ActiveInterviewState {
   session: LiveInterviewSession;
@@ -29,6 +29,14 @@ interface ActiveInterviewState {
 
 export const interviewState$ = new BehaviorSubject<InterviewState>("idle");
 const interviewStatus$ = new BehaviorSubject<string>("");
+/** Summaries run in the background, so a new interview can start while earlier ones are summarized. */
+const pendingSummaries$ = new BehaviorSubject<number>(0);
+const summaryError$ = new BehaviorSubject<string>("");
+const summaryMessage$ = combineLatest([pendingSummaries$, summaryError$]).pipe(
+  map(([pending, error]) =>
+    pending ? `Summarizing ${pending} interview${pending > 1 ? "s" : ""} in the background...` : error,
+  ),
+);
 let activeInterview: ActiveInterviewState | null = null;
 
 export const UserTestingTool = createComponent(
@@ -61,16 +69,19 @@ export const UserTestingTool = createComponent(
           return;
         }
 
-        interviewState$.next("summarizing");
-        interviewStatus$.next("Summarizing interview...");
+        // Free the interview slot immediately; the summary continues in the background.
+        interviewState$.next("idle");
+        interviewStatus$.next("");
+        summaryError$.next("");
+        pendingSummaries$.next(pendingSummaries$.value + 1);
 
         runUserAction(
           runtime,
           "interview_persona",
           { cardIds: [current.personaCard.id, ...current.contextItems.map((item) => item.id)], _transcript: transcript },
           (result) => {
-            interviewState$.next("idle");
-            interviewStatus$.next(result && !result.error ? "" : "Failed to summarize interview.");
+            pendingSummaries$.next(Math.max(0, pendingSummaries$.value - 1));
+            if (!result || result.error) summaryError$.next("Failed to summarize interview.");
           },
         );
         return;
@@ -149,9 +160,10 @@ export const UserTestingTool = createComponent(
       interviewStatus$,
       progressMsg$,
       apiKeys$,
+      summaryMessage$,
     ]).pipe(
-      map(([selected, trait, segment, numUsers, isRunning, interviewState, interviewStatus, progressMsg, apiKeys]) => {
-        if (selected.length === 0 && interviewState === "idle") return html``;
+      map(([selected, trait, segment, numUsers, isRunning, interviewState, interviewStatus, progressMsg, apiKeys, summaryMessage]) => {
+        if (selected.length === 0 && interviewState === "idle" && !summaryMessage) return html``;
 
         const statusMessage = interviewStatus || progressMsg;
         const interviewSelection = resolveInterviewSelection(selected);
@@ -160,9 +172,7 @@ export const UserTestingTool = createComponent(
             ? "Stop"
             : interviewState === "connecting"
               ? "Connecting..."
-              : interviewState === "summarizing"
-                ? "Summarizing..."
-                : "Interview";
+              : "Interview";
         const isInterviewDisabled =
           interviewState === "active"
             ? false
@@ -210,6 +220,7 @@ export const UserTestingTool = createComponent(
               />
             </div>
             ${statusMessage ? html`<div class="progress-msg">${statusMessage}</div>` : html``}
+            ${summaryMessage ? html`<div class="progress-msg">${summaryMessage}</div>` : html``}
             <div class="actions">
               <button
                 @click=${() => startAction$.next(true)}

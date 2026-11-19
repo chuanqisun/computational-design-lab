@@ -12,7 +12,7 @@ import {
   takeUntil,
   type Subscription,
 } from "rxjs";
-import type { CanvasItem } from "../../components/canvas/canvas.component";
+import type { CanvasItem, CardOrigin } from "../../components/canvas/canvas.component";
 import { placeRows, type Position } from "../../components/canvas/layout";
 import { ActionLog } from "../workflows/action-log";
 import type { Registry } from "./registry";
@@ -196,7 +196,14 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
           })).subscribe();
         },
         newId,
-        addCards: (cards) => items$.next([...items$.value, ...cards]),
+        addCards: (cards) => {
+          // Stamp provenance so cards can be organized chronologically by the action that made them,
+          // independent of the (clearable) action log.
+          const createdAt = Date.now();
+          const createdBy: CardOrigin = { runId: actionId, action: name, actor };
+          const stamped = cards.map((card) => ({ ...card, metadata: { ...card.metadata, createdAt, createdBy } }));
+          items$.next([...items$.value, ...stamped]);
+        },
         updateCard: (id, patch) =>
           items$.next(
             items$.value.map((item) =>

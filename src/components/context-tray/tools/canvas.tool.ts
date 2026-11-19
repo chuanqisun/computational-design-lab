@@ -10,6 +10,11 @@ export const CanvasTool = createComponent(
     const runtime = getActionRuntime(items$, apiKeys$);
 
     const gatherItems = () => runUserAction(runtime, "move_cards", { arrange: "gather" });
+    // Organizes the selection, or the whole board when nothing is selected.
+    const organizeItems = () => {
+      const cardIds = items$.value.filter((item) => item.isSelected).map((item) => item.id);
+      runUserAction(runtime, "move_cards", cardIds.length ? { arrange: "organize", cardIds } : { arrange: "organize" });
+    };
     const focusSelected = () =>
       runUserAction(runtime, "move_cards", {
         arrange: "focus",
@@ -23,6 +28,13 @@ export const CanvasTool = createComponent(
 
         return html`
           <button @click=${gatherItems} ?disabled=${items.length === 0}>Gather</button>
+          <button
+            @click=${organizeItems}
+            ?disabled=${items.length === 0}
+            title=${hasSelection ? "Arrange selected cards by creation: one row per action" : "Arrange all cards by creation: one row per action"}
+          >
+            Organize
+          </button>
           <button @click=${focusSelected} ?disabled=${!hasSelection}>Focus</button>
           <button @click=${clearAll} ?disabled=${items.length === 0}>Destroy</button>
         `;

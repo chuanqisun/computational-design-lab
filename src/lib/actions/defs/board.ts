@@ -1,6 +1,11 @@
 import { map, of, switchMap } from "rxjs";
 import type { CanvasItem } from "../../../components/canvas/canvas.component";
-import { focusSelectedItems, gatherItemsIntoViewport, placeRows } from "../../../components/canvas/layout";
+import {
+  focusSelectedItems,
+  gatherItemsIntoViewport,
+  organizeChronologically,
+  placeRows,
+} from "../../../components/canvas/layout";
 import { ActionError, type ActionDef } from "../types";
 
 const cardIdsParam = {
@@ -54,12 +59,12 @@ export const selectCards: ActionDef<{ cardIds?: string[]; mode?: "replace" | "ad
 
 export const moveCards: ActionDef<{
   moves?: { id: string; x: number; y: number }[];
-  arrange?: "gather" | "focus" | "rows";
+  arrange?: "gather" | "focus" | "rows" | "organize";
   cardIds?: string[];
 }> = {
   name: "move_cards",
   description:
-    "Move cards. Either give explicit `moves` (absolute x,y), or `arrange`: gather (pull off-screen cards into view), focus (bring target cards into view), rows (lay target cards out in tidy rows).",
+    "Move cards. Either give explicit `moves` (absolute x,y), or `arrange`: gather (pull off-screen cards into view), focus (bring target cards into view), rows (lay target cards out in tidy rows), organize (chronological: one row per creating action, oldest at top; target cards, or the whole board if none).",
   parameters: {
     type: "object",
     properties: {
@@ -71,7 +76,7 @@ export const moveCards: ActionDef<{
           required: ["id", "x", "y"],
         },
       },
-      arrange: { type: "string", enum: ["gather", "focus", "rows"] },
+      arrange: { type: "string", enum: ["gather", "focus", "rows", "organize"] },
       cardIds: cardIdsParam,
     },
   },
@@ -95,6 +100,10 @@ export const moveCards: ActionDef<{
             items.map((item) => ({ ...item, isSelected: targetIds.has(item.id) })),
             vp,
           );
+        } else if (args.arrange === "organize") {
+          // Keep board (insertion) order regardless of the order cardIds were given in.
+          const targetIds = new Set(ctx.targets.map((t) => t.id));
+          moves = organizeChronologically(targetIds.size ? items.filter((item) => targetIds.has(item.id)) : items);
         } else if (args.arrange === "rows") {
           const targets = ctx.targets;
           if (!targets.length) throw new ActionError("unavailable", "No target cards to arrange");

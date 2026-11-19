@@ -299,3 +299,78 @@ function calculateAnchorPoint(items: CanvasItem[]): Position {
     z: sum.z + 1,
   };
 }
+
+export interface OrganizeOptions {
+  gap?: number;
+  /** Top-left of the first row. Defaults to the top-left of the items' bounding box. */
+  origin?: { x: number; y: number };
+}
+
+/** Fallback grouping key for cards without a creation stamp: the id prefix (e.g. "scan" in "scan-ab12cd34"). */
+const idPrefix = (id: string) => /^(.+)-[a-z0-9]+$/i.exec(id)?.[1] ?? id;
+
+/**
+ * Lay items out chronologically: one row per creating action (left to right in creation order),
+ * rows stacked top to bottom from oldest to newest.
+ *
+ * Grouping uses `metadata.createdBy.runId` / `metadata.createdAt`. Unstamped cards (older boards) keep
+ * their array order (which is insertion order) and are grouped into contiguous runs of the same id prefix.
+ * They are placed before stamped cards, since they predate stamping.
+ */
+export function organizeChronologically(
+  items: CanvasItem[],
+  options: OrganizeOptions = {},
+): { id: string; x: number; y: number }[] {
+  if (!items.length) return [];
+  const gap = options.gap ?? 24;
+  const originX = options.origin?.x ?? Math.min(...items.map((item) => item.x));
+  const originY = options.origin?.y ?? Math.min(...items.map((item) => item.y));
+
+  interface Group {
+    key: string;
+    at: number;
+    order: number;
+    cards: CanvasItem[];
+  }
+  const groups = new Map<string, Group>();
+  let legacyRun = 0;
+  let lastLegacyPrefix: string | null = null;
+
+  items.forEach((item, order) => {
+    const runId = item.metadata?.createdBy?.runId;
+    let key: string;
+    let at: number;
+    if (runId) {
+      key = `run:${runId}`;
+      at = item.metadata?.createdAt ?? 0;
+      lastLegacyPrefix = null;
+    } else {
+      const prefix = idPrefix(item.id);
+      if (prefix !== lastLegacyPrefix) legacyRun++;
+      lastLegacyPrefix = prefix;
+      key = `legacy:${legacyRun}`;
+      at = -Infinity;
+    }
+    const group = groups.get(key);
+    if (group) {
+      group.cards.push(item);
+      group.at = Math.min(group.at, at);
+    } else {
+      groups.set(key, { key, at, order, cards: [item] });
+    }
+  });
+
+  const rows = [...groups.values()].sort((a, b) => a.at - b.at || a.order - b.order);
+
+  const moves: { id: string; x: number; y: number }[] = [];
+  let y = originY;
+  for (const row of rows) {
+    let x = originX;
+    for (const card of row.cards) {
+      moves.push({ id: card.id, x, y });
+      x += card.width + gap;
+    }
+    y += Math.max(...row.cards.map((card) => card.height)) + gap;
+  }
+  return moves;
+}

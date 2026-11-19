@@ -1,5 +1,5 @@
 import { html } from "lit-html";
-import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, map } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, map, of, type Observable } from "rxjs";
 import { createComponent } from "../../sdk/create-component";
 import type { ApiKeys } from "../connections/storage";
 import type { CanvasItem } from "./canvas.component";
@@ -32,11 +32,19 @@ export const CardComponent = createComponent(
     onUpdate: (id: string, updates: Partial<CanvasItem>) => void;
     onOpen: (id: string) => void;
     onMouseDown: (id: string, e: MouseEvent) => void;
+    /** Ids that would be selected if the in-progress marquee were released; null when not dragging. */
+    selectionPreview$?: Observable<ReadonlySet<string> | null>;
   }) => {
     const item$ = props.items$.pipe(
       map((items) => items.find((i) => i.id === props.id)),
       filter((item): item is CanvasItem => item !== undefined),
       distinctUntilChanged(isSameRenderableItem),
+    );
+
+    // undefined = no preview in progress; otherwise whether this card would end up selected.
+    const previewSelected$ = (props.selectionPreview$ ?? of(null)).pipe(
+      map((preview) => (preview ? preview.has(props.id) : undefined)),
+      distinctUntilChanged(),
     );
 
     const isPlaying$ = new BehaviorSubject(false);
@@ -72,12 +80,13 @@ export const CardComponent = createComponent(
       search: "Searching…",
     };
 
-    const template$ = combineLatest([item$, isPlaying$]).pipe(
-      map(([item, isPlaying]) => {
+    const template$ = combineLatest([item$, isPlaying$, previewSelected$]).pipe(
+      map(([item, isPlaying, previewSelected]) => {
         const pending = item.metadata?.pending as string | undefined;
+        const selected = previewSelected ?? item.isSelected;
         return html`
           <div
-            class="canvas-card ${item.isSelected ? "selected" : ""} ${pending ? "pending" : ""}"
+            class="canvas-card ${selected ? "selected" : ""} ${pending ? "pending" : ""}"
             data-id="${item.id}"
             style="left: ${item.x}px; top: ${item.y}px; width: ${item.width}px; height: ${item.height}px; z-index: ${
               item.zIndex || 0

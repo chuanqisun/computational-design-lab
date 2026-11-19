@@ -239,7 +239,12 @@ describe("dispatch$", () => {
   });
 
   it("parity: the same action and args yield the same board diff for user and ai", async () => {
-    const strip = (items: CanvasItem[]) => items.map(({ id: _id, ...rest }) => rest);
+    // Provenance (who/when/which run) legitimately differs; the board effect must not.
+    const strip = (items: CanvasItem[]) =>
+      items.map(({ id: _id, metadata, ...rest }) => {
+        const { createdAt: _at, createdBy: _by, ...meta } = metadata ?? {};
+        return { ...rest, metadata: meta };
+      });
 
     const userRun = setup();
     await lastValueFrom(userRun.runtime.dispatch$("echo", { label: "p", cardIds: ["a", "b"] }, "user"));
@@ -249,6 +254,18 @@ describe("dispatch$", () => {
 
     expect(strip(userRun.items$.value)).toEqual(strip(aiRun.items$.value));
     expect(userRun.items$.value.length).toBe(3);
+  });
+
+  it("stamps created cards with creation time and the run that made them", async () => {
+    const { runtime, items$ } = setup();
+    const before = Date.now();
+    await lastValueFrom(runtime.dispatch$("echo", { label: "x", cardIds: ["a"] }, "user"));
+    await lastValueFrom(runtime.dispatch$("echo", { label: "y", cardIds: ["a"] }, "ai"));
+    const [first, second] = items$.value.slice(-2);
+    expect(first.metadata?.createdAt).toBeGreaterThanOrEqual(before);
+    expect(first.metadata?.createdBy).toMatchObject({ action: "echo", actor: "user" });
+    expect(second.metadata?.createdBy).toMatchObject({ action: "echo", actor: "ai" });
+    expect(first.metadata?.createdBy?.runId).not.toBe(second.metadata?.createdBy?.runId);
   });
 
   it("emits created ids for the reveal hook", async () => {
