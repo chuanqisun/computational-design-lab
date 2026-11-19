@@ -15,7 +15,7 @@ import { IterateTool } from "./tools/iterate.tool";
 import { RenderTool } from "./tools/render.tool";
 import { SearchTool } from "./tools/search.tool";
 import { SketchTool } from "./tools/sketch.tool";
-import { UserTestingTool } from "./tools/user-testing.tool";
+import { interviewState$, UserTestingTool } from "./tools/user-testing.tool";
 import { VisualizeTool } from "./tools/visualize.tool";
 import { WriterTool } from "./tools/writer.tool";
 
@@ -39,9 +39,10 @@ export const ContextTrayComponent = createComponent(
     const sketchToolUI = SketchTool({ selected$, items$, apiKeys$ });
     const animateToolUI = AnimateTool({ selected$, items$, apiKeys$ });
 
-    const template$ = combineLatest([selected$, selectedWithText$]).pipe(
-      map(([selected, _selectedWithText]) => {
+    const template$ = combineLatest([selected$, selectedWithText$, interviewState$]).pipe(
+      map(([selected, _selectedWithText, interviewState]) => {
         const totalSelected = selected.length;
+        const showUserTesting = totalSelected > 0 || interviewState !== "idle";
 
         return html`<aside class="context-tray">
           <section class="tool-section">
@@ -77,10 +78,22 @@ export const ContextTrayComponent = createComponent(
                     <h2>Design</h2>
                     <div class="tool-body">${designToolUI}</div>
                   </section>
+                `
+              : nothing
+          }
+          ${
+            showUserTesting
+              ? html`
                   <section class="tool-section">
                     <h2>User testing</h2>
                     <div class="tool-body">${userTestingUI}</div>
                   </section>
+                `
+              : nothing
+          }
+          ${
+            totalSelected > 0
+              ? html`
                   <section class="tool-section">
                     <h2>Iterate</h2>
                     <div class="tool-body">${iterateUI}</div>

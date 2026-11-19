@@ -9,6 +9,7 @@ import {
   formatInterviewTranscript,
   isSyntheticUserCard,
   resolveInterviewSelection,
+  resolvePersonaCardVoice,
   summarizeInterview$,
 } from "./interview";
 
@@ -87,6 +88,37 @@ describe("synthetic user live interview helpers", () => {
     const openEnded = buildInterviewSystemPrompt(user, []);
     expect(openEnded).toContain("Persona Name: Maya");
     expect(openEnded).toContain("No specific design items are selected");
+
+    const neutralUser = item({
+      id: "persona-neutral",
+      title: "Alex",
+      body: "UX researcher, age 29",
+      metadata: { kind: "synthetic-user", gender: "neutral", voiceName: "Zephyr" },
+    });
+    const neutralPrompt = buildInterviewSystemPrompt(neutralUser, []);
+    expect(neutralPrompt).toContain("gender-neutral / non-binary");
+  });
+
+  it("resolves assigned Gemini Live voice profiles from synthetic user card metadata", () => {
+    expect(
+      resolvePersonaCardVoice(
+        item({
+          id: "persona-1",
+          title: "Maya",
+          metadata: { kind: "synthetic-user", gender: "female", voiceName: "Kore" },
+        }),
+      ),
+    ).toBe("Kore");
+
+    expect(
+      resolvePersonaCardVoice(
+        item({
+          id: "persona-2",
+          title: "Alex",
+          metadata: { kind: "synthetic-user", persona: { gender: "non-binary", voiceName: "Umbriel" } },
+        }),
+      ),
+    ).toBe("Umbriel");
   });
 
   it("builds multimodal context parts containing text and images from all selected non-user items", async () => {

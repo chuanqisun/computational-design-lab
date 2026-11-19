@@ -164,12 +164,37 @@ Example: {"title": "...", "body": "...", "imagePrompt": "..."}`;
         }
       }
 
+      const properties: Record<string, { type: "string" }> = {};
+      const required: string[] = [];
+      if (!content.title) {
+        properties.title = { type: "string" };
+        required.push("title");
+      }
+      if (!content.body) {
+        properties.body = { type: "string" };
+        required.push("body");
+      }
+      if (!content.videoSrc && !content.imageSrc && !content.imagePrompt) {
+        properties.imagePrompt = { type: "string" };
+        required.push("imagePrompt");
+      }
+
+      if (required.length === 0) {
+        subscriber.next({});
+        subscriber.complete();
+        return;
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       const interaction = await ai.interactions.create(
         {
           model: GEMINI_TEXT_MODEL,
           input: [{ type: "user_input", content: parts }],
-          response_format: { type: "text", mime_type: "application/json" },
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+            schema: { type: "object", properties, required },
+          },
           generation_config: { thinking_level: GEMINI_TEXT_THINKING },
           store: false,
         },

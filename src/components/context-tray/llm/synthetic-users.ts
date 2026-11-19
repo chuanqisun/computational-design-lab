@@ -7,14 +7,24 @@ import {
   GEMINI_TEXT_MODEL,
   GEMINI_TEXT_THINKING,
 } from "../../../lib/gemini-models";
+import {
+  formatVoiceCatalogForPrompt,
+  GEMINI_LIVE_VOICE_NAMES,
+  normalizePersonaGender,
+  resolvePersonaVoice,
+  type GeminiLiveVoiceName,
+  type PersonaGender,
+} from "../../../lib/gemini-voices";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
 export interface Persona {
   name: string;
   age: number;
+  gender: PersonaGender;
   occupation: string;
   description: string;
+  voiceName: GeminiLiveVoiceName;
 }
 
 export interface RankingResult {
@@ -53,16 +63,29 @@ export function generatePersonas$({
 
     const ai = new GoogleGenAI({ apiKey });
     const parser = new JSONParser();
+    const usedVoices = new Set<string>();
 
     parser.onValue = (entry) => {
       if (typeof entry.key === "number" && entry.parent && entry.value && typeof entry.value === "object") {
-        const p = entry.value as any;
-        if (p.name && p.description) {
+        const p = entry.value as Record<string, unknown>;
+        if (typeof p.name === "string" && p.name && typeof p.description === "string" && p.description) {
+          const gender = normalizePersonaGender(p.gender);
+          const occupation = typeof p.occupation === "string" ? p.occupation : "";
+          const voiceName = resolvePersonaVoice({
+            gender,
+            voiceName: p.voiceName,
+            seed: `${p.name}:${occupation}:${entry.key}`,
+            usedVoices,
+          });
+          usedVoices.add(voiceName);
+
           subscriber.next({
             name: p.name,
-            age: p.age ?? 30,
-            occupation: p.occupation ?? "",
+            age: typeof p.age === "number" ? p.age : 30,
+            gender,
+            occupation,
             description: p.description,
+            voiceName,
           });
         }
       }
@@ -81,17 +104,22 @@ export function generatePersonas$({
                 properties: {
                   name: { type: "string" },
                   age: { type: "number" },
+                  gender: { type: "string", enum: ["female", "male", "neutral"] },
                   occupation: { type: "string" },
                   description: { type: "string" },
+                  voiceName: { type: "string", enum: [...GEMINI_LIVE_VOICE_NAMES] },
                 },
-                required: ["name", "age", "occupation", "description"],
+                required: ["name", "age", "gender", "occupation", "description", "voiceName"],
               },
             },
           },
           required: ["personas"],
         };
 
-        const prompt = `Generate ${numUsers} synthetic user personas${segmentText}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.`;
+        const prompt = `Generate ${numUsers} synthetic user personas${segmentText}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, genders ("female", "male", or "neutral" for non-binary / gender-neutral personas), occupations, a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life, and a matching Gemini Live voiceName.
+
+Assign each persona a distinct voiceName from the Gemini Live catalog below, matching female personas to female voices, male personas to male voices, and gender-neutral ("neutral") personas to a balanced or personality-fitting voice:
+${formatVoiceCatalogForPrompt()}`;
 
         const stream = await ai.interactions.create(
           {

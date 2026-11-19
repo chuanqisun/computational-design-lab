@@ -34,6 +34,19 @@ import {
 } from "./user-testing-layout";
 import "./user-testing.css";
 
+export type InterviewState = "idle" | "connecting" | "active" | "summarizing";
+
+interface ActiveInterviewState {
+  session: LiveInterviewSession;
+  personaCard: CanvasItem;
+  contextItems: CanvasItem[];
+  snapshot: CanvasItem[];
+}
+
+export const interviewState$ = new BehaviorSubject<InterviewState>("idle");
+const interviewStatus$ = new BehaviorSubject<string>("");
+let activeInterview: ActiveInterviewState | null = null;
+
 export const UserTestingTool = createComponent(
   ({
     selected$,
@@ -48,15 +61,8 @@ export const UserTestingTool = createComponent(
     const segment$ = new BehaviorSubject<string>("All");
     const numUsers$ = new BehaviorSubject<number>(3);
     const isRunning$ = new BehaviorSubject<boolean>(false);
-    const interviewState$ = new BehaviorSubject<"idle" | "connecting" | "active" | "summarizing">("idle");
     const progressMsg$ = new BehaviorSubject<string>("");
     const startAction$ = new BehaviorSubject<boolean>(false);
-    let activeInterview: {
-      session: LiveInterviewSession;
-      personaCard: CanvasItem;
-      contextItems: CanvasItem[];
-      snapshot: CanvasItem[];
-    } | null = null;
 
     const handleInterviewClick = async () => {
       if (interviewState$.value === "active" && activeInterview) {
@@ -66,19 +72,19 @@ export const UserTestingTool = createComponent(
 
         if (transcript.length === 0) {
           interviewState$.next("idle");
-          progressMsg$.next("No conversation recorded to summarize.");
+          interviewStatus$.next("No conversation recorded to summarize.");
           return;
         }
 
         const apiKey = apiKeys$.value.gemini;
         if (!apiKey) {
           interviewState$.next("idle");
-          progressMsg$.next("Gemini API key required to summarize interview.");
+          interviewStatus$.next("Gemini API key required to summarize interview.");
           return;
         }
 
         interviewState$.next("summarizing");
-        progressMsg$.next("Summarizing interview...");
+        interviewStatus$.next("Summarizing interview...");
 
         const fallbackPos = {
           x: current.personaCard.x + current.personaCard.width + 20,
@@ -100,7 +106,7 @@ export const UserTestingTool = createComponent(
               body: summary.body,
               x: pos.x,
               y: pos.y,
-              width: 240,
+              width: 200,
               height: 300,
               zIndex: pos.z,
               isSelected: false,
@@ -114,12 +120,12 @@ export const UserTestingTool = createComponent(
           }),
           tap({
             error: () => {
-              progressMsg$.next("Failed to summarize interview.");
+              interviewStatus$.next("Failed to summarize interview.");
             },
           }),
           finalize(() => {
             interviewState$.next("idle");
-            if (progressMsg$.value !== "Failed to summarize interview.") progressMsg$.next("");
+            if (interviewStatus$.value !== "Failed to summarize interview.") interviewStatus$.next("");
           }),
         );
 
@@ -138,20 +144,20 @@ export const UserTestingTool = createComponent(
       const contextItems = selection.contextItems;
 
       interviewState$.next("connecting");
-      progressMsg$.next("Starting interview...");
+      interviewStatus$.next("Starting interview...");
 
       try {
         const session = await startLiveInterview({
           personaCard,
           contextItems,
           apiKey,
-          onStatus: (status) => progressMsg$.next(status),
-          onError: (error) => progressMsg$.next(error.message),
+          onStatus: (status) => interviewStatus$.next(status),
+          onError: (error) => interviewStatus$.next(error.message),
           onClose: () => {
             if (activeInterview) {
               activeInterview = null;
               interviewState$.next("idle");
-              progressMsg$.next("Interview ended.");
+              interviewStatus$.next("Interview ended.");
             }
           },
         });
@@ -160,7 +166,7 @@ export const UserTestingTool = createComponent(
       } catch (error) {
         activeInterview = null;
         interviewState$.next("idle");
-        progressMsg$.next(error instanceof Error ? error.message : "Failed to start interview.");
+        interviewStatus$.next(error instanceof Error ? error.message : "Failed to start interview.");
       }
     };
 
@@ -209,7 +215,7 @@ export const UserTestingTool = createComponent(
             const personaCard: CanvasItem = {
               id: `persona-${Date.now()}-${Math.random()}`,
               title: persona.name,
-              body: `${persona.occupation}, age ${persona.age}\n${persona.description}`,
+              body: `${persona.occupation}, age ${persona.age}\nVoice: ${persona.voiceName}\n${persona.description}`,
               x: personaPos.x,
               y: personaPos.y,
               width: personaPos.width,
@@ -218,6 +224,8 @@ export const UserTestingTool = createComponent(
               isSelected: false,
               metadata: {
                 kind: "synthetic-user",
+                gender: persona.gender,
+                voiceName: persona.voiceName,
                 persona,
               },
             };
@@ -291,12 +299,14 @@ export const UserTestingTool = createComponent(
       numUsers$,
       isRunning$,
       interviewState$,
+      interviewStatus$,
       progressMsg$,
       apiKeys$,
     ]).pipe(
-      map(([selected, trait, segment, numUsers, isRunning, interviewState, progressMsg, apiKeys]) => {
+      map(([selected, trait, segment, numUsers, isRunning, interviewState, interviewStatus, progressMsg, apiKeys]) => {
         if (selected.length === 0 && interviewState === "idle") return html``;
 
+        const statusMessage = interviewStatus || progressMsg;
         const interviewSelection = resolveInterviewSelection(selected);
         const interviewButtonLabel =
           interviewState === "active"
@@ -352,7 +362,7 @@ export const UserTestingTool = createComponent(
                 @input=${(e: Event) => numUsers$.next(parseInt((e.target as HTMLInputElement).value) || 3)}
               />
             </div>
-            ${progressMsg ? html`<div class="progress-msg">${progressMsg}</div>` : html``}
+            ${statusMessage ? html`<div class="progress-msg">${statusMessage}</div>` : html``}
             <div class="actions">
               <button
                 @click=${() => startAction$.next(true)}

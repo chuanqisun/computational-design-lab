@@ -1,6 +1,12 @@
 import { GoogleGenAI, Modality, type Interactions, type LiveServerMessage, type Part, type Session } from "@google/genai";
 import { Observable } from "rxjs";
 import { GEMINI_LIVE_MODEL, GEMINI_TEXT_MODEL, GEMINI_TEXT_THINKING } from "../../../lib/gemini-models";
+import {
+  normalizePersonaGender,
+  resolvePersonaVoice,
+  type GeminiLiveVoiceName,
+  type PersonaGender,
+} from "../../../lib/gemini-voices";
 import type { CanvasItem } from "../../canvas/canvas.component";
 import { progress$ } from "../../progress/progress";
 
@@ -42,9 +48,30 @@ export function resolveInterviewSelection(selected: CanvasItem[]): InterviewSele
   };
 }
 
+export function resolvePersonaCardGender(personaCard: CanvasItem): PersonaGender {
+  const persona = personaCard.metadata?.persona as Record<string, unknown> | undefined;
+  return normalizePersonaGender(personaCard.metadata?.gender ?? persona?.gender);
+}
+
+export function resolvePersonaCardVoice(personaCard: CanvasItem): GeminiLiveVoiceName {
+  const persona = personaCard.metadata?.persona as Record<string, unknown> | undefined;
+  const gender = resolvePersonaCardGender(personaCard);
+  const rawVoiceName = personaCard.metadata?.voiceName ?? persona?.voiceName;
+  return resolvePersonaVoice({
+    gender,
+    voiceName: rawVoiceName,
+    seed: `${personaCard.title || ""}:${personaCard.id}`,
+  });
+}
+
 export function buildInterviewSystemPrompt(personaCard: CanvasItem, contextItems: CanvasItem[]): string {
   const personaName = personaCard.title?.trim() || "Synthetic User";
   const personaDetails = personaCard.body?.trim() || "A thoughtful design research participant.";
+  const gender = resolvePersonaCardGender(personaCard);
+  const genderGuidance =
+    gender === "neutral"
+      ? "\n- Maintain a gender-neutral / non-binary identity naturally (avoid binary gendered self-references unless explicitly stated in your persona profile)."
+      : "";
 
   const topicGuidance =
     contextItems.length > 0
@@ -59,7 +86,7 @@ ${personaDetails}
 
 Instructions:
 - Stay fully in character as ${personaName} throughout the conversation. Never break character or mention being an AI.
-- Speak naturally, concisely, and conversationally—like a real person in a live voice interview.
+- Speak naturally, concisely, and conversationally—like a real person in a live voice interview.${genderGuidance}
 - ${topicGuidance}`;
 }
 
@@ -346,11 +373,19 @@ export async function startLiveInterview(options: {
     }
 
     const ai = new GoogleGenAI({ apiKey: token.name, apiVersion: "v1beta" });
+    const voiceName = resolvePersonaCardVoice(options.personaCard);
 
     session = await ai.live.connect({
       model: GEMINI_LIVE_MODEL,
       config: {
         responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName,
+            },
+          },
+        },
         systemInstruction: { parts: [{ text: systemPrompt }] },
         inputAudioTranscription: {},
         outputAudioTranscription: {},
