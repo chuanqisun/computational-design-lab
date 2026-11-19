@@ -15,7 +15,14 @@ import {
 import { persistSubject } from "../../../lib/persistence";
 import { createComponent } from "../../../sdk/create-component";
 import type { CanvasItem } from "../../canvas/canvas.component";
+import { getNextPositions } from "../../canvas/layout";
 import type { ApiKeys } from "../../connections/storage";
+import {
+  resolveInterviewSelection,
+  startLiveInterview,
+  summarizeInterview$,
+  type LiveInterviewSession,
+} from "../llm/interview";
 import { generatePersonas$, rankDesigns$ } from "../llm/synthetic-users";
 import { submitTask } from "../tasks";
 import {
@@ -41,8 +48,121 @@ export const UserTestingTool = createComponent(
     const segment$ = new BehaviorSubject<string>("All");
     const numUsers$ = new BehaviorSubject<number>(3);
     const isRunning$ = new BehaviorSubject<boolean>(false);
+    const interviewState$ = new BehaviorSubject<"idle" | "connecting" | "active" | "summarizing">("idle");
     const progressMsg$ = new BehaviorSubject<string>("");
     const startAction$ = new BehaviorSubject<boolean>(false);
+    let activeInterview: {
+      session: LiveInterviewSession;
+      personaCard: CanvasItem;
+      contextItems: CanvasItem[];
+      snapshot: CanvasItem[];
+    } | null = null;
+
+    const handleInterviewClick = async () => {
+      if (interviewState$.value === "active" && activeInterview) {
+        const current = activeInterview;
+        activeInterview = null;
+        const transcript = await current.session.stop();
+
+        if (transcript.length === 0) {
+          interviewState$.next("idle");
+          progressMsg$.next("No conversation recorded to summarize.");
+          return;
+        }
+
+        const apiKey = apiKeys$.value.gemini;
+        if (!apiKey) {
+          interviewState$.next("idle");
+          progressMsg$.next("Gemini API key required to summarize interview.");
+          return;
+        }
+
+        interviewState$.next("summarizing");
+        progressMsg$.next("Summarizing interview...");
+
+        const fallbackPos = {
+          x: current.personaCard.x + current.personaCard.width + 20,
+          y: current.personaCard.y,
+          z: (current.personaCard.zIndex ?? 0) + 1,
+        };
+        const pos = getNextPositions(current.snapshot).next().value || fallbackPos;
+
+        const summaryTask$ = summarizeInterview$({
+          personaCard: current.personaCard,
+          contextItems: current.contextItems,
+          transcript,
+          apiKey,
+        }).pipe(
+          tap((summary) => {
+            const summaryCard: CanvasItem = {
+              id: `interview-summary-${crypto.randomUUID()}`,
+              title: summary.title,
+              body: summary.body,
+              x: pos.x,
+              y: pos.y,
+              width: 240,
+              height: 300,
+              zIndex: pos.z,
+              isSelected: false,
+              metadata: {
+                kind: "interview-summary",
+                personaCardId: current.personaCard.id,
+                personaName: current.personaCard.title || "Synthetic User",
+              },
+            };
+            items$.next([...items$.value, summaryCard]);
+          }),
+          tap({
+            error: () => {
+              progressMsg$.next("Failed to summarize interview.");
+            },
+          }),
+          finalize(() => {
+            interviewState$.next("idle");
+            if (progressMsg$.value !== "Failed to summarize interview.") progressMsg$.next("");
+          }),
+        );
+
+        submitTask(summaryTask$);
+        return;
+      }
+
+      if (interviewState$.value !== "idle") return;
+
+      const apiKey = apiKeys$.value.gemini;
+      const snapshot = items$.value.filter((item) => item.isSelected);
+      const selection = resolveInterviewSelection(snapshot);
+      if (!apiKey || !selection.canInterview || !selection.personaCard) return;
+
+      const personaCard = selection.personaCard;
+      const contextItems = selection.contextItems;
+
+      interviewState$.next("connecting");
+      progressMsg$.next("Starting interview...");
+
+      try {
+        const session = await startLiveInterview({
+          personaCard,
+          contextItems,
+          apiKey,
+          onStatus: (status) => progressMsg$.next(status),
+          onError: (error) => progressMsg$.next(error.message),
+          onClose: () => {
+            if (activeInterview) {
+              activeInterview = null;
+              interviewState$.next("idle");
+              progressMsg$.next("Interview ended.");
+            }
+          },
+        });
+        activeInterview = { session, personaCard, contextItems, snapshot };
+        interviewState$.next("active");
+      } catch (error) {
+        activeInterview = null;
+        interviewState$.next("idle");
+        progressMsg$.next(error instanceof Error ? error.message : "Failed to start interview.");
+      }
+    };
 
     void persistSubject(trait$, "context-tray:user-testing:trait");
     void persistSubject(segment$, "context-tray:user-testing:segment");
@@ -96,6 +216,10 @@ export const UserTestingTool = createComponent(
               height: personaPos.height,
               zIndex: maxZ + 1 + userIndex,
               isSelected: false,
+              metadata: {
+                kind: "synthetic-user",
+                persona,
+              },
             };
             items$.next([...items$.value, personaCard]);
 
@@ -160,9 +284,40 @@ export const UserTestingTool = createComponent(
       ignoreElements(),
     );
 
-    const template$ = combineLatest([selected$, trait$, segment$, numUsers$, isRunning$, progressMsg$, apiKeys$]).pipe(
-      map(([selected, trait, segment, numUsers, isRunning, progressMsg, apiKeys]) => {
-        if (selected.length === 0) return html``;
+    const template$ = combineLatest([
+      selected$,
+      trait$,
+      segment$,
+      numUsers$,
+      isRunning$,
+      interviewState$,
+      progressMsg$,
+      apiKeys$,
+    ]).pipe(
+      map(([selected, trait, segment, numUsers, isRunning, interviewState, progressMsg, apiKeys]) => {
+        if (selected.length === 0 && interviewState === "idle") return html``;
+
+        const interviewSelection = resolveInterviewSelection(selected);
+        const interviewButtonLabel =
+          interviewState === "active"
+            ? "Stop"
+            : interviewState === "connecting"
+              ? "Connecting..."
+              : interviewState === "summarizing"
+                ? "Summarizing..."
+                : "Interview";
+        const isInterviewDisabled =
+          interviewState === "active"
+            ? false
+            : interviewState !== "idle" || isRunning || !apiKeys.gemini || !interviewSelection.canInterview;
+        const interviewTitle =
+          interviewState === "active"
+            ? "Stop interview and summarize findings"
+            : !apiKeys.gemini
+              ? "Gemini API key required"
+              : !interviewSelection.canInterview
+                ? "Select exactly one synthetic user card (plus any cards to discuss)"
+                : "Conduct a live voice interview with the selected synthetic user";
 
         return html`
           <div class="user-testing">
@@ -198,9 +353,22 @@ export const UserTestingTool = createComponent(
               />
             </div>
             ${progressMsg ? html`<div class="progress-msg">${progressMsg}</div>` : html``}
-            <button @click=${() => startAction$.next(true)} ?disabled=${isRunning || !apiKeys.gemini || !trait.trim()}>
-              ${isRunning ? "Running..." : "Start"}
-            </button>
+            <div class="actions">
+              <button
+                @click=${() => startAction$.next(true)}
+                ?disabled=${isRunning || interviewState !== "idle" || !apiKeys.gemini || !trait.trim()}
+              >
+                ${isRunning ? "Running..." : "Start"}
+              </button>
+              <button
+                class=${interviewState === "active" ? "interview-stop" : ""}
+                @click=${() => void handleInterviewClick()}
+                ?disabled=${isInterviewDisabled}
+                title=${interviewTitle}
+              >
+                ${interviewButtonLabel}
+              </button>
+            </div>
           </div>
         `;
       }),

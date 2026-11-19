@@ -25,3 +25,12 @@
   font-style: italic;
 }
 
+.user-testing .actions {
+  display: flex;
+  gap: 1ch;
+
+  button {
+    flex: 1;
+  }
+}
+
