@@ -219,6 +219,32 @@ describe("animate request model", () => {
     ]);
   });
 
+  it("prepares inline video data URLs with codec parameters", async () => {
+    const webmVp9 = resolveAnimateInputs([
+      item({
+        title: "Mint Tumbler Showcase",
+        videoSrc: "data:video/webm;codecs=vp9;base64,VIDEO_VP9",
+        videoMimeType: "video/webm;codecs=vp9",
+      }),
+    ]).inputs;
+
+    expect(getAnimatePreflightErrors(webmVp9, true)).toEqual([]);
+    await expect(prepareAnimateContents(webmVp9, new Map(), {})).resolves.toEqual([
+      { type: "video", mime_type: "video/webm", data: "VIDEO_VP9" },
+    ]);
+
+    const webmVp9Opus = resolveAnimateInputs([
+      item({
+        videoSrc: "data:video/webm;codecs=vp9,opus;base64,VIDEO_AV",
+      }),
+    ]).inputs;
+
+    expect(getAnimatePreflightErrors(webmVp9Opus, true)).toEqual([]);
+    await expect(prepareAnimateContents(webmVp9Opus, new Map(), {})).resolves.toEqual([
+      { type: "video", mime_type: "video/webm", data: "VIDEO_AV" },
+    ]);
+  });
+
   it("extracts the first inline model-output video, supports output_video fallback, and rejects missing output", () => {
     expect(
       extractAnimateVideo([

@@ -239,8 +239,8 @@ export function getAnimatePreflightErrors(
 }
 
 function parseDataUrl(src: string): { mimeType: string; data: string } | null {
-  const match = /^data:([^;,]+);base64,(.+)$/s.exec(src);
-  return match ? { mimeType: match[1], data: match[2] } : null;
+  const match = /^data:([^;,]*)(?:;.*)?;base64,(.+)$/is.exec(src);
+  return match ? { mimeType: match[1].trim(), data: match[2] } : null;
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
