@@ -53,10 +53,6 @@ export const ContextTrayComponent = createComponent(
       map(([_items, _apiKeys, interviewState]) => {
         return html`<aside class="context-tray">
           <section class="tool-section">
-            <h2>Workflow</h2>
-            <div class="tool-body">${workflowUI}</div>
-          </section>
-          <section class="tool-section">
             <h2>New</h2>
             <div class="tool-body">${captureToolUI}</div>
             <div class="tool-body">${newPromptToolUI}</div>
@@ -79,6 +75,10 @@ export const ContextTrayComponent = createComponent(
             <div class="tool-body">${canvasToolUI}</div>
           </section>
           ${section("export_cards", "Export", exportToolUI)}
+          <section class="tool-section">
+            <h2>Workflow</h2>
+            <div class="tool-body">${workflowUI}</div>
+          </section>
         </aside>`;
       }),
     );

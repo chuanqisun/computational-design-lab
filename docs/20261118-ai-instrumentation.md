@@ -298,7 +298,7 @@ Terminology used everywhere in the UI:
 - **Run:** the AI following the selected workflow.
 - **Trace:** the recorded actions of the user and the AI.
 
-The top bar keeps only progress, Stop and Setup. Workflow controls live in a **Workflow** section at the top of the context tray. The detailed UI lives in two declarative dialogs, both following Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
+The top bar keeps only progress, Stop and Setup. Workflow controls live in a **Workflow** section at the bottom of the context tray, below Canvas and Export. The detailed UI lives in two declarative dialogs, both following Chrome's [declarative dialog & popover control guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/declarative-dialog-popover-control.md.txt).
 
 ### 5.1 Workflow Section (`src/components/workflow/workflow-section.component.ts`)
 
