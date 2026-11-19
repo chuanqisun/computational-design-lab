@@ -332,14 +332,9 @@ Place these controls before the existing progress text, Stop and Setup:
 - Don't put `popovertarget` and `commandfor` on the same button.
 - To react to opening or closing, listen for `command`, `toggle` or `close` on the **target element**. The `command` event doesn't bubble.
 - Set the `popover` attribute with `setAttribute`, never with the `.popover` property.
-- Popover CSS selectors use `[popover]:is(:popover-open, .\:popover-open)`.
+- Popover CSS selectors use `:popover-open`.
 - When a popover is hidden from a button inside it, move focus back to the invoker.
-- Polyfills: add `invokers-polyfill` and `@oddbird/popover-polyfill` to `dependencies`, and load them conditionally at the top of `src/canvas-page.ts`:
-  ```ts
-  if (!("commandForElement" in HTMLButtonElement.prototype)) import("invokers-polyfill");
-  if (!Object.hasOwn(HTMLElement.prototype, "popover")) import("@oddbird/popover-polyfill");
-  ```
-- The status pill's `aria-expanded` is synced from the popover's `toggle` event, because the invokers polyfill doesn't manage ARIA state.
+- No polyfills: the app targets the latest Chromium, which supports invoker commands and popover natively.
 
 ### 5.4 Meta-Controls
 
@@ -446,7 +441,7 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
 | `src/components/context-tray/tasks.ts` | `stop$`, abort signal (§2.3) |
 | `src/components/context-tray/tools/*.tool.ts` | Thin forms calling `dispatch$`, visibility from `isAvailable` |
 | `src/components/canvas/canvas.component.ts`, `card.component.ts` | Gesture-end dispatch, render `pending` (§2.5–2.6) |
-| `src/canvas-page.ts` | Polyfills, top-bar control, dialog mount |
+| `src/canvas-page.ts` | Top-bar control, dialog mount |
 | `src/lib/gemini-models.ts` | `GEMINI_AGENT_MODEL`, `GEMINI_AGENT_THINKING` |
 
 ---
@@ -467,7 +462,6 @@ The existing tests (`animate`, `search-images`, `user-testing-layout`, `intervie
    - Live spot tests: multimodal `function_result` and `allowed_tools`.
 4. **Workflow capture and UI**
    - Implement the action log, trace draft, summarizer (with its live spot test) and storage.
-   - Add the polyfills.
    - Build the top-bar control, the status popover, and the Workflow dialog with all five tabs.
 5. **Auto-Iterate**
    - Add the model constants and write the `auto-iterate` tests.
