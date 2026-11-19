@@ -225,6 +225,7 @@ generative-image {
 }
 
 .main {
+  position: relative; /* anchors the minimap overlay */
   flex: 1;
   display: grid;
   grid-template-columns: 1fr auto var(--tray-width, 20rem);
@@ -233,6 +234,8 @@ generative-image {
 
 .canvas-area {
   overflow: auto;
+  /* Own stacking context: card z-indices (which grow on every click) stay below overlays like the minimap. */
+  isolation: isolate;
 }
 
 .context-tray-area {

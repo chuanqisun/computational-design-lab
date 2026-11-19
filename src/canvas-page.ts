@@ -39,6 +39,7 @@ import { TraceDialogComponent } from "./components/workflow/trace-dialog.compone
 import { WorkflowEditorComponent } from "./components/workflow/workflow-editor.component";
 import { getActionRuntime } from "./lib/actions/app-runtime";
 import { getWorldViewport, refreshViewport, scrollToWorld } from "./components/canvas/canvas-viewport";
+import { MinimapComponent } from "./components/canvas/minimap.component";
 import { persistSubject } from "./lib/persistence";
 import { createComponent } from "./sdk/create-component";
 import { observe } from "./sdk/observe-directive";
@@ -183,6 +184,7 @@ const Main = createComponent(() => {
   );
   const trayWidth$ = new BehaviorSubject(320); // 20rem in px
   const canvasUI = CanvasComponent({ items$, apiKeys$, interaction$: canvasInteraction$ });
+  const minimapUI = MinimapComponent({ items$ });
   const contextTrayUI = ContextTrayComponent({ items$, apiKeys$ });
   const resizerUI = ResizerComponent({ trayWidth$ });
   const connectionsUI = ConnectionsComponent({ apiKeys$, providers: ["gemini"] });
@@ -216,6 +218,7 @@ const Main = createComponent(() => {
     </header>
     <main class="main" style="--tray-width: ${observe(trayWidth$)}px;">
       <div class="canvas-area">${canvasUI}</div>
+      ${minimapUI}
       ${resizerUI}
       <div class="context-tray-area">${contextTrayUI}</div>
     </main>

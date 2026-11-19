@@ -151,9 +151,20 @@ export function ensureExtent(rects: Rect[] = []) {
   }
 }
 
+/** Expose the horizontal scrollbar thickness (0 for overlay scrollbars) so overlays can clear it. */
+function publishScrollbarSize() {
+  const area = getArea();
+  const host = area?.parentElement;
+  if (!area || !host) return;
+  const value = `${area.offsetHeight - area.clientHeight}px`;
+  if (host.style.getPropertyValue("--canvas-scrollbar-x") !== value)
+    host.style.setProperty("--canvas-scrollbar-x", value);
+}
+
 /** Re-measure: grow the extent around the view and publish the visible world rect. */
 export function refreshViewport() {
   ensureExtent();
+  publishScrollbarSize();
   const next = getWorldViewport();
   const prev = worldView$.value;
   if (prev.x !== next.x || prev.y !== next.y || prev.width !== next.width || prev.height !== next.height) {

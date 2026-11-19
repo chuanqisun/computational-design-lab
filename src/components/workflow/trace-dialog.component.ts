@@ -115,11 +115,9 @@ export const TraceDialogComponent = createComponent(({ runtime }: { runtime: Act
       records.length === 0
         ? html`<p class="empty">No actions yet. Everything you or the AI do on the board is recorded here.</p>`
         : html`<ol class="trace-list">
-            ${[...records]
-              .reverse()
-              .map((record) =>
-                traceRow(record, { checked: checked.has(record.id), onToggle: () => toggle(record.id), thumbs: true }),
-              )}
+            ${records.map((record) =>
+              traceRow(record, { checked: checked.has(record.id), onToggle: () => toggle(record.id), thumbs: true }),
+            )}
           </ol>`
     }
   `;

@@ -1,0 +1,26 @@
+.minimap {
+  position: absolute;
+  /* Clear the canvas's classic (space-taking) scrollbars; measured by canvas-viewport.ts. */
+  left: 12px;
+  bottom: calc(12px + var(--canvas-scrollbar-x, 0px));
+  z-index: 10; /* above the canvas, whose card z-indices are isolated in .canvas-area */
+  display: block;
+  background: var(--page-background, #fff);
+  border: 1px solid var(--color-border, #ccc);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.minimap-card {
+  fill: var(--color-text-tertiary, #999);
+}
+
+.minimap-card.selected {
+  fill: var(--color-selection-outline, #295ea0);
+}
+
+.minimap-view {
+  fill: var(--color-text, #222);
+}

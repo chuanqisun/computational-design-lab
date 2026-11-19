@@ -11,7 +11,7 @@ const RECENT_TRACE_COUNT = 4;
 export const TraceSectionComponent = createComponent(({ runtime }: { runtime: ActionRuntime }) =>
   runtime.log.records$.pipe(
     map((records) => {
-      const recent = records.slice(-RECENT_TRACE_COUNT).reverse();
+      const recent = records.slice(-RECENT_TRACE_COUNT); // chronological, newest last
       return html`
         <div class="trace-section">
           ${
