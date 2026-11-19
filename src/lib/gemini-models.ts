@@ -15,3 +15,5 @@ export const GEMINI_IMAGE_EDIT_MODEL = "gemini-nano-banana-2.1";
 
 export const GEMINI_VIDEO_MODEL = "gemini-omni-1.2-flash";
 export const GEMINI_LIVE_MODEL = "gemini-3.8-live";
+
+export const GEMINI_DECISION_MODEL = "gemini-decision-1";

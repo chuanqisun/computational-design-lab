@@ -11,16 +11,59 @@
 }
 
 .scan-option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5ch;
   cursor: pointer;
-}
-
-.scan-option input[type="radio"] {
-  margin: 0;
+  overflow: hidden;
 }
 
 .scan-label {
   font-size: inherit;
+}
+
+.scan-meter {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  pointer-events: none;
+}
+
+.scan-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-text);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scan-meter.loading {
+  background: var(--color-border-light);
+}
+
+.scan-meter.loading .scan-meter-fill {
+  animation: scan-meter-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes scan-meter-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-meter-fill {
+    transition: none;
+  }
+  .scan-meter.loading .scan-meter-fill {
+    animation: none;
+    opacity: 0.5;
+  }
 }
