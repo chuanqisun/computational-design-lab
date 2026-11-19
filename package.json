@@ -9,7 +9,8 @@
     "build:apps": "vite build",
     "build:prompt-library": "vite build --config vite-prompt-library.config.ts --emptyOutDir=false",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts"
   },
   "devDependencies": {
     "prettier": "^3.10.1",

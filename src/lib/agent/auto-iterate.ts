@@ -144,7 +144,7 @@ export function runAgent$(options: RunAgentOptions): Observable<AgentEvent> {
             previous_interaction_id: previousId,
             generation_config: {
               thinking_level: GEMINI_AGENT_THINKING,
-              tool_choice: { allowed_tools: { mode: "auto", tools: availability().available } },
+              tool_choice: { allowed_tools: { mode: "validated", tools: availability().available } },
             },
             store: true,
           },
