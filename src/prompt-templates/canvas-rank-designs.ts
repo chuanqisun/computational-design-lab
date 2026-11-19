@@ -13,9 +13,11 @@ const outputSchema = {
 } as const;
 
 export interface CanvasRankDesignsVars {
-  personaSummary: string;
+  personaName: string;
+  personaAge: number;
+  personaOccupation: string;
+  personaDescription: string;
   trait: string;
-  designCount: number;
   designSummaries: string[];
 }
 
@@ -24,14 +26,16 @@ const canvasRankDesignsPresets = [
     title: "Ingredient-Driven Ranking",
     description: "Rank shampoo concepts for an ingredient-conscious shopper.",
     values: {
-      personaSummary:
-        "You are a 34-year-old product designer who shops for shampoo based on ingredient transparency, calm aesthetics, and whether the pack looks credible in a premium bathroom.",
+      personaName: "Maya Chen",
+      personaAge: 34,
+      personaOccupation: "product designer",
+      personaDescription:
+        "She shops for shampoo based on ingredient transparency, calm aesthetics, and whether the pack looks credible in a premium bathroom.",
       trait: "premium",
-      designCount: 3,
       designSummaries: [
-        "A1: Rounded matte shampoo bottle with eucalyptus green cap and minimal recessed label.",
-        "B2: Glossy shampoo bottle with high-contrast botanical graphics and metallic cap.",
-        "C3: Refill pouch plus reusable countertop bottle system with soft neutral labeling.",
+        'Design 1 (id: A1): "Matte Eucalyptus" — Rounded matte shampoo bottle with eucalyptus green cap and minimal recessed label.',
+        'Design 2 (id: B2): "Gloss Botanica" — Glossy shampoo bottle with high-contrast botanical graphics and metallic cap.',
+        'Design 3 (id: C3): "Refill Duo" — Refill pouch plus reusable countertop bottle system with soft neutral labeling.',
       ],
     },
   },
@@ -39,14 +43,16 @@ const canvasRankDesignsPresets = [
     title: "Clinical Trust Ranking",
     description: "Rank mouthwash concepts for a trust-seeking oral care buyer.",
     values: {
-      personaSummary:
-        "You are a parent comparing mouthwash packs and care most about visible dosage cues, product clarity, and whether the design looks safe and clinically trustworthy.",
+      personaName: "Daniel Okafor",
+      personaAge: 41,
+      personaOccupation: "school administrator and parent of two",
+      personaDescription:
+        "He compares mouthwash packs for the family and cares most about visible dosage cues, product clarity, and whether the design looks safe and clinically trustworthy.",
       trait: "trustworthy",
-      designCount: 3,
       designSummaries: [
-        "A1: Transparent aqua mouthwash bottle with measured dosage cap and crisp white label.",
-        "B2: Dark opaque bottle with bold flavor graphics and neon accents.",
-        "C3: Frosted bottle with soft blue cap and oversized ingredient callouts.",
+        'Design 1 (id: A1): "Measured Clarity" — Transparent aqua mouthwash bottle with measured dosage cap and crisp white label.',
+        'Design 2 (id: B2): "Bold Flavor" — Dark opaque bottle with bold flavor graphics and neon accents.',
+        'Design 3 (id: C3): "Frosted Calm" — Frosted bottle with soft blue cap and oversized ingredient callouts.',
       ],
     },
   },
@@ -54,14 +60,16 @@ const canvasRankDesignsPresets = [
     title: "Sustainability Ranking",
     description: "Rank refill concepts for eco-oriented packaging users.",
     values: {
-      personaSummary:
-        "You actively choose refill systems when they feel easy to use and premium enough to justify countertop space.",
+      personaName: "Lena Fischer",
+      personaAge: 29,
+      personaOccupation: "environmental consultant",
+      personaDescription:
+        "She actively chooses refill systems when they feel easy to use and premium enough to justify countertop space.",
       trait: "sustainable",
-      designCount: 3,
       designSummaries: [
-        "A1: Mono-material refill pouch with reusable pump bottle companion.",
-        "B2: Conventional rigid shampoo bottle with recycled plastic claim on pack.",
-        "C3: Concentrate pod system with small reusable aluminum bottle.",
+        'Design 1 (id: A1): "Loop Pouch" — Mono-material refill pouch with reusable pump bottle companion.',
+        'Design 2 (id: B2): "Recycled Classic" — Conventional rigid shampoo bottle with recycled plastic claim on pack.',
+        'Design 3 (id: C3): "Concentrate Pods" — Concentrate pod system with small reusable aluminum bottle.',
       ],
     },
   },
@@ -69,21 +77,39 @@ const canvasRankDesignsPresets = [
 
 const template: PromptTemplateModule<
   CanvasRankDesignsVars,
-  "personaSummary" | "trait" | "designCount" | "designSummaries"
+  "personaName" | "personaAge" | "personaOccupation" | "personaDescription" | "trait" | "designSummaries"
 > = {
   metadata: {
     title: "Rank Designs As Persona",
     purpose:
-      "Rank designs from a persona perspective against a target trait and return ordered IDs with brief feedback.",
-    sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
+      "Rank the selected design cards (text plus attached images) from a persona's perspective against a target trait and return ordered IDs with brief feedback.",
+    sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts", "src/lib/actions/defs/media.ts"],
     categories: ["canvas", "mixed-to-json", "ranking"],
     inputType: "mixed",
     outputType: "json",
     model: "gemini-4-hydrogen",
     outputSchema,
     slots: {
-      personaSummary: {
-        description: "Persona description used as the system instruction.",
+      personaName: {
+        description: "Persona name, used in the system instruction.",
+        required: true,
+        multiple: false,
+        type: "text",
+      },
+      personaAge: {
+        description: "Persona age, used in the system instruction.",
+        required: true,
+        multiple: false,
+        type: "number",
+      },
+      personaOccupation: {
+        description: "Persona occupation, used in the system instruction.",
+        required: true,
+        multiple: false,
+        type: "text",
+      },
+      personaDescription: {
+        description: "Persona description, used in the system instruction.",
         required: true,
         multiple: false,
         type: "text",
@@ -94,14 +120,9 @@ const template: PromptTemplateModule<
         multiple: false,
         type: "text",
       },
-      designCount: {
-        description: "Number of design concepts that must be ranked.",
-        required: true,
-        multiple: false,
-        type: "number",
-      },
       designSummaries: {
-        description: "List of design labels and descriptions.",
+        description:
+          'One line per design, formatted as `Design N (id: <id>): "<title>" — <body>`. The design count is derived from this list. Design images are attached as separate image parts after the text.',
         required: false,
         multiple: true,
         type: "text",
@@ -109,17 +130,25 @@ const template: PromptTemplateModule<
     },
   },
   presets: canvasRankDesignsPresets,
-  template: ({ personaSummary = "", trait = "", designCount = 0, designSummaries = [] }) => ({
-    system: personaSummary,
-    user: `Here are ${designCount} design concepts:
+  template: ({
+    personaName = "",
+    personaAge = 30,
+    personaOccupation = "",
+    personaDescription = "",
+    trait = "",
+    designSummaries = [],
+  }) => {
+    const designCount = designSummaries.length;
+
+    return {
+      developer: `You are ${personaName}, ${personaAge} years old, ${personaOccupation}. ${personaDescription}`,
+      user: `Here are ${designCount} design concepts:
 
 ${designSummaries.join("\n\n")}
 
-Rank these designs from least to most "${trait}" based on your personal perspective. Return all ${designCount} item IDs in order from least ${trait} (first) to most ${trait} (last). Also write 1-2 sentences of feedback explaining your ranking.
-
-Return ONLY valid JSON matching this schema:
-${JSON.stringify(outputSchema, null, 2)}`,
-  }),
+Rank these designs from least to most "${trait}" based on your personal perspective. Return all ${designCount} item IDs in order from least ${trait} (first) to most ${trait} (last). Also write 1-2 sentences of feedback explaining your ranking.`,
+    };
+  },
 };
 
 export default template;

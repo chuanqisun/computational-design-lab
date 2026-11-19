@@ -3,7 +3,7 @@ import { toTextBlock } from "./prompt-template.utils";
 
 export interface CanvasBlendImagesVars {
   instruction: string | string[];
-  itemNotes: string[];
+  itemBodies: string[];
 }
 
 const canvasBlendImagesPresets = [
@@ -15,9 +15,9 @@ const canvasBlendImagesPresets = [
         "Blend the uploaded shampoo bottle render with the botanical reference image into one cohesive hero shot.",
         "Keep the bottle silhouette readable and let eucalyptus leaves influence only the supporting composition.",
       ],
-      itemNotes: [
-        "Reference 1: Rounded shampoo bottle with a matte off-white body and eucalyptus green cap.",
-        "Reference 2: Dewy eucalyptus leaves on a pale stone surface with soft morning light.",
+      itemBodies: [
+        "Rounded shampoo bottle with a matte off-white body and eucalyptus green cap.",
+        "Dewy eucalyptus leaves on a pale stone surface with soft morning light.",
       ],
     },
   },
@@ -29,9 +29,9 @@ const canvasBlendImagesPresets = [
         "Blend the mouthwash bottle image with the bathroom material reference.",
         "Preserve the transparent aqua liquid and make the final image feel clinical but premium.",
       ],
-      itemNotes: [
-        "Reference 1: Transparent rectangular mouthwash bottle with integrated dosage cap.",
-        "Reference 2: White tile, chrome, and diffused daylight from a modern bathroom interior.",
+      itemBodies: [
+        "Transparent rectangular mouthwash bottle with integrated dosage cap.",
+        "White tile, chrome, and diffused daylight from a modern bathroom interior.",
       ],
     },
   },
@@ -43,33 +43,34 @@ const canvasBlendImagesPresets = [
         "Blend the refill pouch render with the recycled paper and pebble texture reference.",
         "Aim for an editorial sustainability mood with restrained styling.",
       ],
-      itemNotes: [
-        "Reference 1: Stand-up shampoo refill pouch with pearl matte film and clear window.",
-        "Reference 2: Recycled paper, smooth pebbles, and soft side light in a quiet neutral palette.",
+      itemBodies: [
+        "Stand-up shampoo refill pouch with pearl matte film and clear window.",
+        "Recycled paper, smooth pebbles, and soft side light in a quiet neutral palette.",
       ],
     },
   },
 ];
 
-const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "itemNotes"> = {
+const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "itemBodies"> = {
   metadata: {
     title: "Blend Images",
     purpose:
-      "Blend multiple visual references into a single generated image guided by text instructions and reference notes.",
-    sourceFiles: ["src/components/context-tray/llm/blend-images.ts"],
+      "Blend two or more canvas cards into a single generated image: the instruction is sent first, followed by each card's image and body text as separate parts.",
+    sourceFiles: ["src/components/context-tray/llm/blend-images.ts", "src/lib/actions/defs/generate.ts"],
     categories: ["canvas", "mixed-to-image", "image-blending"],
     inputType: "mixed",
     outputType: "image",
     model: "gemini-nano-banana-2.1",
     slots: {
       instruction: {
-        description: "Primary blend or edit instruction.",
+        description: "Blend instruction from the user (sent as the first text part).",
         required: true,
         multiple: true,
         type: "text",
       },
-      itemNotes: {
-        description: "Optional notes describing attached references.",
+      itemBodies: {
+        description:
+          "Body text of each selected card, sent verbatim as its own text part after that card's image (cards without body text send only their image).",
         required: false,
         multiple: true,
         type: "text",
@@ -77,15 +78,8 @@ const template: PromptTemplateModule<CanvasBlendImagesVars, "instruction" | "ite
     },
   },
   presets: canvasBlendImagesPresets,
-  template: ({ instruction, itemNotes = [] }) => ({
-    user: `${toTextBlock(instruction)}${
-      itemNotes.length > 0
-        ? `
-
-Reference notes:
-${itemNotes.join("\n")}`
-        : ""
-    }`,
+  template: ({ instruction, itemBodies = [] }) => ({
+    user: [toTextBlock(instruction), ...itemBodies].join("\n\n"),
   }),
 };
 

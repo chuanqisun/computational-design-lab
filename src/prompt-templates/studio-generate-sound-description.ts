@@ -85,21 +85,21 @@ const template: PromptTemplateModule<StudioGenerateSoundDescriptionVars, "sceneX
   metadata: {
     title: "Generate Sound Description",
     purpose:
-      "Generate a natural-language sound description for a product animation based on scene XML and motion instructions.",
-    sourceFiles: ["src/lib/studio-ai.ts"],
-    categories: ["studio", "mixed-to-text", "sound-design"],
-    inputType: "mixed",
+      "Generate a natural-language sound description for a staged product photo, run automatically after Take Photo using the staged scene XML and the photo scene as the animation prompt.",
+    sourceFiles: ["src/lib/studio-ai.ts", "src/components/center-panel/center-panel.component.ts"],
+    categories: ["studio", "text-to-text", "sound-design"],
+    inputType: "text",
     outputType: "text",
     model: "gemini-4-hydrogen",
     slots: {
       sceneXml: {
-        description: "Scene XML used as the visual basis.",
+        description: "Staged photo scene XML returned by the Stage Photo Scene step.",
         required: true,
         multiple: false,
         type: "xml",
       },
       animationPrompt: {
-        description: "Motion prompt or animation description.",
+        description: "Animation prompt; at photo time this is the trimmed photo scene text entered for Take Photo.",
         required: true,
         multiple: true,
         type: "text",

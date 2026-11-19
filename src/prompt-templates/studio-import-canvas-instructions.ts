@@ -40,15 +40,17 @@ const studioImportCanvasInstructionsPresets = [
 const template: PromptTemplateModule<StudioImportCanvasInstructionsVars, "cardDescriptions"> = {
   metadata: {
     title: "Canvas to Studio conversion",
-    purpose: "Convert imported canvas concept card descriptions into studio-specific bottle design guidance.",
-    sourceFiles: ["src/studio-page.ts"],
+    purpose:
+      'Convert imported canvas concept cards (title and body) into the Studio custom instructions, which are later sent to Gemini as "Additional instructions" in the scene XML synthesis prompt.',
+    sourceFiles: ["src/studio-page.ts", "src/lib/studio-ai.ts"],
     categories: ["studio", "text-to-text", "input-prep"],
     inputType: "text",
     outputType: "text",
     model: "gemini-4-hydrogen",
     slots: {
       cardDescriptions: {
-        description: "Canvas card descriptions merged into studio custom instructions.",
+        description:
+          "One entry per imported canvas card that has a title or body, formatted as title and body joined by a newline.",
         required: false,
         multiple: true,
         type: "text",

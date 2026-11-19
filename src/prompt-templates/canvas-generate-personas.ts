@@ -1,5 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
-import { toInlineText } from "./prompt-template.utils";
+import { formatVoiceCatalogForPrompt, GEMINI_LIVE_VOICE_NAMES } from "../lib/gemini-voices";
 
 const outputSchema = {
   type: "object",
@@ -11,10 +11,12 @@ const outputSchema = {
         properties: {
           name: { type: "string" },
           age: { type: "number" },
+          gender: { type: "string", enum: ["female", "male", "neutral"] },
           occupation: { type: "string" },
           description: { type: "string" },
+          voiceName: { type: "string", enum: [...GEMINI_LIVE_VOICE_NAMES] },
         },
-        required: ["name", "age", "occupation", "description"],
+        required: ["name", "age", "gender", "occupation", "description", "voiceName"],
       },
     },
   },
@@ -23,7 +25,7 @@ const outputSchema = {
 
 export interface CanvasGeneratePersonasVars {
   trait: string;
-  segment: string | string[];
+  segment: string;
   numUsers: number;
 }
 
@@ -33,7 +35,7 @@ const canvasGeneratePersonasPresets = [
     description: "Generate personas for a premium botanical shampoo segment.",
     values: {
       trait: "ingredient consciousness",
-      segment: ["Premium shampoo shoppers", "Urban professionals"],
+      segment: "Premium shampoo shoppers, urban professionals",
       numUsers: 3,
     },
   },
@@ -42,7 +44,7 @@ const canvasGeneratePersonasPresets = [
     description: "Create personas for approachable mouthwash packaging decisions.",
     values: {
       trait: "trust in clinical cues",
-      segment: ["Parents shopping for family oral care"],
+      segment: "Parents shopping for family oral care",
       numUsers: 4,
     },
   },
@@ -51,7 +53,7 @@ const canvasGeneratePersonasPresets = [
     description: "Generate refill-oriented packaging personas.",
     values: {
       trait: "willingness to adopt refill systems",
-      segment: ["Sustainability-minded personal care buyers"],
+      segment: "Sustainability-minded personal care buyers",
       numUsers: 3,
     },
   },
@@ -60,8 +62,13 @@ const canvasGeneratePersonasPresets = [
 const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segment" | "numUsers"> = {
   metadata: {
     title: "Generate Personas",
-    purpose: "Generate synthetic user personas that vary along a chosen trait and optional segment.",
-    sourceFiles: ["src/components/context-tray/llm/synthetic-users.ts"],
+    purpose:
+      "Generate synthetic user personas (name, age, gender, occupation, description, Gemini Live voice) that vary along a chosen trait within an optional segment.",
+    sourceFiles: [
+      "src/components/context-tray/llm/synthetic-users.ts",
+      "src/lib/actions/defs/media.ts",
+      "src/lib/gemini-voices.ts",
+    ],
     categories: ["canvas", "text-to-json", "persona-generation"],
     inputType: "text",
     outputType: "json",
@@ -75,9 +82,9 @@ const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segm
         type: "text",
       },
       segment: {
-        description: "Optional market or demographic segment.",
+        description: 'Optional market or demographic segment ("All" or empty means no segment).',
         required: false,
-        multiple: true,
+        multiple: false,
         type: "text",
       },
       numUsers: {
@@ -90,13 +97,13 @@ const template: PromptTemplateModule<CanvasGeneratePersonasVars, "trait" | "segm
   },
   presets: canvasGeneratePersonasPresets,
   template: ({ trait = "", segment, numUsers = 3 }) => {
-    const segmentText = toInlineText(segment);
+    const segmentText = segment && segment !== "All" ? ` in the segment: ${segment}` : "";
 
     return {
-      user: `Generate ${numUsers} synthetic user personas${segmentText && segmentText !== "All" ? ` in the segment: ${segmentText}` : ""}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, occupations, and a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life.
+      user: `Generate ${numUsers} synthetic user personas${segmentText}. Each persona should have varying levels of "${trait}". Give them realistic names, ages, genders ("female", "male", or "neutral" for non-binary / gender-neutral personas), occupations, a brief 2-3 sentence description of their personality and how "${trait}" manifests in their life, and a matching Gemini Live voiceName.
 
-Return ONLY valid JSON matching this schema:
-${JSON.stringify(outputSchema, null, 2)}`,
+Assign each persona a distinct voiceName from the Gemini Live catalog below, matching female personas to female voices, male personas to male voices, and gender-neutral ("neutral") personas to a balanced or personality-fitting voice:
+${formatVoiceCatalogForPrompt()}`,
     };
   },
 };

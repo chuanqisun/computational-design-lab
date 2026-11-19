@@ -86,8 +86,9 @@ const studioStagePhotoScenePresets = [
 const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "scene" | "brandGuide"> = {
   metadata: {
     title: "Stage Photo Scene",
-    purpose: "Re-stage an existing product XML scene into a specific photo context.",
-    sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
+    purpose:
+      "Re-stage the current synthesized product XML into a specific photo scene (Take Photo); the result feeds image generation and the sound description step.",
+    sourceFiles: ["src/lib/studio-ai.ts", "src/components/center-panel/center-panel.component.ts"],
     categories: ["studio", "text-to-xml", "photo-staging"],
     inputType: "text",
     outputType: "xml",
@@ -106,7 +107,8 @@ const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "
         type: "text",
       },
       brandGuide: {
-        description: "Optional brand guidelines to follow while staging the photo scene.",
+        description:
+          "Optional photo brand guide; when present it becomes the system prompt, otherwise no system prompt is sent.",
         required: false,
         multiple: true,
         type: "text",
@@ -115,7 +117,7 @@ const template: PromptTemplateModule<StudioStagePhotoSceneVars, "currentXml" | "
   },
   presets: studioStagePhotoScenePresets,
   template: ({ currentXml = "", scene, brandGuide }) => ({
-    system: toTextBlock(brandGuide)
+    developer: toTextBlock(brandGuide)
       ? `You stage product photo scenes as XML. Follow the provided brand guide when choosing styling, materials, atmosphere, prop language, and visual tone. Output only XML, nothing else.\n\nBrand guide:\n${toTextBlock(brandGuide)}`
       : undefined,
     user: `Given this product XML and a desired photo scene, generate a new XML that places the product in the specified scene. In the <subject>, make sure <product> and <hand> and their relationship is clearly specified. Output only the updated XML, nothing else.

@@ -1,57 +1,73 @@
----
-name: canvas-fill-card
-purpose: Fill missing canvas card fields from the available text and image context.
-source_files:
-  - src/components/canvas/ai-helpers.ts
-input_types:
-  - image
-  - text
-output_type: json
----
+<!-- Generated from src/prompt-templates by prompt-templates.test.ts. Do not edit; run `npx vitest run -u`. -->
 
-```handlebars role=user
-I have a card with the following content: Title:
-{{#if title}}{{title}}{{else}}(missing){{/if}}
-Body:
-{{#if body}}{{#each body}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}{{else}}(missing){{/if}}
-Image Prompt:
-{{#if imagePrompt}}{{#each imagePrompt}}{{this}}{{#unless @last}}\n{{/unless}}{{/each}}{{else}}(missing){{/if}}
-Image Status:
-{{#if imageStatus}}{{imageStatus}}{{else}}(unknown){{/if}}
+# Fill Card Fields
 
-Please generate the missing fields based on the available information. - If title is missing, generate a short, catchy
-title (max 3 words). - If body is missing, generate a concise description (max 2 sentences). - If image prompt is
-missing and no image is provided, generate a detailed image generation prompt. - If image is provided, use it to
-generate the missing text fields.
-{{#if guidance}}
-  - Additional guidance:
-  {{#each guidance}}{{this}}{{#unless @last}}{{/unless}}{{/each}}
-{{/if}}
+Fill missing canvas card fields (title, body, image prompt) from the card's available text plus its attached image or video, if any. The response schema is built per request from only the missing fields; outputSchema shows the case where all three are missing.
 
-Return ONLY valid JSON matching this schema. Omit fields that were already present or cannot be generated.
+- **Template:** `src/prompt-templates/canvas-fill-card.ts`
+- **Model:** `gemini-4-hydrogen`
+- **Input → output:** mixed → json
+- **Sources:** `src/components/canvas/ai-helpers.ts`, `src/lib/actions/card-fill.ts`
+- **Categories:** canvas, mixed-to-json, field-completion
+
+## Slots
+
+| Slot | Type | Required | Multiple | Description |
+| --- | --- | --- | --- | --- |
+| `title` | text | no | no | Existing card title, if any. |
+| `body` | text | no | yes | Existing card body content. |
+| `imagePrompt` | text | no | yes | Existing image prompt text. |
+
+## Example: Missing Title
+
+Complete a shampoo concept card missing its title.
+
+### User
+
+```text
+I have a card with the following content:
+Title: (missing)
+Body: A rounded shampoo bottle inspired by eucalyptus leaves and smooth river stones.
+The pack should feel restorative, quiet, and premium without leaning overly clinical.
+Image Prompt: Studio render of a warm white matte shampoo bottle with a eucalyptus green cap.
+
+Please generate the missing fields based on the available information.
+- If title is missing, generate a short, catchy title (max 3 words).
+- If body is missing, generate a concise description (max 2 sentences).
+- If image prompt is missing and no image or video is provided, generate a detailed image generation prompt.
+- If image or video is provided, use it to generate the missing text fields.
+- Never generate or return video content.
+
+Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
+Example: {"title": "...", "body": "...", "imagePrompt": "..."}
 ```
 
-```json type=schema
+## Output schema
+
+```json
 {
   "type": "object",
   "properties": {
-    "title": { "type": "string" },
-    "body": { "type": "string" },
-    "imagePrompt": { "type": "string" }
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "imagePrompt": {
+      "type": "string"
+    }
   },
-  "additionalProperties": false
+  "required": [
+    "title",
+    "body",
+    "imagePrompt"
+  ]
 }
 ```
 
-```json type=defaults
-{
-  "title": "",
-  "body": [
-    "A rounded shampoo bottle inspired by eucalyptus leaves and smooth river stones.",
-    "The pack should feel restorative, quiet, and premium without leaning overly clinical."
-  ],
-  "imagePrompt": ["Studio render of a warm white matte shampoo bottle with a eucalyptus green cap."],
-  "imageStatus": "image ready",
-  "guidance": ["Prioritize a short brandable title."]
-}
-```
+## Presets
+
+- **Missing Title** — Complete a shampoo concept card missing its title.
+- **Missing Body** — Fill in descriptive copy for a mouthwash design card.
+- **Missing Image Prompt** — Generate a missing image prompt from card text for a refill concept.

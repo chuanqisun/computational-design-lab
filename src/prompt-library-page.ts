@@ -2,58 +2,12 @@ import { html, render } from "lit-html";
 import { repeat } from "lit-html/directives/repeat.js";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import "./prompt-library-page.css";
-import canvasBlendImagesTemplate from "./prompt-templates/canvas-blend-images";
-import canvasCaptionFromImageTemplate from "./prompt-templates/canvas-caption-from-image";
-import canvasDesignConceptsTemplate from "./prompt-templates/canvas-design-concepts";
-import canvasEnhanceImagePromptTemplate from "./prompt-templates/canvas-enhance-image-prompt";
-import canvasFillCardTemplate from "./prompt-templates/canvas-fill-card";
-import canvasGenerateImagePromptTemplate from "./prompt-templates/canvas-generate-image-prompt";
-import canvasGeneratePersonasTemplate from "./prompt-templates/canvas-generate-personas";
-import canvasRankDesignsTemplate from "./prompt-templates/canvas-rank-designs";
-import canvasScanConceptsTemplate from "./prompt-templates/canvas-scan-concepts";
-import canvasScanMoodsTemplate from "./prompt-templates/canvas-scan-moods";
-import canvasScanMoodsSupervisedTemplate from "./prompt-templates/canvas-scan-moods-supervised";
-import canvasVisualizeConceptTemplate from "./prompt-templates/canvas-visualize-concept";
-import type {
-  PromptSlotMetadata,
-  PromptTemplateModule,
-  PromptTemplatePreset,
-} from "./prompt-templates/prompt-template.types";
-import studioGenerateSoundDescriptionTemplate from "./prompt-templates/studio-generate-sound-description";
-import studioImportCanvasInstructionsTemplate from "./prompt-templates/studio-import-canvas-instructions";
-import studioReviseSceneXmlTemplate from "./prompt-templates/studio-revise-scene-xml";
-import studioScanProductFeaturesTemplate from "./prompt-templates/studio-scan-product-features";
-import studioStagePhotoSceneTemplate from "./prompt-templates/studio-stage-photo-scene";
-import studioSynthesizeSceneXmlTemplate from "./prompt-templates/studio-synthesize-scene-xml";
+import { promptTemplates, type TemplateItem, type TemplateRecord } from "./prompt-templates";
+import type { PromptSlotMetadata, PromptTemplatePreset } from "./prompt-templates/prompt-template.types";
 
-type TemplateRecord = PromptTemplateModule<Record<string, unknown>, string>;
 type SlotValue = string | string[] | number | boolean;
 
-interface TemplateItem {
-  id: string;
-  module: TemplateRecord;
-}
-
-const templates: TemplateItem[] = [
-  { id: "canvas-generate-image-prompt", module: canvasGenerateImagePromptTemplate as TemplateRecord },
-  { id: "canvas-enhance-image-prompt", module: canvasEnhanceImagePromptTemplate as TemplateRecord },
-  { id: "canvas-blend-images", module: canvasBlendImagesTemplate as TemplateRecord },
-  { id: "canvas-caption-from-image", module: canvasCaptionFromImageTemplate as TemplateRecord },
-  { id: "canvas-design-concepts", module: canvasDesignConceptsTemplate as TemplateRecord },
-  { id: "canvas-fill-card", module: canvasFillCardTemplate as TemplateRecord },
-  { id: "canvas-generate-personas", module: canvasGeneratePersonasTemplate as TemplateRecord },
-  { id: "canvas-rank-designs", module: canvasRankDesignsTemplate as TemplateRecord },
-  { id: "canvas-scan-concepts", module: canvasScanConceptsTemplate as TemplateRecord },
-  { id: "canvas-scan-moods-supervised", module: canvasScanMoodsSupervisedTemplate as TemplateRecord },
-  { id: "canvas-scan-moods", module: canvasScanMoodsTemplate as TemplateRecord },
-  { id: "canvas-visualize-concept", module: canvasVisualizeConceptTemplate as TemplateRecord },
-  { id: "canvas-to-studio-conversion", module: studioImportCanvasInstructionsTemplate as TemplateRecord },
-  { id: "studio-scan-product-features", module: studioScanProductFeaturesTemplate as TemplateRecord },
-  { id: "studio-synthesize-scene-xml", module: studioSynthesizeSceneXmlTemplate as TemplateRecord },
-  { id: "studio-revise-scene-xml", module: studioReviseSceneXmlTemplate as TemplateRecord },
-  { id: "studio-generate-sound-description", module: studioGenerateSoundDescriptionTemplate as TemplateRecord },
-  { id: "studio-stage-photo-scene", module: studioStagePhotoSceneTemplate as TemplateRecord },
-];
+const templates: TemplateItem[] = promptTemplates;
 
 const selectedTemplateId$ = new BehaviorSubject<string>(templates[0]?.id ?? "");
 const templateValues$ = new BehaviorSubject<Record<string, SlotValue>>({});

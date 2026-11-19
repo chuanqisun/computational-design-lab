@@ -1,5 +1,4 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
-import { toTextBlock } from "./prompt-template.utils";
 
 const outputSchema = {
   type: "object",
@@ -20,44 +19,53 @@ const outputSchema = {
 } as const;
 
 export interface CanvasScanConceptsVars {
-  instruction: string | string[];
+  instruction: string;
+  itemTexts: string[];
 }
 
 const canvasScanConceptsPresets = [
   {
     title: "Extract Bottle Cues",
-    description: "Pull key form and finish concepts from packaging references.",
+    description: "Pull key form concepts from shampoo packaging references (shape lens).",
     values: {
-      instruction: [
-        "Distill the key bottle form, finish, and brand mood concepts from the provided shampoo references.",
+      instruction: "Analyze the geometric shapes, contours, silhouettes, and profiles present in the selected items.",
+      itemTexts: [
+        "Eucalyptus Repair: A rounded shampoo bottle with a warm white matte body, eucalyptus green cap, and subtle spa-inspired restraint.",
+        "Soft Shoulder Ritual: A palm-friendly silhouette that makes restorative care feel premium and tactile.",
       ],
     },
   },
   {
     title: "Extract Oral Care Signals",
-    description: "Identify concepts that make mouthwash packaging feel trustworthy.",
+    description: "Identify how mouthwash packaging makes people feel (emotions lens).",
     values: {
-      instruction: [
-        "Identify the 3-5 strongest concepts that make the mouthwash references feel clinically trustworthy and easy to use.",
+      instruction:
+        "Analyze the selected items and describe how people feel when interacting with them. Focus on emotional responses, moods, and psychological impact.",
+      itemTexts: [
+        "Measured Clarity: A transparent mouthwash bottle built around trust, visible formula clarity, and an intuitive dosage cap.",
+        "Fresh Precision: Clinical geometry and crisp label architecture for a premium pharmacy shelf presence.",
       ],
     },
   },
   {
     title: "Extract Refill Ideas",
-    description: "Focus concept extraction on sustainability and ritual.",
+    description: "Focus concept extraction on refill behavior and ritual (interactions lens).",
     values: {
-      instruction: [
-        "Distill the key concepts around sustainability, refill behavior, and countertop desirability from these references.",
+      instruction:
+        "Describe how people interact with the selected items. Focus on gestures, ergonomics, and functional usage patterns.",
+      itemTexts: [
+        "Refill Ritual: A countertop-worthy shampoo refill pouch with pearl matte film and a translucent product window.",
+        "Countertop System: Reusable primary bottle plus elegant refill format designed for sustainable routines.",
       ],
     },
   },
 ];
 
-const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
+const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction" | "itemTexts"> = {
   metadata: {
     title: "Scan Concepts",
-    purpose: "Distill key concepts from referenced canvas items.",
-    sourceFiles: ["src/components/context-tray/llm/scan-concepts.ts"],
+    purpose: "Distill 3-5 key concepts from the selected canvas items (text and images) through a chosen scan lens.",
+    sourceFiles: ["src/components/context-tray/llm/scan-concepts.ts", "src/lib/actions/defs/generate.ts"],
     categories: ["canvas", "mixed-to-json", "concept-extraction"],
     inputType: "mixed",
     outputType: "json",
@@ -65,7 +73,15 @@ const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
     outputSchema,
     slots: {
       instruction: {
-        description: "User instruction that shapes the conceptual scan.",
+        description:
+          "Scan lens instruction (one of SCAN_LENSES in src/lib/actions/defs/generate.ts: emotions, associations, symbolism, shape, material, color, tactility, acoustics, interactions, narrative).",
+        required: true,
+        multiple: false,
+        type: "text",
+      },
+      itemTexts: {
+        description:
+          "One text part per selected item that has a body, formatted as `<title>: <body>`. Item images are sent as separate image parts, each placed before that item's text.",
         required: false,
         multiple: true,
         type: "text",
@@ -73,12 +89,9 @@ const template: PromptTemplateModule<CanvasScanConceptsVars, "instruction"> = {
     },
   },
   presets: canvasScanConceptsPresets,
-  template: ({ instruction }) => ({
-    developer: `Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear title and one short sentence description.
-
-Return ONLY valid JSON matching this schema:
-${JSON.stringify(outputSchema, null, 2)}`,
-    user: toTextBlock(instruction, "Distill key concepts from the provided references."),
+  template: ({ instruction = "", itemTexts = [] }) => ({
+    developer: `Analyze the provided input and distill 3-5 key concepts based on user instruction. Each concept should have a clear title and one short sentence description.`,
+    user: [instruction, ...itemTexts].join("\n\n"),
   }),
 };
 

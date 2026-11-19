@@ -8,15 +8,13 @@ const outputSchema = {
     body: { type: "string" },
     imagePrompt: { type: "string" },
   },
-  additionalProperties: false,
+  required: ["title", "body", "imagePrompt"],
 } as const;
 
 export interface CanvasFillCardVars {
   title: string;
   body: string | string[];
   imagePrompt: string | string[];
-  imageStatus: string;
-  guidance: string | string[];
 }
 
 const canvasFillCardPresets = [
@@ -30,8 +28,6 @@ const canvasFillCardPresets = [
         "The pack should feel restorative, quiet, and premium without leaning overly clinical.",
       ],
       imagePrompt: ["Studio render of a warm white matte shampoo bottle with a eucalyptus green cap."],
-      imageStatus: "image ready",
-      guidance: ["Prioritize a short brandable title."],
     },
   },
   {
@@ -43,8 +39,6 @@ const canvasFillCardPresets = [
       imagePrompt: [
         "Premium mouthwash bottle render, clear rectangular body, aqua rinse, white dosage cap, bright clinical studio lighting.",
       ],
-      imageStatus: "image ready",
-      guidance: ["Keep the body to two compact sentences and explain the dosage cap benefit."],
     },
   },
   {
@@ -57,20 +51,16 @@ const canvasFillCardPresets = [
         "Pearl matte film, a transparent fill window, and calm forest green accents make it feel elevated and sustainable.",
       ],
       imagePrompt: [],
-      imageStatus: "no image attached",
-      guidance: ["Include lighting, material finish, and camera angle in the generated prompt."],
     },
   },
 ];
 
-const template: PromptTemplateModule<
-  CanvasFillCardVars,
-  "title" | "body" | "imagePrompt" | "imageStatus" | "guidance"
-> = {
+const template: PromptTemplateModule<CanvasFillCardVars, "title" | "body" | "imagePrompt"> = {
   metadata: {
     title: "Fill Card Fields",
-    purpose: "Fill missing canvas card fields from the available text and image context.",
-    sourceFiles: ["src/components/canvas/ai-helpers.ts"],
+    purpose:
+      "Fill missing canvas card fields (title, body, image prompt) from the card's available text plus its attached image or video, if any. The response schema is built per request from only the missing fields; outputSchema shows the case where all three are missing.",
+    sourceFiles: ["src/components/canvas/ai-helpers.ts", "src/lib/actions/card-fill.ts"],
     categories: ["canvas", "mixed-to-json", "field-completion"],
     inputType: "mixed",
     outputType: "json",
@@ -95,37 +85,24 @@ const template: PromptTemplateModule<
         multiple: true,
         type: "text",
       },
-      imageStatus: {
-        description: "Whether an image is attached or missing.",
-        required: false,
-        multiple: false,
-        type: "text",
-      },
-      guidance: {
-        description: "Extra completion guidance beyond the built-in rules.",
-        required: false,
-        multiple: true,
-        type: "text",
-      },
     },
   },
   presets: canvasFillCardPresets,
-  template: ({ title, body, imagePrompt, imageStatus, guidance }) => ({
+  template: ({ title, body, imagePrompt }) => ({
     user: `I have a card with the following content:
 Title: ${title || "(missing)"}
 Body: ${toTextBlock(body, "(missing)")}
 Image Prompt: ${toTextBlock(imagePrompt, "(missing)")}
-Image Status: ${imageStatus || "(unknown)"}
 
 Please generate the missing fields based on the available information.
 - If title is missing, generate a short, catchy title (max 3 words).
 - If body is missing, generate a concise description (max 2 sentences).
-- If image prompt is missing and no image is provided, generate a detailed image generation prompt.
-- If image is provided, use it to generate the missing text fields.
-${toTextBlock(guidance) ? `- Additional guidance: ${toTextBlock(guidance)}` : ""}
+- If image prompt is missing and no image or video is provided, generate a detailed image generation prompt.
+- If image or video is provided, use it to generate the missing text fields.
+- Never generate or return video content.
 
-Return ONLY valid JSON matching this schema. Omit fields that were already present or cannot be generated.
-${JSON.stringify(outputSchema, null, 2)}`,
+Return ONLY a JSON object with the generated fields. Do not include fields that were already present or that cannot be generated.
+Example: {"title": "...", "body": "...", "imagePrompt": "..."}`,
   }),
 };
 

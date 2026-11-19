@@ -1,5 +1,4 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
-import { toTextBlock } from "./prompt-template.utils";
 
 const outputSchema = {
   type: "object",
@@ -7,16 +6,22 @@ const outputSchema = {
     prompts: {
       type: "array",
       items: { type: "string" },
+      maxItems: 3,
     },
   },
   required: ["prompts"],
 } as const;
 
+// Mirrors VISUALIZE_STYLES in src/lib/actions/defs/generate.ts.
+const VISUALIZE_ABSTRACT =
+  "Create abstract, artistic visualizations that capture the essence of the concept in non-literal, symbolic ways. Use diverse artistic styles, colors, and compositions to represent ideas metaphorically.";
+const VISUALIZE_CONCRETE =
+  "Create concrete, realistic visualizations that depict the concept in literal, tangible forms. Focus on detailed, lifelike representations that show the concept as it might appear in reality.";
+
 export interface CanvasVisualizeConceptVars {
   conceptTitle: string;
-  conceptDescription: string | string[];
-  instruction: string | string[];
-  maxPrompts: number;
+  conceptDescription: string;
+  instruction: string;
 }
 
 const canvasVisualizeConceptPresets = [
@@ -24,51 +29,43 @@ const canvasVisualizeConceptPresets = [
     title: "Visualize Shampoo Concept",
     description: "Create render prompts from a botanical shampoo concept.",
     values: {
-      conceptTitle: "Eucalyptus Repair",
-      conceptDescription: [
-        "A rounded shampoo bottle with a soft shoulder profile, matte warm white body, and eucalyptus green cap.",
-        "The concept should feel restorative, calm, and premium with subtle spa references.",
-      ],
-      instruction: ["Generate premium studio render prompts with restrained styling and beauty-ad polish."],
-      maxPrompts: 3,
+      conceptTitle: "Selected Concept",
+      conceptDescription:
+        "A rounded shampoo bottle with a soft shoulder profile, matte warm white body, and eucalyptus green cap. The concept should feel restorative, calm, and premium with subtle spa references.",
+      instruction: VISUALIZE_CONCRETE,
     },
   },
   {
     title: "Visualize Mouthwash Concept",
     description: "Create prompts from a clinical mouthwash concept.",
     values: {
-      conceptTitle: "Measured Clarity",
-      conceptDescription: [
-        "A transparent mouthwash bottle with beveled shoulders, visible aqua formula, and a measured dosage cap.",
-        "The design communicates trust, freshness, and controlled use.",
-      ],
-      instruction: ["Generate clean commercial prompts with crisp lighting and front-label legibility."],
-      maxPrompts: 3,
+      conceptTitle: "Selected Concept",
+      conceptDescription:
+        "A transparent mouthwash bottle with beveled shoulders, visible aqua formula, and a measured dosage cap. The design communicates trust, freshness, and controlled use.",
+      instruction: VISUALIZE_CONCRETE,
     },
   },
   {
     title: "Visualize Refill Concept",
     description: "Create prompts from a refill-first packaging concept.",
     values: {
-      conceptTitle: "Refill Ritual",
-      conceptDescription: [
-        "A pearl matte shampoo refill pouch intended to sit visibly on a bathroom shelf.",
-        "It balances sustainability with premium editorial appeal and quiet color blocking.",
-      ],
-      instruction: ["Generate prompts that make the pouch feel elevated, tactile, and environmentally considered."],
-      maxPrompts: 4,
+      conceptTitle: "Selected Concept",
+      conceptDescription:
+        "A pearl matte shampoo refill pouch intended to sit visibly on a bathroom shelf. It balances sustainability with premium editorial appeal and quiet color blocking.",
+      instruction: VISUALIZE_ABSTRACT,
     },
   },
 ];
 
 const template: PromptTemplateModule<
   CanvasVisualizeConceptVars,
-  "conceptTitle" | "conceptDescription" | "instruction" | "maxPrompts"
+  "conceptTitle" | "conceptDescription" | "instruction"
 > = {
   metadata: {
     title: "Visualize Concept",
-    purpose: "Generate multiple image-generation prompts that visualize a concept and its instruction.",
-    sourceFiles: ["src/components/context-tray/llm/visualize-concept.ts"],
+    purpose:
+      "Generate up to 3 image-generation prompts that visualize the selected cards' text in an abstract or concrete style; each prompt is then rendered with the image model.",
+    sourceFiles: ["src/components/context-tray/llm/visualize-concept.ts", "src/lib/actions/defs/generate.ts"],
     categories: ["canvas", "text-to-json", "image-prompt-generation"],
     inputType: "text",
     outputType: "json",
@@ -76,43 +73,40 @@ const template: PromptTemplateModule<
     outputSchema,
     slots: {
       conceptTitle: {
-        description: "Concept title.",
+        description: 'Concept title. The visualize_concept action always passes "Selected Concept".',
         required: true,
         multiple: false,
         type: "text",
       },
       conceptDescription: {
-        description: "Expanded concept description.",
-        required: false,
-        multiple: true,
+        description: "Body text of all selected cards that have text, joined with a single space.",
+        required: true,
+        multiple: false,
         type: "text",
       },
       instruction: {
-        description: "User instruction for how to interpret the concept visually.",
-        required: false,
-        multiple: true,
-        type: "text",
-      },
-      maxPrompts: {
-        description: "Upper bound on generated render prompts.",
-        required: false,
+        description:
+          "Style instruction from VISUALIZE_STYLES in src/lib/actions/defs/generate.ts (abstract or concrete), chosen by the action's style argument.",
+        required: true,
         multiple: false,
-        type: "number",
+        type: "text",
       },
     },
   },
   presets: canvasVisualizeConceptPresets,
-  template: ({ conceptTitle = "", conceptDescription, instruction, maxPrompts = 3 }) => ({
+  template: ({ conceptTitle = "", conceptDescription = "", instruction = "" }) => ({
     user: `Create detailed prompts for image generation based on the following concept and instruction.
 
 Concept: ${conceptTitle}
-Description: ${toTextBlock(conceptDescription)}
-Instruction: ${toTextBlock(instruction)}
+Description: ${conceptDescription}
+Instruction: ${instruction}
 
-Generate up to ${maxPrompts} vivid, detailed descriptions suitable for an AI image generator. Capture diverse elements of the concept following the instruction. Each prompt covers subject, scene, style.
+Generate up to 3 vivid, detailed descriptions suitable for an AI image generator. Capture diverse elements of the concept following the instruction. Each prompt covers subject, scene, style.
 
-Return ONLY valid JSON matching this schema:
-${JSON.stringify(outputSchema, null, 2)}`,
+Respond in JSON format:
+{
+  "prompts": ["prompt1", "prompt2", "prompt3"]
+}`,
   }),
 };
 

@@ -1,4 +1,5 @@
 import type { PromptTemplateModule } from "./prompt-template.types";
+import { colorsByName, materialsById, mechanismsById, shapesById } from "../lib/studio-utils";
 import { toTextBlock } from "./prompt-template.utils";
 
 export interface StudioSynthesizeSceneXmlVars {
@@ -8,29 +9,63 @@ export interface StudioSynthesizeSceneXmlVars {
   brandGuide?: string | string[];
 }
 
-const shampooSelectionJson = `{
-  "shapes": ["Tall rounded bottle", "Soft shoulder silhouette"],
-  "materials": ["PET", "PP cap"],
-  "surfaceOptions": ["Soft-touch matte label", "Satin cap"],
-  "mechanisms": ["Flip-top cap"],
-  "colors": ["Warm white", "Eucalyptus green"]
-}`;
+// Mirrors the selection payload built in synthesize() (src/lib/studio-ai.ts).
+const toSelectionJson = (picked: {
+  colors: string[];
+  materials: string[];
+  surfaceOptions: string[];
+  mechanisms: string[];
+  shapes: string[];
+}) =>
+  JSON.stringify(
+    {
+      colors: picked.colors.map((name) => {
+        const c = colorsByName.get(name);
+        return c ? { name: c.name, hex: c.hex } : { name, hex: "unknown" };
+      }),
+      materials: picked.materials.map((id) => {
+        const m = materialsById.get(id);
+        return m
+          ? { name: m.name, visual: m.visual, surfaceOptions: m.surfaceOptions, colorOptions: m.colorOptions }
+          : { name: id };
+      }),
+      surfaceOptions: picked.surfaceOptions,
+      mechanisms: picked.mechanisms.map((id) => {
+        const m = mechanismsById.get(id);
+        return m ? { name: m.name, interaction: m.interaction } : { name: id };
+      }),
+      shapes: picked.shapes.map((id) => {
+        const s = shapesById.get(id);
+        return s ? { name: s.name, description: s.description } : { name: id };
+      }),
+    },
+    null,
+    2,
+  );
 
-const mouthwashSelectionJson = `{
-  "shapes": ["Rectangular bottle", "Beveled shoulder"],
-  "materials": ["Clear PET", "PP dosing cap"],
-  "surfaceOptions": ["Gloss bottle", "Matte label"],
-  "mechanisms": ["Measured dosage cap"],
-  "colors": ["Clear", "Aqua", "White"]
-}`;
+const shampooSelectionJson = toSelectionJson({
+  colors: ["White", "Sea Green"],
+  materials: ["colored-hdpe"],
+  surfaceOptions: ["Soft-touch", "Matte"],
+  mechanisms: ["flip-top-cap"],
+  shapes: ["cosmo-oval"],
+});
 
-const refillSelectionJson = `{
-  "shapes": ["Stand-up refill pouch", "Compact screw closure"],
-  "materials": ["Flexible mono-material film"],
-  "surfaceOptions": ["Matte pouch", "Clear product window"],
-  "mechanisms": ["Screw cap"],
-  "colors": ["Pearl white", "Deep forest green"]
-}`;
+const mouthwashSelectionJson = toSelectionJson({
+  colors: ["Aqua", "White"],
+  materials: ["clear-pet"],
+  surfaceOptions: ["High gloss"],
+  mechanisms: ["continuous-thread-screw-cap"],
+  shapes: ["beveled-rectangle"],
+});
+
+const refillSelectionJson = toSelectionJson({
+  colors: ["Floral White", "Forest Green"],
+  materials: ["colored-hdpe"],
+  surfaceOptions: ["Matte", "Easy-grip texture"],
+  mechanisms: ["continuous-thread-screw-cap"],
+  shapes: ["f-style"],
+});
 
 const system = `You are a product visualization scene generator. Output valid XML and nothing else. Do not wrap the output in markdown code blocks. Do not include any explanation or commentary.
 
@@ -106,32 +141,37 @@ const template: PromptTemplateModule<
     title: "Generate Scene XML",
     purpose:
       "Generate a complete product visualization scene XML from selected attributes, optional photos, and custom instructions.",
-    sourceFiles: ["src/lib/studio-ai.ts", "src/studio-page.ts"],
+    sourceFiles: [
+      "src/lib/studio-ai.ts",
+      "src/components/center-panel/center-panel.component.ts",
+      "src/studio-page.ts",
+    ],
     categories: ["studio", "mixed-to-xml", "scene-synthesis"],
     inputType: "mixed",
     outputType: "xml",
     model: "gemini-4-hydrogen",
     slots: {
       selectionJson: {
-        description: "Serialized material, shape, mechanism, color, and surface selections.",
+        description:
+          "Pretty-printed JSON of the picked colors, materials, surfaceOptions, mechanisms, and shapes, expanded with library details.",
         required: true,
         multiple: false,
         type: "json",
       },
       photoCount: {
-        description: "How many reference photos are attached.",
+        description: "How many scanned reference photos are attached as image parts before the text.",
         required: false,
         multiple: false,
         type: "number",
       },
       customInstructions: {
-        description: "Optional user instructions or imported canvas guidance.",
+        description: "Optional user instructions (may be prefilled by Import from Canvas in src/studio-page.ts).",
         required: false,
         multiple: true,
         type: "text",
       },
       brandGuide: {
-        description: "Optional brand guidelines to follow in the system prompt.",
+        description: "Optional synthesis brand guide appended to the system prompt.",
         required: false,
         multiple: true,
         type: "text",
@@ -140,7 +180,7 @@ const template: PromptTemplateModule<
   },
   presets: studioSynthesizeSceneXmlPresets,
   template: ({ selectionJson = "{}", photoCount = 0, customInstructions, brandGuide }) => ({
-    system: toTextBlock(brandGuide)
+    developer: toTextBlock(brandGuide)
       ? `${system}\n\nFollow this brand guide when making design, styling, material, color, and scene decisions:\n${toTextBlock(brandGuide)}`
       : system,
     user: `Given the following design selections, generate the scene XML.
