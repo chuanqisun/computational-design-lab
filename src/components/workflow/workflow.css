@@ -68,44 +68,81 @@
   gap: 0.5ch;
 }
 
-.activity-mini li,
+/* The global `input { width: 100% }` rule must not stretch checkboxes in these rows. */
+.workflow-dialog,
+.agent-status-popover {
+  input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    margin: 0;
+    flex: none;
+  }
+
+  time {
+    white-space: nowrap;
+  }
+}
+
 .wf-timeline li {
   display: grid;
   gap: 0.5ch;
+  padding: 0.25ch 0;
+  border-bottom: 1px solid #f0f0f0;
 
   label {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto minmax(14ch, auto) 1fr auto;
     align-items: baseline;
     gap: 1ch;
+    color: inherit;
+    cursor: pointer;
   }
 
   .summary {
-    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  &.status-error .summary,
-  .summary.error {
-    color: #b00020;
-  }
-
-  &.status-running .summary,
-  .summary.running {
-    opacity: 0.6;
+  .thumbs {
+    padding-left: 3ch;
   }
 
   time {
     opacity: 0.6;
     font-size: 0.85em;
   }
+
+  &.status-error .summary {
+    color: #b00020;
+  }
+
+  &.status-running .summary {
+    opacity: 0.6;
+  }
 }
 
 .activity-mini li {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
   align-items: baseline;
   gap: 1ch;
+
+  .summary {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.error {
+      color: #b00020;
+    }
+
+    &.running {
+      opacity: 0.6;
+    }
+  }
 }
 
 .thumbs {
@@ -204,6 +241,12 @@
       display: flex;
       align-items: center;
       gap: 1ch;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.5ch;
+      }
     }
 
     label {
