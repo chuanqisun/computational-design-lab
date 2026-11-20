@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && npm run build:apps && npm run build:prompt-library",
+    "build": "tsc && npm run build:apps && npm run build:prompt-library && npm run build:canvas-guide",
     "build:apps": "vite build",
     "build:prompt-library": "vite build --config vite-prompt-library.config.ts --emptyOutDir=false",
+    "build:canvas-guide": "vite build --config vite-canvas-guide.config.ts --emptyOutDir=false",
     "preview": "vite preview",
     "test": "vitest run",
     "test:live": "vitest run --config vitest.live.config.ts"
