@@ -59,8 +59,28 @@ Vite serves the multi-page app under the `/computational-design-lab/` base path 
 - **Multi-page Vite app:** Entry points are defined in `vite.config.ts` (`canvas.html`, `studio.html`, plus legacy/experimental `index.html` and `wizard.html`). `canvas-guide.html` and `prompt-library.html` are built separately with `vite-plugin-singlefile` so each can be shared or opened as a self-contained HTML artifact.
 - **Reactive components (`src/sdk/`):** UI components are built with `createComponent` (`src/sdk/create-component.ts`), which pairs `lit-html` templates with `rxjs` streams (`BehaviorSubject` / `Observable`) via a custom `observe()` directive (`src/sdk/observe-directive.ts`).
 - **Custom Elements for media:** `<generative-image>` (`src/components/generative-image/`) and `<generative-video>` (`src/components/generative-video/`) encapsulate Gemini image/video generation and caching behind standard Web Component tags.
-- **Client-side persistence:** Application state lives in IndexedDB (`src/components/connections/storage.ts` → `moodboard-db` for Canvas cards; `src/lib/persistence.ts` → `computational-design-lab-persistence` for Studio state, action logs, and cached media blobs) and `localStorage` (API keys and Canvas viewport center).
 - **Centralized model configuration:** All Gemini model IDs and thinking levels are declared in `src/lib/gemini-models.ts` (covering text/reasoning, the Auto-Iterate agent, image generation/editing, video generation, Gemini Live audio, and the Decisions API).
+
+### Persistence & Data Loss Risk
+
+> [!WARNING]
+> **All user data is stored strictly in the local browser (`IndexedDB` and `localStorage`) — there is no backend database, cloud sync, or automatic backup.**
+
+| Storage | Keys / Databases | What is stored |
+| --- | --- | --- |
+| **`IndexedDB`** (`moodboard-db`) | `items` | Canvas cards, metadata, and generated card media (`src/components/connections/storage.ts`). |
+| **`IndexedDB`** (`computational-design-lab-persistence`) | `keyval`, `image-cache` | Photo Studio selections, XML synthesis output, photo gallery, cached image/video blobs, and Canvas action logs (`src/lib/persistence.ts`). |
+| **`localStorage`** | `moodboard-ai-api-keys`, `moodboard-viewport-center` | Gemini API key and last Canvas viewport position (`src/components/connections/storage.ts`). |
+
+**Implications & data loss risks in the current version:**
+
+- **Clearing browser data** (cookies/site data/cache) permanently deletes all boards, Studio projects, workflows, and generated images/videos.
+- **Private / Incognito windows** discard all stored state as soon as the session closes.
+- **No cross-device or cross-browser sync:** Data is scoped to a single browser profile and origin (`localhost` vs. GitHub Pages do not share data).
+- **Browser storage eviction:** Under disk pressure or storage quota limits, browsers may evict `IndexedDB` data without warning, especially when many high-resolution images or video clips are cached.
+- **No undo across resets:** Destructive actions such as Canvas **Destroy** or Studio **Clear input** immediately overwrite local persistence.
+
+Export or download important generated assets locally rather than relying on the browser as long-term storage.
 
 ---
 
@@ -165,7 +185,7 @@ Today, the repository deploys as a **fully static site** to GitHub Pages via `.g
 
 - There is **no backend server** and **no user authentication**.
 - Each user brings their own Gemini API key (**BYOK**), stored in browser `localStorage`, and all `@google/genai` requests are sent directly from the browser to Google's APIs.
-- All boards, studio states, and generated media are persisted locally in the user's browser (IndexedDB).
+- All boards, studio states, and generated media are persisted **only in the user's browser (`IndexedDB` / `localStorage`)**—see [Persistence & Data Loss Risk](#persistence--data-loss-risk) above. Clearing site data, using incognito mode, or switching devices will lose all work.
 
 ### Workshops & Short-Term Demos
 
