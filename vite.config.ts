@@ -17,6 +17,7 @@ export default defineConfig({
         canvas: resolve(__dirname, "canvas.html"),
         wizard: resolve(__dirname, "wizard.html"),
         studio: resolve(__dirname, "studio.html"),
+        "canvas-guide": resolve(__dirname, "canvas-guide.html"),
       },
     },
   },
