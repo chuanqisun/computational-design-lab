@@ -218,6 +218,28 @@ generative-image {
   gap: 1ch;
 }
 
+.app-header__left {
+  display: flex;
+  align-items: baseline;
+  gap: 2ch;
+}
+
+.app-header__nav {
+  display: flex;
+  gap: 1ch;
+}
+
+.app-header__nav a {
+  color: #666;
+  text-decoration: none;
+}
+
+.app-header__nav a:hover,
+.app-header__nav a:focus-visible {
+  color: black;
+  text-decoration: underline;
+}
+
 .app-header__right {
   display: flex;
   align-items: baseline;

@@ -57,6 +57,10 @@ export const ContextTrayComponent = createComponent(
             <div class="tool-body">${captureToolUI}</div>
             <div class="tool-body">${newPromptToolUI}</div>
           </section>
+          <section class="tool-section">
+            <h2>Canvas</h2>
+            <div class="tool-body">${canvasToolUI}</div>
+          </section>
           ${section("visualize_concept", "Visualize", visualizeUI)}
           ${section("scan_concept", "Scan", conceptualScanUI)}
           ${section("blend_images", "Blend", blendToolUI)}
@@ -78,10 +82,6 @@ export const ContextTrayComponent = createComponent(
             html`<div class="media-tools">${sketchToolUI}${animateToolUI}</div>`,
             isTrayVisible(runtime, "edit_image") || isTrayVisible(runtime, "animate"),
           )}
-          <section class="tool-section">
-            <h2>Canvas</h2>
-            <div class="tool-body">${canvasToolUI}</div>
-          </section>
           <section class="tool-section">
             <h2>Workflow</h2>
             <div class="tool-body">${workflowUI}</div>

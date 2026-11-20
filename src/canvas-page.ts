@@ -205,7 +205,13 @@ const Main = createComponent(() => {
 
   const template$ = of(html`
     <header class="app-header">
-      <h1>Computational Mood Board</h1>
+      <div class="app-header__left">
+        <h1>Computational Mood Board</h1>
+        <nav class="app-header__nav">
+          <a href="prompt-library.html" target="_blank">Prompts</a>
+          <a href="canvas-guide.html" target="_blank">Help</a>
+        </nav>
+      </div>
       <div class="app-header__right">
         ${observe(progressText)}
         ${observe(
