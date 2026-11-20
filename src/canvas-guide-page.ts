@@ -11,7 +11,7 @@ interface GuideEntry {
   needs: string;
   what: string;
   how: string;
-  /** File in public/canvas-guide/ (without extension). Omitted when the feature cannot be recorded. */
+  /** File in src/canvas-guide-clips/ (without extension). Omitted when the feature cannot be recorded. */
   clip?: string;
   note?: string;
 }
@@ -184,7 +184,9 @@ const entries: GuideEntry[] = [
 ];
 
 const sections = [...new Set(entries.map((entry) => entry.section))];
-const clipUrl = (clip: string) => `${import.meta.env.BASE_URL}canvas-guide/${clip}.mp4`;
+// Imported as assets so the single-file build (vite-canvas-guide.config.ts) inlines them as data URIs.
+const clipUrls = import.meta.glob<string>("./canvas-guide-clips/*.mp4", { eager: true, query: "?url", import: "default" });
+const clipUrl = (clip: string) => clipUrls[`./canvas-guide-clips/${clip}.mp4`];
 const entryFromHash = () => entries.find((entry) => `#${entry.id}` === location.hash) ?? entries[0];
 
 const selected$ = new BehaviorSubject<GuideEntry>(entryFromHash());
