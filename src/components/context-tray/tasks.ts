@@ -15,16 +15,6 @@ export const stopAllTasks = () => {
   stop$.next();
 };
 
-/** AbortSignal that aborts on the next `stop$` emission. */
-export const createAbortSignal = (): AbortSignal => {
-  const controller = new AbortController();
-  const sub = stop$.subscribe(() => {
-    controller.abort();
-    sub.unsubscribe();
-  });
-  return controller.signal;
-};
-
 export const taskRunner$ = taskQueue$.pipe(
   mergeMap((task$) =>
     task$.pipe(

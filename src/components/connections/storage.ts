@@ -17,10 +17,6 @@ export function loadApiKeys(): ApiKeys {
   return stored ? JSON.parse(stored) : {};
 }
 
-export function clearApiKeys(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 export interface ViewportCenter {
   centerX: number;
   centerY: number;
@@ -46,10 +42,6 @@ interface MoodboardDB extends DBSchema {
     key: string;
     value: CanvasItem[];
   };
-  "material-page": {
-    key: string;
-    value: MaterialPageState;
-  };
 }
 
 const DB_NAME = "moodboard-db";
@@ -67,12 +59,6 @@ function getDB(): Promise<IDBPDatabase<MoodboardDB>> {
             db.deleteObjectStore("items");
           }
           db.createObjectStore("items");
-        }
-
-        if (oldVersion < 2) {
-          if (!db.objectStoreNames.contains("material-page")) {
-            db.createObjectStore("material-page");
-          }
         }
       },
     });
@@ -93,49 +79,5 @@ export async function loadCanvasItems(): Promise<CanvasItem[]> {
   } catch (error) {
     console.error("Failed to load canvas items:", error);
     return [];
-  }
-}
-
-export async function clearCanvasItems(): Promise<void> {
-  const db = await getDB();
-  await db.delete("items", CANVAS_ITEMS_KEY);
-}
-
-// Material page persistence
-export interface MaterialPageState {
-  selectedComponents: {
-    shape: string | null;
-    cap: string | null;
-    material: string | null;
-    surface: string | null;
-  };
-  capColor: string;
-  previews: Array<{
-    type: "image" | "video";
-    prompt: string;
-    model: string;
-    width?: string;
-    height?: string;
-    aspectRatio?: string;
-    startFrame?: string;
-    componentIds?: number[];
-  }>;
-}
-
-const MATERIAL_STATE_KEY = "material-page-state";
-
-export async function saveMaterialPageState(state: MaterialPageState): Promise<void> {
-  const db = await getDB();
-  await db.put("material-page", state, MATERIAL_STATE_KEY);
-}
-
-export async function loadMaterialPageState(): Promise<MaterialPageState | null> {
-  try {
-    const db = await getDB();
-    const state = await db.get("material-page", MATERIAL_STATE_KEY);
-    return state || null;
-  } catch (error) {
-    console.error("Failed to load material page state:", error);
-    return null;
   }
 }

@@ -29,14 +29,14 @@ import studioSynthesizeSceneXmlTemplate from "./studio-synthesize-scene-xml";
 export type TemplateRecord = PromptTemplateModule<Record<string, unknown>, string>;
 
 export interface TemplateItem {
-  /** Matches the module's file name (and its generated doc in docs/prompts/templates). */
+  /** Matches the module's file name. */
   id: string;
   module: TemplateRecord;
 }
 
 /**
  * Every prompt the canvas and photo/video studio apps send. Only prompts reachable from those apps belong
- * here. Docs in docs/prompts are generated from this list (see prompt-templates.test.ts).
+ * here.
  */
 export const promptTemplates: TemplateItem[] = [
   // Canvas

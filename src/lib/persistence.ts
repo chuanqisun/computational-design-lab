@@ -46,12 +46,6 @@ export async function setCachedImage(key: string, url: string): Promise<void> {
   return void (await dbPromise).put(IMAGE_CACHE_STORE, url, key);
 }
 
-export async function clearAllPersistence(): Promise<void> {
-  const db = await dbPromise;
-  await db.clear(STORE_NAME);
-  await db.clear(IMAGE_CACHE_STORE);
-}
-
 export async function clearPersistenceExcept(excludeKeys: string[]): Promise<void> {
   const db = await dbPromise;
   const allKeys = await db.getAllKeys(STORE_NAME);

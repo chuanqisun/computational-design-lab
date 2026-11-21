@@ -47,8 +47,7 @@ Vite serves the multi-page app under the `/computational-design-lab/` base path 
 | `npm run dev` | Start the Vite dev server with HMR. |
 | `npm run build` | Type-check (`tsc`), build the multi-page apps (`build:apps`), and build standalone single-file bundles for `prompt-library.html` and `canvas-guide.html` into `dist/`. |
 | `npm run preview` | Preview the production `dist/` build locally. |
-| `npm test` | Run Vitest unit tests (excludes `*.live.test.ts`). Also verifies that `docs/prompts/` matches `src/prompt-templates/`. |
-| `npx vitest run -u` | Regenerate `docs/prompts/` snapshots after modifying any prompt template. |
+| `npm test` | Run Vitest unit tests (excludes `*.live.test.ts`), including prompt-template checks. |
 | `npm run test:live` | Run live integration spot tests (`src/**/*.live.test.ts`) against the Gemini API. Reads `GEMINI_API_KEY` from `.env` (tests skip if unset). |
 
 ---
@@ -57,7 +56,7 @@ Vite serves the multi-page app under the `/computational-design-lab/` base path 
 
 ### UI & State Stack
 
-- **Multi-page Vite app:** Entry points are defined in `vite.config.ts` (`index.html` landing page linking to `concept.html`, `canvas.html`, `studio.html`, and `wizard.html`). `canvas-guide.html` and `prompt-library.html` are built separately with `vite-plugin-singlefile` so each can be shared or opened as a self-contained HTML artifact.
+- **Multi-page Vite app:** Entry points are defined in `vite.config.ts` (`index.html` landing page linking to `canvas.html` and `studio.html`). `canvas-guide.html` and `prompt-library.html` are built separately with `vite-plugin-singlefile` so each can be shared or opened as a self-contained HTML artifact.
 - **Reactive components (`src/sdk/`):** UI components are built with `createComponent` (`src/sdk/create-component.ts`), which pairs `lit-html` templates with `rxjs` streams (`BehaviorSubject` / `Observable`) via a custom `observe()` directive (`src/sdk/observe-directive.ts`).
 - **Custom Elements for media:** `<generative-image>` (`src/components/generative-image/`) and `<generative-video>` (`src/components/generative-video/`) encapsulate Gemini image/video generation and caching behind standard Web Component tags.
 - **Centralized model configuration:** All Gemini model IDs and thinking levels are declared in `src/lib/gemini-models.ts` (covering text/reasoning, the Auto-Iterate agent, image generation/editing, video generation, Gemini Live audio, and the Decisions API).
@@ -128,12 +127,12 @@ Photo Studio is a structured product-design and photo/video staging environment 
 - **What it is:** A standalone, hash-routed reference guide (`src/canvas-guide-page.ts`) documenting every Canvas tool with **What it does**, **How it works**, **Requires**, and looping `.mp4` walkthroughs (`src/canvas-guide-clips/`).
 - **Packaging:** Built via `vite-canvas-guide.config.ts` using `vite-plugin-singlefile`, which inlines CSS, JS, and video clips as data URIs into a single portable `dist/canvas-guide.html`. Linked directly from the **Help** link in the Canvas header.
 
-### Prompt Library (`prompt-library.html`, `src/prompt-templates/`, `docs/prompts/`)
+### Prompt Library (`prompt-library.html`, `src/prompt-templates/`)
 
 - **Audience:** Developers and AI engineers auditing prompts, migrating models, or porting workflows to other platforms (e.g., Vertex AI, LangChain, internal services, or other model providers).
 - **Source of truth:** Every LLM prompt used by Canvas and Photo Studio is defined as a typed template module in `src/prompt-templates/` (`canvas-*.ts` and `studio-*.ts`) with metadata (model, input/output types, slots, JSON output schema, source file references) and example presets.
 - **Interactive browser:** `prompt-library.html` (`src/prompt-library-page.ts`, built as a single-file bundle via `vite-prompt-library.config.ts`) lets you browse templates, tweak slot values or switch presets, inspect rendered system/user prompts and JSON schemas, and copy them cleanly. Linked from the **Prompts** link in the Canvas header.
-- **Drift protection & Markdown export:** `src/prompt-templates/prompt-templates.test.ts` ensures every template references a valid model from `src/lib/gemini-models.ts` and existing source files, and snapshots generated Markdown documentation into `docs/prompts/README.md` and `docs/prompts/templates/*.md`. Run `npx vitest run -u` to update the Markdown docs whenever you change a template.
+- **Drift protection:** `src/prompt-templates/prompt-templates.test.ts` ensures every template is registered, renders with its presets, and references a valid model from `src/lib/gemini-models.ts` and existing source files.
 
 ---
 
@@ -145,10 +144,7 @@ Photo Studio is a structured product-design and photo/video staging environment 
 ├── studio.html                     # Photo Studio app entry point
 ├── canvas-guide.html               # Human-facing Canvas guide (single-file build)
 ├── prompt-library.html             # Interactive Prompt Library (single-file build)
-├── index.html                      # Landing page linking to the apps
-├── concept.html / wizard.html      # Concept and Wizard prototypes
-├── docs/
-│   └── prompts/                    # Auto-generated Markdown prompt inventory
+├── index.html                      # Landing page linking to Canvas and Studio
 ├── src/
 │   ├── canvas-page.ts              # Canvas bootstrap, IndexedDB sync, layout
 │   ├── studio-page.ts              # Photo Studio bootstrap, scan pipeline, canvas import

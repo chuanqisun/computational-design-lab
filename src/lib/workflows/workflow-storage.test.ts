@@ -3,11 +3,11 @@ import {
   allowsClearCanvas,
   deleteWorkflow,
   getActiveWorkflowId,
-  importAgentsMd,
   loadWorkflows,
   saveWorkflow,
   setActiveWorkflow,
   validateAgentsMd,
+  workflowNameFromMd,
 } from "./workflow-storage";
 
 const memoryStore = () => {
@@ -24,7 +24,8 @@ describe("workflow storage", () => {
     const store = memoryStore();
     const saved = saveWorkflow({ name: "A", agentsMd: "# A" }, store, 1);
     saveWorkflow({ id: saved.id, name: "A2", agentsMd: "# A2" }, store, 2);
-    const imported = importAgentsMd("# Moody chairs\n\nBody", store);
+    const md = "# Moody chairs\n\nBody";
+    const imported = saveWorkflow({ name: workflowNameFromMd(md), agentsMd: md }, store);
     expect(imported.name).toBe("Moody chairs");
     expect(loadWorkflows(store).map((w) => w.name)).toEqual(["A2", "Moody chairs"]);
     expect(loadWorkflows(store)[0]).toMatchObject({ createdAt: 1, updatedAt: 2 });

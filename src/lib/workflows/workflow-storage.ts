@@ -96,10 +96,6 @@ export function workflowNameFromMd(md: string, fallback = "Imported workflow"): 
   return /^#\s+(.+)$/m.exec(md)?.[1]?.trim() || fallback;
 }
 
-export function importAgentsMd(md: string, store: KeyValueStore = defaultStore()): SavedWorkflow {
-  return saveWorkflow({ name: workflowNameFromMd(md), agentsMd: md }, store);
-}
-
 export function exportAgentsMd(workflow: SavedWorkflow): void {
   const blob = new Blob([workflow.agentsMd], { type: "text/markdown" });
   const url = URL.createObjectURL(blob);

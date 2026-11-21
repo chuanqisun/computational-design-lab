@@ -1,4 +1,4 @@
-import { BehaviorSubject, combineLatest, map } from "rxjs";
+import { BehaviorSubject, map } from "rxjs";
 import type { ActionRecord } from "./action-log";
 import { BUILT_IN_WORKFLOWS } from "./builtin-workflows";
 import { compileTrace } from "./compile-trace";
@@ -37,10 +37,6 @@ export const workflows$ = saved$.pipe(
     ...BUILT_IN_WORKFLOWS,
     ...saved.map((workflow) => ({ ...workflow, builtIn: false, summary: summaryOf(workflow.agentsMd) })),
   ]),
-);
-
-export const activeWorkflow$ = combineLatest([workflows$, activeWorkflowId$]).pipe(
-  map(([workflows, id]) => workflows.find((workflow) => workflow.id === id) ?? null),
 );
 
 const refresh = () => {
