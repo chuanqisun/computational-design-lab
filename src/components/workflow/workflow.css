@@ -1,14 +1,5 @@
 /* Shared pieces --------------------------------------------------------- */
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .workflow-section,
 .app-dialog {
   /* The global `input { width: 100% }` rule must not stretch checkboxes and radios. */

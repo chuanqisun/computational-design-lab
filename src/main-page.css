@@ -298,18 +298,6 @@ generative-image {
       opacity: 0.9;
     }
   }
-
-  .preview-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: calc(4 * var(--spacing-unit));
-  }
-
-  .preview-column {
-    min-height: 40ch;
-    border: 1px solid #eee;
-    background: #fafafa;
-  }
 }
 
 /* Dialog */

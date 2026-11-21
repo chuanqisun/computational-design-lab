@@ -3,16 +3,6 @@
   flex-direction: column;
   gap: 1ch;
 
-  .conceptual-placeholder {
-    color: #666;
-    margin-bottom: 2ch;
-  }
-
-  .conceptual-placeholder ul {
-    margin: 1ch 0;
-    padding-left: 2ch;
-  }
-
   .concepts-list {
     display: flex;
     flex-direction: column;
@@ -70,24 +60,6 @@
     resize: none;
     field-sizing: content;
     padding-block: 0.5ch;
-  }
-
-  .manual-add {
-    padding: 1ch;
-    border: 1px dashed #ccc;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5ch;
-  }
-
-  .manual-add textarea {
-    border: 1px solid #ccc;
-  }
-
-  .manual-add textarea {
-    resize: none;
-    field-sizing: content;
-    min-height: 2em;
   }
 
   .rejected-concepts {
