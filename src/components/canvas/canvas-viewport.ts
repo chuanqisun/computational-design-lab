@@ -115,10 +115,6 @@ function applyExtent(canvas: HTMLElement) {
   canvas.style.setProperty("--canvas-height", `${extent.maxY - extent.minY}px`);
 }
 
-export function getExtent(): Extent {
-  return extent;
-}
-
 /** The visible world rect, read from the DOM. */
 export function getWorldViewport(): Rect {
   const area = getArea();
@@ -188,10 +184,4 @@ export function clientToWorld(clientX: number, clientY: number): { x: number; y:
   if (!canvas) return { x: clientX, y: clientY };
   const rect = canvas.getBoundingClientRect();
   return { x: clientX - rect.left + extent.minX, y: clientY - rect.top + extent.minY };
-}
-
-/** Test-only: reset module state. */
-export function resetViewportForTests() {
-  extent = DEFAULT_EXTENT;
-  worldView$.next(FALLBACK_VIEW);
 }

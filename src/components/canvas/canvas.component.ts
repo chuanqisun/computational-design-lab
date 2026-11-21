@@ -79,28 +79,8 @@ export interface CardOrigin {
   actor: "user" | "ai";
 }
 
-export function hasImage(item: CanvasItem): boolean {
-  return !!(item.imageSrc || item.imagePrompt);
-}
-
-export function hasVideo(item: CanvasItem): boolean {
-  return !!item.videoSrc;
-}
-
 export function hasText(item: CanvasItem): boolean {
   return !!item.body;
-}
-
-/** Migrate legacy items from IndexedDB */
-export function migrateItem(raw: any): CanvasItem {
-  const { type: _type, src: _src, content: _content, ...rest } = raw;
-  if (raw.type === "image") {
-    return { ...rest, imageSrc: rest.imageSrc ?? raw.src };
-  }
-  if (raw.type === "text") {
-    return { ...rest, body: rest.body ?? raw.content };
-  }
-  return rest;
 }
 
 export const CanvasComponent = createComponent(

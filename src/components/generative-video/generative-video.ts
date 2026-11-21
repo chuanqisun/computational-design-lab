@@ -24,7 +24,7 @@ interface VideoConnections {
 
 export class GenerativeVideoElement extends HTMLElement {
   static getConnections: () => VideoConnections;
-  static observedAttributes = ["prompt", "model", "aspect-ratio", "start-frame"];
+  static observedAttributes = ["prompt", "model", "aspect-ratio", "start-frame", "variant"];
 
   static define(getConnections: () => VideoConnections, tagName = "generative-video") {
     if (!customElements.get(tagName)) {
@@ -59,6 +59,8 @@ export class GenerativeVideoElement extends HTMLElement {
         model: this.getAttribute("model") ?? GEMINI_VIDEO_MODEL,
         aspectRatio: (this.getAttribute("aspect-ratio") as "16:9" | "9:16" | null) ?? "16:9",
         startFrame: this.getAttribute("start-frame") ?? undefined,
+        /** Optional cache discriminator: elements with different variants never share a cached result. */
+        variant: this.getAttribute("variant") ?? "",
         retryCounter: this.retryCounter,
       })),
       distinctUntilChanged(
@@ -67,6 +69,7 @@ export class GenerativeVideoElement extends HTMLElement {
           a.model === b.model &&
           a.aspectRatio === b.aspectRatio &&
           a.startFrame === b.startFrame &&
+          a.variant === b.variant &&
           a.retryCounter === b.retryCounter,
       ),
     );
@@ -80,7 +83,7 @@ export class GenerativeVideoElement extends HTMLElement {
           });
         }
 
-        const cacheKey = `video:${attrs.model}:${attrs.aspectRatio}:${attrs.prompt}:${attrs.startFrame ?? "none"}`;
+        const cacheKey = `video:${attrs.model}:${attrs.aspectRatio}:${attrs.prompt}:${attrs.startFrame ?? "none"}${attrs.variant ? `:${attrs.variant}` : ""}`;
 
         return from(getCachedImage(cacheKey)).pipe(
           switchMap((cachedUrl) => {

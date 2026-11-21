@@ -23,7 +23,7 @@ interface ImageConnections {
 
 export class GenerativeImageElement extends HTMLElement {
   static getConnections: () => ImageConnections;
-  static observedAttributes = ["prompt", "width", "height", "placeholderSrc", "model", "aspect-ratio"];
+  static observedAttributes = ["prompt", "width", "height", "placeholderSrc", "model", "aspect-ratio", "variant"];
 
   static define(getConnections: () => ImageConnections, tagName = "generative-image") {
     if (!customElements.get(tagName)) {
@@ -60,6 +60,8 @@ export class GenerativeImageElement extends HTMLElement {
         placeholderSrc: this.getAttribute("placeholderSrc"),
         model: this.getAttribute("model") ?? undefined,
         aspectRatio: this.getAttribute("aspect-ratio") ?? undefined,
+        /** Optional cache discriminator: elements with different variants never share a cached result. */
+        variant: this.getAttribute("variant") ?? "",
         retryCounter: this.retryCounter,
       })),
       distinctUntilChanged(
@@ -69,6 +71,7 @@ export class GenerativeImageElement extends HTMLElement {
           a.height === b.height &&
           a.model === b.model &&
           a.aspectRatio === b.aspectRatio &&
+          a.variant === b.variant &&
           a.retryCounter === b.retryCounter,
       ),
     );
@@ -83,7 +86,7 @@ export class GenerativeImageElement extends HTMLElement {
           });
         }
 
-        const cacheKey = `img:${attrs.model ?? "default"}:${attrs.width}x${attrs.height}:${attrs.aspectRatio ?? "auto"}:${attrs.prompt}`;
+        const cacheKey = `img:${attrs.model ?? "default"}:${attrs.width}x${attrs.height}:${attrs.aspectRatio ?? "auto"}:${attrs.prompt}${attrs.variant ? `:${attrs.variant}` : ""}`;
 
         return from(getCachedImage(cacheKey)).pipe(
           switchMap((cachedUrl) => {

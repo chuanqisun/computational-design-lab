@@ -85,6 +85,7 @@ async function init() {
           if (previewData.height) element.setAttribute("height", previewData.height);
           if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
           if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
+          if (previewData.variant) element.setAttribute("variant", previewData.variant);
         } else {
           element = document.createElement("generative-video");
           element.setAttribute("prompt", previewData.prompt);
@@ -92,6 +93,7 @@ async function init() {
           if (previewData.aspectRatio) element.setAttribute("aspect-ratio", previewData.aspectRatio);
           if (previewData.startFrame) element.setAttribute("start-frame", previewData.startFrame);
           if (previewData.componentIds) element.setAttribute("data-components", previewData.componentIds.join(","));
+          if (previewData.variant) element.setAttribute("variant", previewData.variant);
         }
 
         previewsGrid.appendChild(createPreviewItem(element));
@@ -119,6 +121,7 @@ function serializePreview(element: HTMLElement): MaterialPageState["previews"][0
       height: element.getAttribute("height") || undefined,
       aspectRatio: element.getAttribute("aspect-ratio") || undefined,
       componentIds,
+      variant: element.getAttribute("variant") || undefined,
     };
   } else if (element.tagName.toLowerCase() === "generative-video") {
     return {
@@ -128,6 +131,7 @@ function serializePreview(element: HTMLElement): MaterialPageState["previews"][0
       aspectRatio: element.getAttribute("aspect-ratio") || undefined,
       startFrame: element.getAttribute("start-frame") || undefined,
       componentIds,
+      variant: element.getAttribute("variant") || undefined,
     };
   }
   return null;
@@ -322,6 +326,8 @@ function createPreviewItem(element: HTMLElement) {
       genVideo.setAttribute("model", GEMINI_VIDEO_MODEL);
       genVideo.setAttribute("aspect-ratio", "9:16");
       genVideo.setAttribute("data-components", rawIds);
+      // Unique per click, so animating the same image again generates a new video instead of reusing the cache.
+      genVideo.setAttribute("variant", crypto.randomUUID());
 
       const newItem = createPreviewItem(genVideo);
       container.before(newItem);
@@ -383,6 +389,8 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("height", "1280");
     genImage.setAttribute("aspect-ratio", "9:16");
     genImage.setAttribute("model", GEMINI_IMAGE_MODEL);
+    // Unique per click, so rendering the same config again generates a new image instead of reusing the cache.
+    genImage.setAttribute("variant", crypto.randomUUID());
 
     // Store component IDs on the element
     const ids = [

@@ -7,10 +7,6 @@ import type { PhotoCard } from "../../lib/studio-types";
 import { mountXmlEditor } from "../../sdk/xml-editor";
 import "./photo-gallery.component.css";
 
-export interface PhotoGalleryProps {
-  photoGallery$: BehaviorSubject<PhotoCard[]>;
-}
-
 export function openAnimationDialog(photoId: string, photoGallery$: BehaviorSubject<PhotoCard[]>) {
   const photo = photoGallery$.value.find((p) => p.id === photoId);
   if (!photo) return;

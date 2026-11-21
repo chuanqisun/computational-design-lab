@@ -1,9 +1,3 @@
-export interface LibraryShape {
-  id: string;
-  name: string;
-  description: string;
-}
-
 export const shapes = [
   {
     id: "boston-round",

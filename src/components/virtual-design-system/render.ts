@@ -63,16 +63,3 @@ export function getRenderPrompt(
 </scene_description>
 `.trim();
 }
-
-export function getFullRenderPrompts(
-  shape: ComponentInfo,
-  material: ComponentInfo,
-  cap: ComponentInfo,
-  surface: ComponentInfo,
-  capColor: string = "#ffffff",
-) {
-  return (["front", "three-quarters", "in-use"] as ViewType[]).map((view) => ({
-    view,
-    prompt: getRenderPrompt(shape, material, cap, surface, view, capColor),
-  }));
-}

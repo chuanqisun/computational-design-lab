@@ -17,10 +17,6 @@ export function loadApiKeys(): ApiKeys {
   return stored ? JSON.parse(stored) : {};
 }
 
-export function clearApiKeys(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
 export interface ViewportCenter {
   centerX: number;
   centerY: number;
@@ -96,11 +92,6 @@ export async function loadCanvasItems(): Promise<CanvasItem[]> {
   }
 }
 
-export async function clearCanvasItems(): Promise<void> {
-  const db = await getDB();
-  await db.delete("items", CANVAS_ITEMS_KEY);
-}
-
 // Material page persistence
 export interface MaterialPageState {
   selectedComponents: {
@@ -119,6 +110,8 @@ export interface MaterialPageState {
     aspectRatio?: string;
     startFrame?: string;
     componentIds?: number[];
+    /** Cache discriminator so each render gets its own generation (absent on older saved previews). */
+    variant?: string;
   }>;
 }
 
