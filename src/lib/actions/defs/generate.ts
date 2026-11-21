@@ -4,10 +4,11 @@ import type { CanvasItem } from "../../../components/canvas/canvas.component";
 import { blendImages } from "../../../components/context-tray/llm/blend-images";
 import { designConcepts$ } from "../../../components/context-tray/llm/design-concepts";
 import { scanConcepts$ } from "../../../components/context-tray/llm/scan-concepts";
-import { searchImages, streamSearchResults$ } from "../../../components/context-tray/llm/search-images";
+import { MAX_SEARCH_RESULTS, searchImages, streamSearchResults$ } from "../../../components/context-tray/llm/search-images";
 import { visualizeConcept$ } from "../../../components/context-tray/llm/visualize-concept";
 import { generateImage } from "../../../components/design/generate-image-gemini";
 import { imageToimage } from "../../../components/semantic-scan/image-to-image";
+import { needsFill, needsRender } from "../card-fill";
 import { ActionError, type ActionContext, type ActionDef, type ActionResult } from "../types";
 import { annotateImageWithRegions, type ImageRegion } from "./annotate";
 
@@ -28,17 +29,36 @@ const needTargets =
 function addStreamedCard(ctx: ActionContext, next: () => { x: number; y: number; z: number }, card: Partial<CanvasItem>, prefix: string) {
   const pos = next();
   const id = ctx.newId(prefix);
-  ctx.addCards([{ width: 200, height: 300, isSelected: false, ...card, id, x: pos.x, y: pos.y, zIndex: pos.z }]);
+  const item: CanvasItem = { width: 200, height: 300, isSelected: false, ...card, id, x: pos.x, y: pos.y, zIndex: pos.z };
+  // Mark cards the action will settle as pending from the start, so the card view shows a placeholder instead of
+  // starting its own <generative-image> render (which would generate the same image twice).
+  if (!item.metadata?.pending) {
+    const pending = needsRender(item) ? "image" : needsFill(item) ? "fill" : undefined;
+    if (pending) item.metadata = { ...item.metadata, pending };
+  }
+  ctx.addCards([item]);
   return id;
 }
 
-/** Collect created ids from a stream, then settle them all. */
+/** Settle each created card as soon as it streams in, then report them all (in creation order). */
 function collectAndSettle(ctx: ActionContext, summary: (ids: string[]) => string) {
-  return (source: import("rxjs").Observable<string>) =>
-    source.pipe(
+  return (source: import("rxjs").Observable<string>) => {
+    const ids: string[] = [];
+    return source.pipe(
+      tap((id) => ids.push(id)),
+      mergeMap((id) => ctx.settle$([id]), 4),
       toArray(),
-      switchMap((ids) => ctx.settle$(ids).pipe(map((): ActionResult => ({ summary: summary(ids), created: ids })))),
+      map((): ActionResult => ({ summary: summary(ids), created: [...ids] })),
+      // If stopped, cards still queued for settling never started; drop their pending placeholder.
+      finalize(() => {
+        for (const id of ids) {
+          if (ctx.items$.value.find((item) => item.id === id)?.metadata?.pending) {
+            ctx.updateCard(id, { metadata: { pending: undefined } });
+          }
+        }
+      }),
     );
+  };
 }
 
 export const renderImage: ActionDef<{ prompt: string; cardIds?: string[] }> = {
@@ -80,7 +100,7 @@ export const searchReferences: ActionDef<{ prompt: string; cardIds?: string[]; m
     properties: {
       prompt: { type: "string" },
       cardIds: cardIdsParam,
-      maxResults: { type: "integer", minimum: 1, maximum: 9 },
+      maxResults: { type: "integer", minimum: 1, maximum: MAX_SEARCH_RESULTS },
     },
     required: ["prompt"],
   },
@@ -103,7 +123,7 @@ export const searchReferences: ActionDef<{ prompt: string; cardIds?: string[]; m
       prompt,
       contextText,
       images,
-      maxResults: args.maxResults ?? 9,
+      maxResults: args.maxResults ?? MAX_SEARCH_RESULTS,
     }).pipe(
       mergeMap((result) => {
         const id = addStreamedCard(

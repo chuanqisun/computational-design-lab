@@ -238,7 +238,7 @@ export const addCard: ActionDef<{ text: string }> = {
     const text = args.text.trim();
     if (!text) throw new ActionError("invalid_args", "text must not be empty");
     const isTitle = text.split(/\s+/).length < 5 && !text.includes("\n");
-    const [pos] = ctx.place(1, []);
+    const [pos] = ctx.place(1);
     const id = ctx.newId("text");
     ctx.addCards([
       {
@@ -278,7 +278,7 @@ export const addMedia: ActionDef<{ _media?: IncomingMedia[]; _items?: CanvasItem
     const pasted = args._items ?? [];
     const total = media.length + pasted.length;
     if (!total) throw new ActionError("invalid_args", "Nothing to add");
-    const positions = ctx.place(total, []);
+    const positions = ctx.place(total);
     const fromMedia: CanvasItem[] = media.map((entry, index) => ({
       id: ctx.newId(entry.kind),
       ...(entry.kind === "image" ? { imageSrc: entry.src } : { videoSrc: entry.src, videoMimeType: entry.mimeType }),

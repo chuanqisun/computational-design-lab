@@ -29,7 +29,7 @@ describe("AnimateTool component", () => {
   it("computes button disabled and title properties accurately", () => {
     const items$ = new BehaviorSubject<CanvasItem[]>([]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -44,7 +44,7 @@ describe("AnimateTool component", () => {
     expect(latest?.values[3]).toBe(nothing);
 
     // Case 2: Has key, no items
-    apiKeys$.next({ gemini: "test-key", openai: "" });
+    apiKeys$.next({ gemini: "test-key" });
     expect(latest?.values[0]).toBe(true);
     expect(latest?.values[1]).toBe("Select a card with video, image, or text content");
 
@@ -66,7 +66,7 @@ describe("AnimateTool component", () => {
     const img3 = item({ id: "card-3", imageSrc: "data:image/png;base64,THREE" });
     const items$ = new BehaviorSubject<CanvasItem[]>([img1, img2, img3]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([img1, img2, img3]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -96,7 +96,7 @@ describe("AnimateTool component", () => {
     const img1 = item({ id: "img-1", imageSrc: "data:image/png;base64,ONE" });
     const items$ = new BehaviorSubject<CanvasItem[]>([video, img1]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([video, img1]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -123,7 +123,7 @@ describe("AnimateTool component", () => {
     const img2 = item({ id: "card-2", imageSrc: "data:image/png;base64,TWO" });
     const items$ = new BehaviorSubject<CanvasItem[]>([img1, img2]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([img1, img2]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -176,7 +176,7 @@ describe("AnimateTool component", () => {
     const img = item({ id: "card-1", imageSrc: "data:image/png;base64,ONE" });
     const items$ = new BehaviorSubject<CanvasItem[]>([img]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([img]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -232,7 +232,7 @@ describe("AnimateTool component", () => {
     const emptyCard = item({ id: "empty", isSelected: true });
     const items$ = new BehaviorSubject<CanvasItem[]>([vid1, vid2, emptyCard]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([vid1, vid2, emptyCard]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -262,7 +262,7 @@ describe("AnimateTool component", () => {
     const img = item({ id: "card-1", imageSrc: "data:image/png;base64,ONE" });
     const items$ = new BehaviorSubject<CanvasItem[]>([img]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([img]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     const template$ = AnimateToolView({ selected$, items$, apiKeys$ });
 
@@ -289,7 +289,7 @@ describe("AnimateTool component", () => {
     const img = item({ id: "card-1", imageSrc: "data:image/png;base64,ONE" });
     const items$ = new BehaviorSubject<CanvasItem[]>([img]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([img]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "test-key" });
 
     vi.spyOn(animateLlm, "prepareAnimateContents").mockResolvedValue([
       { type: "image", mime_type: "image/png", data: "ONE" },
@@ -331,7 +331,7 @@ describe("AnimateTool component", () => {
   it("creates component wrapper via AnimateTool", () => {
     const items$ = new BehaviorSubject<CanvasItem[]>([]);
     const selected$ = new BehaviorSubject<CanvasItem[]>([]);
-    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "key", openai: "" });
+    const apiKeys$ = new BehaviorSubject<ApiKeys>({ gemini: "key" });
 
     const result = AnimateTool({ selected$, items$, apiKeys$ });
     expect(result).toBeDefined();

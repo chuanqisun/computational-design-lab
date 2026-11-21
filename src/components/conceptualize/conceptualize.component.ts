@@ -60,10 +60,10 @@ export const ConceptualizeComponent = createComponent((props: ConceptualizeCompo
     switchMap(() =>
       combineLatest([partiText$, apiKeys$]).pipe(
         take(1),
-        map(([parti, apiKeys]) => ({ parti, apiKey: apiKeys.openai })),
+        map(([parti, apiKeys]) => ({ parti, apiKey: apiKeys.gemini })),
         switchMap(({ parti, apiKey }) => {
           if (!apiKey) {
-            console.error("OpenAI API key not found");
+            console.error("Gemini API key not found");
             isGenerating$.next(false);
             return EMPTY;
           }
@@ -149,7 +149,7 @@ export const ConceptualizeComponent = createComponent((props: ConceptualizeCompo
       apiKeys$.pipe(
         map((apiKeys) => ({
           concept: newConceptTitle$.value.trim(),
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           existingConcepts: concepts$.value.map((c) => ({ concept: c.concept, description: c.description })),
         })),
         switchMap(({ concept, apiKey, existingConcepts }) => {

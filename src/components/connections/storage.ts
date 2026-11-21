@@ -2,7 +2,6 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { CanvasItem } from "../canvas/canvas.component";
 
 export interface ApiKeys {
-  openai?: string;
   gemini?: string;
 }
 

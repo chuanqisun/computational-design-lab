@@ -16,7 +16,7 @@ Search the web (google_search tool) for distinct real-world references on a topi
 | --- | --- | --- | --- | --- |
 | `prompt` | text | yes | no | Search topic entered by the user (trimmed). |
 | `contextText` | text | no | yes | Title, body, and image prompt of each selected card (empty fields skipped), one per line. Omitted from the prompt when empty. |
-| `maxResults` | number | yes | no | Number of results to request (action default 9, max 9). Extra streamed results are ignored. |
+| `maxResults` | number | yes | no | Number of results to request (action default 8, max 8). Extra streamed results are ignored. |
 
 ## Example: Refillable Shampoo Systems
 
@@ -25,7 +25,7 @@ Search for real refill systems with no cards selected.
 ### User
 
 ```text
-Search online to find the top 9 most representative, distinct real-world products, references, or projects for the request below.
+Search online to find the top 8 most representative, distinct real-world products, references, or projects for the request below.
 For each result, return:
 - "title": exact, concise name (product, project, or reference title, max 6 words).
 - "details": precise, concise 1-2 sentence description of its key visual features, materials/form, and why it is a strong reference.

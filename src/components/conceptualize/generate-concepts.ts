@@ -1,5 +1,5 @@
 import { JSONParser } from "@streamparser/json";
-import { OpenAI } from "openai";
+import { generateGeminiText, streamGeminiText } from "../../lib/gemini-text";
 import { Observable } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -24,11 +24,6 @@ export function streamConcepts$(params: StreamConceptsParams): Observable<Concep
 
     const abortController = new AbortController();
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
     const parser = new JSONParser();
 
     // Wire up parser event to emit concepts
@@ -42,7 +37,7 @@ export function streamConcepts$(params: StreamConceptsParams): Observable<Concep
       }
     };
 
-    // Call OpenAI responses API in structured mode, streaming output
+    // Call Gemini in JSON mode, streaming output
     (async () => {
       try {
         const existingList =
@@ -75,23 +70,13 @@ Respond in this JSON format:
 }
         `.trim();
 
-        const responseStream = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: prompt,
-            text: { format: { type: "json_object" } },
-            reasoning: null,
-            stream: true,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
-          }
+        for await (const delta of streamGeminiText({
+          apiKey: params.apiKey,
+          input: prompt,
+          json: true,
+          signal: abortController.signal,
+        })) {
+          parser.write(delta);
         }
         subscriber.complete();
       } catch (error) {
@@ -118,41 +103,24 @@ export function regenerateDescription$(params: {
 
     const abortController = new AbortController();
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
     (async () => {
       try {
-        const response = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: [
-              { role: "developer", content: "Write a short one-sentence description for the provided concept." },
+        const text = await generateGeminiText({
+          apiKey: params.apiKey,
+          signal: abortController.signal,
+          input: [
+            { role: "system", content: "Write a short one-sentence description for the provided concept." },
 
-              // Few-shot examples using existing concepts
-              ...(params.existingConcepts ?? []).flatMap((example) => [
-                { role: "user" as const, content: example.concept },
-                { role: "assistant" as const, content: example.description },
-              ]),
+            // Few-shot examples using existing concepts
+            ...(params.existingConcepts ?? []).flatMap((example) => [
+              { role: "user" as const, content: example.concept },
+              { role: "model" as const, content: example.description },
+            ]),
 
-              { role: "user", content: params.concept },
-            ],
-            reasoning: null,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        const message = response.output[0];
-        if (message?.type === "message" && "content" in message) {
-          const content = message.content?.[0];
-          if (content?.type === "output_text") {
-            subscriber.next(content.text.trim());
-          }
-        }
+            { role: "user", content: params.concept },
+          ],
+        });
+        if (text) subscriber.next(text);
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);

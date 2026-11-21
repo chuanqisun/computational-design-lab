@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CanvasItem } from "./canvas.component";
-import { organizeChronologically, placeRows } from "./layout";
+import { organizeChronologically, placeBelow, placeCentered, placeRows } from "./layout";
 
 const card = (id: string, x: number, y: number, width = 200, height = 300, zIndex = 1): CanvasItem => ({
   id,
@@ -54,6 +54,83 @@ describe("placeRows", () => {
 
   it("returns an empty array for count 0", () => {
     expect(placeRows([card("a", 0, 0)], 0)).toEqual([]);
+  });
+});
+
+describe("placeCentered", () => {
+  const viewport = { x: 1000, y: 2000, width: 1000, height: 800 }; // center (1500, 2400)
+
+  it("centers a single card on the viewport", () => {
+    expect(placeCentered([], 1, { viewport })).toEqual([{ x: 1400, y: 2250, z: 1 }]);
+  });
+
+  it("centers a multi-row block and wraps after `columns`", () => {
+    const positions = placeCentered([], 3, { viewport, columns: 2, gap: 10 });
+    // block 410 x 610 → origin (1295, 2095)
+    expect(positions.map(({ x, y }) => ({ x, y }))).toEqual([
+      { x: 1295, y: 2095 },
+      { x: 1505, y: 2095 },
+      { x: 1295, y: 2405 },
+    ]);
+  });
+
+  it("ignores far-away cards and stacks z above them", () => {
+    const [pos] = placeCentered([card("a", 0, 0, 200, 300, 5)], 1, { viewport });
+    expect(pos).toEqual({ x: 1400, y: 2250, z: 6 });
+  });
+
+  it("shifts to the nearest free spot when the center is occupied", () => {
+    const blocker = card("a", 1400, 2250);
+    const [pos] = placeCentered([blocker], 1, { viewport, gap: 24 });
+    const overlaps =
+      pos.x < blocker.x + blocker.width && pos.x + 200 > blocker.x && pos.y < blocker.y + blocker.height && pos.y + 300 > blocker.y;
+    expect(overlaps).toBe(false);
+    expect(Math.abs(pos.x - 1400) + Math.abs(pos.y - 2250)).toBeLessThanOrEqual(324);
+  });
+
+  it("only keeps `centerRows` rows clear and centered", () => {
+    const positions = placeCentered([], 8, { viewport, columns: 4, gap: 0, centerRows: 1 });
+    expect(positions[0]).toMatchObject({ x: 1100, y: 2250 });
+    expect(positions[4]).toMatchObject({ x: 1100, y: 2550 });
+  });
+
+  it("returns an empty array for count 0", () => {
+    expect(placeCentered([], 0, { viewport })).toEqual([]);
+  });
+});
+
+describe("placeBelow", () => {
+  it("starts at the anchor batch's bottom-left plus gap", () => {
+    const anchor = [card("a", 100, 100), card("b", 324, 150)]; // bottom = 450
+    const positions = placeBelow(anchor, anchor, 2, { gap: 24 });
+    expect(positions).toEqual([
+      { x: 100, y: 474, z: 2 },
+      { x: 324, y: 474, z: 3 },
+    ]);
+  });
+
+  it("ignores cards outside the anchor when they are not in the way", () => {
+    const anchor = [card("a", 0, 0)];
+    const items = [...anchor, card("far", 2000, 5000)];
+    expect(placeBelow(items, anchor, 1, { gap: 10 })[0]).toMatchObject({ x: 0, y: 310 });
+  });
+
+  it("moves down past cards that would be overlapped, keeping the left edge", () => {
+    const anchor = [card("a", 0, 0)];
+    const items = [...anchor, card("x", 150, 320), card("y", 0, 640)];
+    expect(placeBelow(items, anchor, 1, { gap: 10 })[0]).toMatchObject({ x: 0, y: 950 });
+  });
+
+  it("only keeps `clearRows` rows clear", () => {
+    const anchor = [card("a", 0, 0)];
+    const items = [...anchor, card("x", 0, 700)]; // would hit row 2 only
+    const positions = placeBelow(items, anchor, 8, { gap: 10, clearRows: 1 });
+    expect(positions[0]).toMatchObject({ x: 0, y: 310 });
+  });
+
+  it("returns nothing without an anchor or count", () => {
+    expect(placeBelow([], [], 2)).toEqual([]);
+    expect(placeBelow([card("a", 0, 0)], [card("a", 0, 0)], 0)).toEqual([]);
   });
 });
 

@@ -70,13 +70,13 @@ export const ParameterizeComponent = createComponent((props: ParameterizeCompone
         map(([apiKeys, concepts, artifacts, parti, domain]) => ({
           parti,
           domain,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           concepts: concepts.map((c) => ({ name: c.concept, description: c.description })),
           artifacts: artifacts.map((a) => ({ name: a.name, description: a.description })),
         })),
         switchMap(({ parti, domain, apiKey, concepts, artifacts }) => {
           if (!apiKey) {
-            console.error("OpenAI API key not found");
+            console.error("Gemini API key not found");
             isGenerating$.next(false);
             return EMPTY;
           }
@@ -178,7 +178,7 @@ export const ParameterizeComponent = createComponent((props: ParameterizeCompone
         map((apiKeys) => ({
           parameterName: newParameterName$.value.trim(),
           domain: domain$.value,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           existingParameters: parameters$.value.map((p) => ({ name: p.name, description: p.description })),
         })),
         switchMap(({ parameterName, domain, apiKey, existingParameters }) => {

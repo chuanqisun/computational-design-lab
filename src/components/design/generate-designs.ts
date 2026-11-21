@@ -1,5 +1,5 @@
 import { JSONParser } from "@streamparser/json";
-import { OpenAI } from "openai";
+import { generateGeminiText, streamGeminiText } from "../../lib/gemini-text";
 import { Observable } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -41,11 +41,6 @@ export function streamDesigns$(params: StreamDesignsParams): Observable<Design> 
 
     const abortController = new AbortController();
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
     const parser = new JSONParser();
 
     // Wire up parser event to emit designs
@@ -59,7 +54,7 @@ export function streamDesigns$(params: StreamDesignsParams): Observable<Design> 
       }
     };
 
-    // Call OpenAI responses API in structured mode, streaming output
+    // Call Gemini in JSON mode, streaming output
     (async () => {
       try {
         const conceptsList = params.concepts.map((c) => `- ${c.name}: ${c.description}`).join("\n");
@@ -116,23 +111,13 @@ Respond in this JSON format:
 }
         `.trim();
 
-        const responseStream = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: prompt,
-            text: { format: { type: "json_object" } },
-            stream: true,
-            reasoning: null,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
-          }
+        for await (const delta of streamGeminiText({
+          apiKey: params.apiKey,
+          input: prompt,
+          json: true,
+          signal: abortController.signal,
+        })) {
+          parser.write(delta);
         }
         subscriber.complete();
       } catch (error) {
@@ -155,11 +140,6 @@ export function streamMockups$(params: StreamMockupsParams): Observable<Mockup> 
 
     const abortController = new AbortController();
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
     const parser = new JSONParser();
 
     // Wire up parser event to emit mockups
@@ -173,7 +153,7 @@ export function streamMockups$(params: StreamMockupsParams): Observable<Mockup> 
       }
     };
 
-    // Call OpenAI responses API in structured mode, streaming output
+    // Call Gemini in JSON mode, streaming output
     (async () => {
       try {
         const designsList = params.designs
@@ -222,23 +202,13 @@ Respond in this JSON format:
 }
         `.trim();
 
-        const responseStream = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: prompt,
-            text: { format: { type: "json_object" } },
-            stream: true,
-            reasoning: null,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
-          }
+        for await (const delta of streamGeminiText({
+          apiKey: params.apiKey,
+          input: prompt,
+          json: true,
+          signal: abortController.signal,
+        })) {
+          parser.write(delta);
         }
         subscriber.complete();
       } catch (error) {
@@ -269,11 +239,6 @@ export function generateManualDesign$(params: {
     });
 
     const abortController = new AbortController();
-
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
 
     (async () => {
       try {
@@ -318,44 +283,32 @@ Respond in this JSON format:
 }
         `.trim();
 
-        const response = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: [
-              { role: "developer", content: prompt },
+        const text = await generateGeminiText({
+          apiKey: params.apiKey,
+          signal: abortController.signal,
+          input: [
+            { role: "system", content: prompt },
 
-              // Few-shot examples using existing designs
-              ...(params.existingDesigns ?? []).flatMap((example) => [
-                { role: "user" as const, content: example.name },
-                {
-                  role: "assistant" as const,
-                  content: JSON.stringify({ name: example.name, parameterAssignments: example.parameterAssignments }),
-                },
-              ]),
+            // Few-shot examples using existing designs
+            ...(params.existingDesigns ?? []).flatMap((example) => [
+              { role: "user" as const, content: example.name },
+              {
+                role: "model" as const,
+                content: JSON.stringify({ name: example.name, parameterAssignments: example.parameterAssignments }),
+              },
+            ]),
 
-              { role: "user", content: params.designIdea },
-            ],
-            reasoning: null,
-            text: { format: { type: "json_object" } },
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        const message = response.output[0];
-        if (message?.type === "message" && "content" in message) {
-          const content = message.content?.[0];
-          if (content?.type === "output_text") {
-            try {
-              const design = JSON.parse(content.text.trim()) as Design;
-              if (design.name && design.parameterAssignments) {
-                subscriber.next(design);
-              }
-            } catch (parseError) {
-              subscriber.error(new Error("Failed to parse design JSON response"));
-            }
+            { role: "user", content: params.designIdea },
+          ],
+          json: true,
+        });
+        try {
+          const design = JSON.parse(text) as Design;
+          if (design.name && design.parameterAssignments) {
+            subscriber.next(design);
           }
+        } catch (parseError) {
+          subscriber.error(new Error("Failed to parse design JSON response"));
         }
         subscriber.complete();
       } catch (error) {

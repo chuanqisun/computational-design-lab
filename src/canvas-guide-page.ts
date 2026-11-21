@@ -60,7 +60,7 @@ const entries: GuideEntry[] = [
     title: "Search",
     needs: "A topic in the New text box. Selected cards are optional context.",
     what: "Finds real-world visual references on a topic.",
-    how: "Gemini with Google Search grounding streams up to 9 results, each with a title and details. Each result is placed on the board as soon as it arrives. A grounded image search then fills in each card's reference image in parallel.",
+    how: "Gemini with Google Search grounding streams up to 8 results, each with a title and details. Each result is placed on the board as soon as it arrives. A grounded image search then fills in each card's reference image in parallel.",
     clip: "search",
   },
   {

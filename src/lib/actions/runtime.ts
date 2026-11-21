@@ -13,7 +13,7 @@ import {
   type Subscription,
 } from "rxjs";
 import type { CanvasItem, CardOrigin } from "../../components/canvas/canvas.component";
-import { placeRows, type Position } from "../../components/canvas/layout";
+import { placeBelow, placeCentered, type Position } from "../../components/canvas/layout";
 import { ActionLog } from "../workflows/action-log";
 import type { Registry } from "./registry";
 import { validateSchema } from "./schema";
@@ -55,8 +55,10 @@ export interface ActionRuntime {
   readonly registry: Registry;
   readonly log: ActionLog;
   readonly running$: BehaviorSubject<RunningAction[]>;
-  /** Emits card ids to reveal after an action: created cards, plus cards the agent changed. */
-  readonly created$: Subject<{ ids: string[]; actor: Actor }>;
+  /** Emits ids of cards the agent created (or else changed), so the canvas can scroll to them when off-screen. */
+  readonly reveal$: Subject<{ ids: string[]; actor: Actor }>;
+  /** Start of a workflow run: the agent's next output is centered instead of continuing below its previous batch. */
+  resetAgentBatch(): void;
   dispatch$(name: string, args: Record<string, unknown>, actor: Actor): Observable<ActionResult>;
   getUiState(): UiState;
   /** Availability of an action against the selection (tray), the whole board (agent), or explicit targets. */
@@ -89,7 +91,9 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
   const getViewport = options.getViewport ?? (() => DEFAULT_VIEWPORT);
   const newId = options.newId ?? defaultNewId;
   const running$ = new BehaviorSubject<RunningAction[]>([]);
-  const created$ = new Subject<{ ids: string[]; actor: Actor }>();
+  /** Cards the agent created in its most recent creating step; the next step's output starts below them. */
+  let agentBatch: string[] = [];
+  const reveal$ = new Subject<{ ids: string[]; actor: Actor }>();
 
   const getUiState = (): UiState =>
     buildUiState({
@@ -163,6 +167,16 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
       const available = checkAvailability(def, state, targets.map(toCardView));
       if (available !== true) return of(errorResult("unavailable", available.reason));
 
+      // Human actions (and the agent's first step) drop new cards at the screen center. Later agent steps start at
+      // the bottom-left of the agent's previous batch, so a workflow run reads top to bottom.
+      const placeNew = (count: number, leadingRows?: number): Position[] => {
+        const anchorIds = new Set(actor === "ai" ? agentBatch : []);
+        const anchor = items$.value.filter((item) => anchorIds.has(item.id));
+        return anchor.length
+          ? placeBelow(items$.value, anchor, count, { clearRows: leadingRows })
+          : placeCentered(items$.value, count, { viewport: getViewport(), centerRows: leadingRows });
+      };
+
       const abortController = new AbortController();
       const ctx: ActionContext = {
         actor,
@@ -172,19 +186,12 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
         getState: getUiState,
         targets,
         cards: findCards,
-        place: (count, near) =>
-          placeRows(items$.value, count, {
-            near: near ?? targets.map((target) => target.id),
-            viewport: getViewport(),
-          }),
-        placer: (near) => {
+        place: (count) => placeNew(count),
+        placer: () => {
           let positions: Position[] | null = null;
           let index = 0;
           return () => {
-            positions ??= placeRows(items$.value, 64, {
-              near: near ?? targets.map((target) => target.id),
-              viewport: getViewport(),
-            });
+            positions ??= placeNew(64, 1);
             const pos = positions[index++ % positions.length];
             return { ...pos, z: pos.z + Math.floor(index / positions.length) * positions.length };
           };
@@ -260,9 +267,10 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
             });
             if (options.makeThumb && result.created?.length) void attachThumbs(recordId, result.created);
           }
-          // Reveal new cards; for the agent also reveal cards it changed, so the user can follow along.
-          const revealIds = result.created?.length ? result.created : actor === "ai" ? result.updated : undefined;
-          if (revealIds?.length) created$.next({ ids: revealIds, actor });
+          if (actor === "ai" && result.created?.length) agentBatch = [...result.created];
+          // Human cards land in the viewport. Agent output flows down the board, so reveal what it created (or else changed).
+          const revealIds = actor === "ai" ? (result.created?.length ? result.created : result.updated) : undefined;
+          if (revealIds?.length) reveal$.next({ ids: revealIds, actor });
           return result;
         }),
         finalize(() => {
@@ -284,5 +292,5 @@ export function createActionRuntime(options: ActionRuntimeOptions): ActionRuntim
     if (thumbs.length) log.update(recordId, { outputThumbs: thumbs });
   };
 
-  return { items$, apiKeys$, registry, log, running$, created$, dispatch$, getUiState, availability };
+  return { items$, apiKeys$, registry, log, running$, reveal$, resetAgentBatch: () => { agentBatch = []; }, dispatch$, getUiState, availability };
 }

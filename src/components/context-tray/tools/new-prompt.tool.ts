@@ -70,7 +70,7 @@ export const NewPromptTool = createComponent(
         runUserAction(runtime, "search_references", {
           prompt: prompt.trim(),
           cardIds: selected.map((item) => item.id),
-          maxResults: 9,
+          maxResults: 8,
         });
       }),
       ignoreElements(),

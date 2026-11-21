@@ -90,9 +90,10 @@ export interface ActionContext {
   targets: CanvasItem[];
   /** Resolve cards by id. Throws `card_not_found` for unknown ids. */
   cards(ids: string[]): CanvasItem[];
-  place(count: number, near?: string[]): Position[];
+  /** Positions for new cards (human or agent): centered on the viewport, avoiding existing cards (see placeCentered). */
+  place(count: number): Position[];
   /** Successive row positions computed from the board as it is now (for streamed results). */
-  placer(near?: string[]): () => Position;
+  placer(): () => Position;
   /** Keep work running after the action returns (async actions). Cancelled by stop$. */
   background(task$: Observable<unknown>): void;
   newId(prefix: string): string;

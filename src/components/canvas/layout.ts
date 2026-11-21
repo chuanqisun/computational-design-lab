@@ -30,8 +30,8 @@ export interface PlaceRowsOptions {
 }
 
 /**
- * Shared placement policy for every card-creating action (human or AI).
- * New cards go in left-to-right rows below the lowest existing card, so a session reads top to bottom.
+ * Left-to-right rows below the lowest existing card (used by the "rows" arrangement).
+ * New cards use {@link placeCentered} instead.
  */
 export function placeRows(items: CanvasItem[], count: number, options: PlaceRowsOptions = {}): Position[] {
   const { near, columns = 4, gap = 24, cardWidth = 200, cardHeight = 300, viewport } = options;
@@ -54,6 +54,122 @@ export function placeRows(items: CanvasItem[], count: number, options: PlaceRows
   return Array.from({ length: count }, (_, index) => ({
     x: originX + (index % columns) * (cardWidth + gap),
     y: originY + Math.floor(index / columns) * (cardHeight + gap),
+    z: maxZ + index + 1,
+  }));
+}
+
+export interface PlaceCenteredOptions {
+  viewport: { x: number; y: number; width: number; height: number };
+  columns?: number;
+  gap?: number;
+  cardWidth?: number;
+  cardHeight?: number;
+  /**
+   * How many leading rows to center and keep clear of existing cards. Defaults to all rows.
+   * Streamed placement asks for many slots up front but usually fills only the first row, so it passes 1.
+   */
+  centerRows?: number;
+  /** How many grid steps outward to search for a free spot before overlapping. */
+  searchRadius?: number;
+}
+
+/**
+ * Shared placement policy for every card-creating action (human or AI).
+ * New cards go in left-to-right rows centered on the visible viewport. If that spot is covered by
+ * existing cards, the block shifts to the nearest free spot (by grid steps); if none is found nearby,
+ * it stays centered and overlaps.
+ */
+export function placeCentered(items: CanvasItem[], count: number, options: PlaceCenteredOptions): Position[] {
+  const { viewport, columns = 4, gap = 24, cardWidth = 200, cardHeight = 300, searchRadius = 4 } = options;
+  if (count <= 0) return [];
+
+  const maxZ = items.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+  const cols = Math.min(count, columns);
+  const rows = Math.ceil(count / cols);
+  const centerRows = Math.max(1, Math.min(rows, options.centerRows ?? rows));
+  const blockWidth = cols * cardWidth + (cols - 1) * gap;
+  const blockHeight = centerRows * cardHeight + (centerRows - 1) * gap;
+  const baseX = viewport.x + viewport.width / 2 - blockWidth / 2;
+  const baseY = viewport.y + viewport.height / 2 - blockHeight / 2;
+
+  const isFree = (x: number, y: number) =>
+    !items.some(
+      (item) =>
+        x < item.x + item.width + gap &&
+        x + blockWidth + gap > item.x &&
+        y < item.y + item.height + gap &&
+        y + blockHeight + gap > item.y,
+    );
+
+  // Candidate offsets in grid steps, nearest (Euclidean, in pixels) first.
+  const stepX = cardWidth + gap;
+  const stepY = cardHeight + gap;
+  const offsets: { dx: number; dy: number; distance: number }[] = [];
+  for (let i = -searchRadius; i <= searchRadius; i++) {
+    for (let j = -searchRadius; j <= searchRadius; j++) {
+      offsets.push({ dx: i * stepX, dy: j * stepY, distance: Math.hypot(i * stepX, j * stepY) });
+    }
+  }
+  offsets.sort((a, b) => a.distance - b.distance);
+  const free = offsets.find(({ dx, dy }) => isFree(baseX + dx, baseY + dy)) ?? { dx: 0, dy: 0 };
+
+  const originX = Math.round(baseX + free.dx);
+  const originY = Math.round(baseY + free.dy);
+  return Array.from({ length: count }, (_, index) => ({
+    x: originX + (index % cols) * (cardWidth + gap),
+    y: originY + Math.floor(index / cols) * (cardHeight + gap),
+    z: maxZ + index + 1,
+  }));
+}
+
+export interface PlaceBelowOptions {
+  columns?: number;
+  gap?: number;
+  cardWidth?: number;
+  cardHeight?: number;
+  /** How many leading rows must not overlap other cards. Defaults to all rows (streamed placement passes 1). */
+  clearRows?: number;
+}
+
+/**
+ * Workflow placement: rows starting at the bottom-left of `anchor` (the previous step's cards), plus `gap`.
+ * If that block would overlap other cards, it moves down past them, keeping the left edge.
+ */
+export function placeBelow(
+  items: CanvasItem[],
+  anchor: CanvasItem[],
+  count: number,
+  options: PlaceBelowOptions = {},
+): Position[] {
+  const { columns = 4, gap = 24, cardWidth = 200, cardHeight = 300 } = options;
+  if (count <= 0 || anchor.length === 0) return [];
+
+  const maxZ = items.reduce((max, item) => Math.max(max, item.zIndex || 0), 0);
+  const cols = Math.min(count, columns);
+  const rows = Math.ceil(count / cols);
+  const clearRows = Math.max(1, Math.min(rows, options.clearRows ?? rows));
+  const blockWidth = cols * cardWidth + (cols - 1) * gap;
+  const blockHeight = clearRows * cardHeight + (clearRows - 1) * gap;
+
+  const originX = Math.min(...anchor.map((item) => item.x));
+  let originY = Math.max(...anchor.map((item) => item.y + item.height)) + gap;
+
+  // Each pass moves strictly downward past at least one card, so this terminates within items.length passes.
+  for (let pass = 0; pass <= items.length; pass++) {
+    const blockers = items.filter(
+      (item) =>
+        originX < item.x + item.width + gap &&
+        originX + blockWidth + gap > item.x &&
+        originY < item.y + item.height + gap &&
+        originY + blockHeight + gap > item.y,
+    );
+    if (!blockers.length) break;
+    originY = Math.max(...blockers.map((item) => item.y + item.height)) + gap;
+  }
+
+  return Array.from({ length: count }, (_, index) => ({
+    x: originX + (index % cols) * (cardWidth + gap),
+    y: originY + Math.floor(index / cols) * (cardHeight + gap),
     z: maxZ + index + 1,
   }));
 }

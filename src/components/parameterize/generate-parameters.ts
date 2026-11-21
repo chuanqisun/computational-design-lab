@@ -1,5 +1,5 @@
 import { JSONParser } from "@streamparser/json";
-import { OpenAI } from "openai";
+import { generateGeminiText, streamGeminiText } from "../../lib/gemini-text";
 import { Observable } from "rxjs";
 import { progress$ } from "../progress/progress";
 
@@ -25,10 +25,9 @@ export function streamParameters$(params: StreamParametersParams): Observable<Pa
       progress$.next({ ...progress$.value, textGen: progress$.value.textGen - 1 });
     });
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
+    // Unsubscribing aborts the in-flight Gemini request.
+    const abortController = new AbortController();
+    subscriber.add(() => abortController.abort());
 
     const parser = new JSONParser();
 
@@ -43,7 +42,7 @@ export function streamParameters$(params: StreamParametersParams): Observable<Pa
       }
     };
 
-    // Call OpenAI responses API in structured mode, streaming output
+    // Call Gemini in JSON mode, streaming output
     (async () => {
       try {
         const conceptsList = params.concepts.map((c) => `- ${c.name}: ${c.description}`).join("\n");
@@ -94,18 +93,13 @@ Respond in this JSON format:
 }
         `.trim();
 
-        const responseStream = await openai.responses.create({
-          model: "gpt-5.2",
+        for await (const delta of streamGeminiText({
+          apiKey: params.apiKey,
           input: prompt,
-          text: { format: { type: "json_object" } },
-          reasoning: null,
-          stream: true,
-        });
-
-        for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
-          }
+          json: true,
+          signal: abortController.signal,
+        })) {
+          parser.write(delta);
         }
         subscriber.complete();
       } catch (error) {
@@ -129,44 +123,27 @@ export function regenerateParameterDescription$(params: {
 
     const abortController = new AbortController();
 
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
     (async () => {
       try {
-        const response = await openai.responses.create(
-          {
-            model: "gpt-5.2",
-            input: [
-              {
-                role: "developer",
-                content: `Generate a description for a design parameter in the context of ${params.domain}. The description should be a short sentence that defines what this design decision encompasses, including example values that can be assigned to this parameter. This provides clarity about the scope and potential choices without introducing bias into the design process.`,
-              },
+        const text = await generateGeminiText({
+          apiKey: params.apiKey,
+          signal: abortController.signal,
+          input: [
+            {
+              role: "system",
+              content: `Generate a description for a design parameter in the context of ${params.domain}. The description should be a short sentence that defines what this design decision encompasses, including example values that can be assigned to this parameter. This provides clarity about the scope and potential choices without introducing bias into the design process.`,
+            },
 
-              // Few-shot examples using existing parameters
-              ...(params.existingParameters ?? []).flatMap((example) => [
-                { role: "user" as const, content: example.name },
-                { role: "assistant" as const, content: example.description },
-              ]),
+            // Few-shot examples using existing parameters
+            ...(params.existingParameters ?? []).flatMap((example) => [
+              { role: "user" as const, content: example.name },
+              { role: "model" as const, content: example.description },
+            ]),
 
-              { role: "user", content: params.parameterName },
-            ],
-            reasoning: null,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
-
-        const message = response.output[0];
-        if (message?.type === "message" && "content" in message) {
-          const content = message.content?.[0];
-          if (content?.type === "output_text") {
-            subscriber.next(content.text.trim());
-          }
-        }
+            { role: "user", content: params.parameterName },
+          ],
+        });
+        if (text) subscriber.next(text);
         subscriber.complete();
       } catch (error) {
         subscriber.error(error);

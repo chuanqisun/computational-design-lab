@@ -69,6 +69,7 @@ export function runAgent$(options: RunAgentOptions): Observable<AgentEvent> {
     };
 
     const { runtime } = options;
+    runtime.resetAgentBatch();
     const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
     const maxNewCards = options.maxNewCards ?? DEFAULT_MAX_NEW_CARDS;
     const maxVideos = options.maxVideos ?? DEFAULT_MAX_VIDEOS;

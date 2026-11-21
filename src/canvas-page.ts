@@ -152,7 +152,7 @@ const autoSave$ = items$.pipe(
   ),
 );
 
-/** Scroll the canvas so the first new card is visible (new cards are placed below the board). */
+/** Scroll the canvas so the first card the agent created or changed is visible (its output flows down the board). */
 function revealCards(ids: string[]) {
   const card = items$.value.find((item) => item.id === ids[0]);
   if (!card) return;
@@ -171,7 +171,7 @@ const Main = createComponent(() => {
   const runtime = getActionRuntime(items$, apiKeys$);
   void persistSubject(runtime.log.records$, "canvas:action-log");
 
-  const revealEffect$ = runtime.created$.pipe(
+  const revealEffect$ = runtime.reveal$.pipe(
     switchMap((event) =>
       isCanvasIdle$.pipe(
         filter((isIdle) => isIdle),

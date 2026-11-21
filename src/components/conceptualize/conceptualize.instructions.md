@@ -28,78 +28,9 @@ User can perform these actions:
 
 ## Logic
 
-- Use OpenAI Response API with structured output
+- Use Gemini in JSON mode via `streamGeminiText({ apiKey, input: prompt, json: true, signal })` from `src/lib/gemini-text.ts`
 - Use @streamparser/json (already installed in package.json) to incrementally emit concepts
 
 ## Reference implementation of incremental structured output
 
-```ts
-import { Observable } from "rxjs";
-import { OpenAI } from "openai"; // Assume imported from 'openai' package or a compatible ESM module
-import { JSONParser } from "@streamparser/json"; // Assume imported from '@streamparser/json'
-
-// Types for ideas
-interface Idea {
-  title: string;
-  description: string;
-  sourceIds: number[];
-}
-
-// The demo function: streams ideas from OpenAI, emits each parsed idea
-export function streamIdeas$(params: { backlog: string; apiKey: string }): Observable<Idea> {
-  return new Observable<Idea>((subscriber) => {
-    const openai = new OpenAI({
-      dangerouslyAllowBrowser: true,
-      apiKey: params.apiKey,
-    });
-
-    const parser = new JSONParser();
-
-    // Wire up parser event to emit ideas
-    parser.onValue = (entry) => {
-      // Assume ideas are entries in an array under key 'ideas'
-      if (typeof entry.key === "number" && entry.parent?.key === "ideas" && typeof entry.value?.title === "string") {
-        subscriber.next(entry.value);
-      }
-    };
-
-    // Call OpenAI responses API in structured mode, streaming output
-    (async () => {
-      try {
-        const prompt = `
-Generate inspiring ideas based on the backlog:
-
-\`\`\`backlog
-${params.backlog}
-\`\`\`
-
-Respond 7 ideas in this JSON format:
-type Response {
-  ideas: {
-    title: string;
-    description: string;
-    sourceIds: number[];
-  }[]
-}
-        `.trim();
-
-        const responseStream = await openai.responses.create({
-          model: "gpt-4.1",
-          input: prompt,
-          text: { format: { type: "json_object" } },
-          stream: true,
-        });
-
-        for await (const chunk of responseStream) {
-          if (chunk.type === "response.output_text.delta") {
-            parser.write(chunk.delta);
-          }
-        }
-        subscriber.complete();
-      } catch (error) {
-        subscriber.error(error);
-      }
-    })();
-  });
-}
-```
+See `streamConcepts$` in `generate-concepts.ts`: write each text delta from `streamGeminiText` into a `JSONParser`, and emit each array item from `parser.onValue` as it completes.

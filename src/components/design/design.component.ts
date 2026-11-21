@@ -94,14 +94,14 @@ export const DesignComponent = createComponent((props: DesignComponentProps) => 
         map(([apiKeys, concepts, artifacts, parameters, parti, domain]) => ({
           parti,
           domain,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           concepts: concepts.map((c) => ({ name: c.concept, description: c.description })),
           artifacts: artifacts.map((a) => ({ name: a.name, description: a.description })),
           parameters: parameters.map((p) => ({ name: p.name, description: p.description })),
         })),
         switchMap(({ parti, domain, apiKey, concepts, artifacts, parameters }) => {
           if (!apiKey) {
-            console.error("OpenAI API key not found");
+            console.error("Gemini API key not found");
             return of();
           }
 
@@ -230,7 +230,7 @@ export const DesignComponent = createComponent((props: DesignComponentProps) => 
           designIdea: newDesignIdea$.value.trim(),
           parti,
           domain,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           concepts: concepts.map((c) => ({ name: c.concept, description: c.description })),
           artifacts: artifacts.map((a) => ({ name: a.name, description: a.description })),
           parameters: parameters.map((p) => ({ name: p.name, description: p.description })),
@@ -296,14 +296,14 @@ export const DesignComponent = createComponent((props: DesignComponentProps) => 
       combineLatest([apiKeys$, domain$]).pipe(
         take(1),
         map(([apiKeys, domain]) => ({
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           domain,
           design: designs$.value.find((d) => d.id === designId),
           designId,
         })),
         switchMap(({ apiKey, domain, design, designId }) => {
           if (!apiKey) {
-            console.error("OpenAI API key not available");
+            console.error("Gemini API key not available");
             const currentRendering = renderingDesigns$.value;
             currentRendering.delete(designId);
             renderingDesigns$.next(new Set(currentRendering));

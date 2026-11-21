@@ -32,7 +32,7 @@ const canvasSearchReferencesPresets = [
     values: {
       prompt: "Refillable shampoo bottle systems with countertop-worthy primary bottles",
       contextText: [],
-      maxResults: 9,
+      maxResults: 8,
     },
   },
   {
@@ -88,7 +88,7 @@ const template: PromptTemplateModule<CanvasSearchReferencesVars, "prompt" | "con
         type: "text",
       },
       maxResults: {
-        description: "Number of results to request (action default 9, max 9). Extra streamed results are ignored.",
+        description: "Number of results to request (action default 8, max 8). Extra streamed results are ignored.",
         required: true,
         multiple: false,
         type: "number",
@@ -96,7 +96,7 @@ const template: PromptTemplateModule<CanvasSearchReferencesVars, "prompt" | "con
     },
   },
   presets: canvasSearchReferencesPresets,
-  template: ({ prompt = "", contextText, maxResults = 9 }) => {
+  template: ({ prompt = "", contextText, maxResults = 8 }) => {
     const context = toTextBlock(contextText);
 
     return {

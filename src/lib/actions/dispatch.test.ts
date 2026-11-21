@@ -26,7 +26,7 @@ const echo: ActionDef = {
   run: (args, ctx) =>
     of(null).pipe(
       map(() => {
-        const [pos] = ctx.place(1, ctx.targets.map((t) => t.id));
+        const [pos] = ctx.place(1);
         const id = ctx.newId("echo");
         ctx.addCards([{ id, x: pos.x, y: pos.y, width: 200, height: 300, zIndex: pos.z, title: args.label }]);
         return { summary: `echo ${args.label}`, created: [id] };
@@ -268,12 +268,42 @@ describe("dispatch$", () => {
     expect(first.metadata?.createdBy?.runId).not.toBe(second.metadata?.createdBy?.runId);
   });
 
-  it("emits created ids for the reveal hook", async () => {
+  it("reveals cards the agent created, not human-created ones", async () => {
     const { runtime } = setup();
-    const created: string[][] = [];
-    runtime.created$.subscribe((event) => created.push(event.ids));
+    const revealed: string[][] = [];
+    runtime.reveal$.subscribe((event) => revealed.push(event.ids));
     await lastValueFrom(runtime.dispatch$("echo", { label: "x", cardIds: ["a"] }, "user"));
-    expect(created).toEqual([["echo-1"]]);
+    await lastValueFrom(runtime.dispatch$("echo", { label: "y", cardIds: ["a"] }, "ai"));
+    expect(revealed).toEqual([["echo-2"]]);
+  });
+
+  it("places human cards at the viewport center", async () => {
+    const { runtime, items$ } = setup();
+    const human = await lastValueFrom(runtime.dispatch$("echo", { label: "x", cardIds: ["a"] }, "user"));
+    // default viewport 1200x800 at (0, 0): a 200x300 card centered at (600, 400)
+    expect(items$.value.find((i) => i.id === human.created![0])).toMatchObject({ x: 500, y: 250 });
+  });
+
+  it("chains agent steps: first batch centered, each next batch below the previous batch's bottom-left", async () => {
+    const { runtime, items$ } = setup();
+    const find = (id: string) => items$.value.find((i) => i.id === id)!;
+    const first = await lastValueFrom(runtime.dispatch$("echo", { label: "1", cardIds: ["a"] }, "ai"));
+    expect(find(first.created![0])).toMatchObject({ x: 500, y: 250 }); // centered at (600, 400)
+
+    const second = await lastValueFrom(runtime.dispatch$("echo", { label: "2", cardIds: ["a"] }, "ai"));
+    expect(find(second.created![0])).toMatchObject({ x: 500, y: 250 + 300 + 24 });
+
+    // A human card in between does not break the chain (and is not overlapped).
+    await lastValueFrom(runtime.dispatch$("echo", { label: "h", cardIds: ["a"] }, "user"));
+    const third = await lastValueFrom(runtime.dispatch$("echo", { label: "3", cardIds: ["a"] }, "ai"));
+    const t = find(third.created![0]);
+    expect(t.x).toBe(500);
+    expect(t.y).toBeGreaterThanOrEqual(574 + 300 + 24);
+
+    runtime.resetAgentBatch();
+    const fresh = await lastValueFrom(runtime.dispatch$("echo", { label: "4", cardIds: ["a"] }, "ai"));
+    const fr = find(fresh.created![0]);
+    expect(fr.y).toBeLessThan(t.y); // new run starts near the viewport center again
   });
 
   it("availability() evaluates against the selection or the whole board", () => {

@@ -25,12 +25,15 @@ const toImageContent = (image: string): Interactions.Content => {
   return { type: "image", mime_type: match[1], data: match[2] };
 };
 
+/** Upper bound on search results per request; callers may ask for fewer. */
+export const MAX_SEARCH_RESULTS = 8;
+
 export function streamSearchResults$({
   apiKey,
   prompt,
   contextText,
   images = [],
-  maxResults = 9,
+  maxResults: requestedMax = MAX_SEARCH_RESULTS,
 }: {
   apiKey: string;
   prompt: string;
@@ -47,6 +50,7 @@ export function streamSearchResults$({
       abortController.abort();
     });
 
+    const maxResults = Math.max(1, Math.min(requestedMax, MAX_SEARCH_RESULTS));
     const ai = new GoogleGenAI({ apiKey });
     const parser = new JSONParser();
     let emittedCount = 0;

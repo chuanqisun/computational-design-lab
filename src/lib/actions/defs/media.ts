@@ -303,7 +303,7 @@ export const interviewPersona: ActionDef<{ cardIds?: string[]; questions?: strin
       }),
       map(({ summary, transcript }) => {
         // Place at completion time so concurrent summaries for the same persona don't overlap.
-        const [pos] = ctx.place(1, [personaCard.id]);
+        const [pos] = ctx.place(1);
         const id = ctx.newId("interview-summary");
         ctx.addCards([
           {

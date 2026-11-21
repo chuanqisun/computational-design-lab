@@ -74,12 +74,12 @@ export const MoodboardComponent = createComponent((props: MoodboardComponentProp
         take(1),
         map(([apiKeys, concepts, parti]) => ({
           parti,
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           concepts: concepts.map((c) => ({ name: c.concept, description: c.description })),
         })),
         switchMap(({ parti, apiKey, concepts }) => {
           if (!apiKey) {
-            console.error("OpenAI API key not available");
+            console.error("Gemini API key not available");
             isGenerating$.next(false);
             return EMPTY;
           }
@@ -189,7 +189,7 @@ export const MoodboardComponent = createComponent((props: MoodboardComponentProp
         take(1),
         map((apiKeys) => ({
           description: newArtifactDescription$.value.trim(),
-          apiKey: apiKeys.openai,
+          apiKey: apiKeys.gemini,
           existingArtifacts: artifacts$.value.map((a) => ({ name: a.name, description: a.description })),
         })),
         switchMap(({ description, apiKey, existingArtifacts }) => {
@@ -229,7 +229,7 @@ export const MoodboardComponent = createComponent((props: MoodboardComponentProp
       apiKeys$.pipe(
         take(1),
         switchMap((apiKeys) => {
-          if (!apiKeys.openai) {
+          if (!apiKeys.gemini) {
             isGeneratingFromImage$.next(false);
             return EMPTY;
           }
@@ -247,10 +247,11 @@ export const MoodboardComponent = createComponent((props: MoodboardComponentProp
           return new Observable<Artifact>((subscriber) => {
             fileToDataUrl(imageFile)
               .then((dataUrl) => {
-                const base64 = dataUrl.split(",")[1];
+                const [header, base64] = dataUrl.split(",");
                 generateArtifactFromImage$({
                   imageBase64: base64,
-                  apiKey: apiKeys.openai!,
+                  mimeType: /^data:([^;,]+)/.exec(header)?.[1],
+                  apiKey: apiKeys.gemini!,
                   existingArtifacts,
                 }).subscribe(subscriber);
               })
