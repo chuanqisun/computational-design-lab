@@ -32,6 +32,7 @@ Vite serves the multi-page app under the `/computational-design-lab/` base path 
 
 | Page | Local URL |
 | --- | --- |
+| **Home** | `http://localhost:5173/computational-design-lab/` |
 | **Canvas** | `http://localhost:5173/computational-design-lab/canvas.html` |
 | **Photo Studio** | `http://localhost:5173/computational-design-lab/studio.html` |
 | **Canvas Guide** | `http://localhost:5173/computational-design-lab/canvas-guide.html` |
@@ -56,7 +57,7 @@ Vite serves the multi-page app under the `/computational-design-lab/` base path 
 
 ### UI & State Stack
 
-- **Multi-page Vite app:** Entry points are defined in `vite.config.ts` (`canvas.html`, `studio.html`, plus legacy/experimental `index.html` and `wizard.html`). `canvas-guide.html` and `prompt-library.html` are built separately with `vite-plugin-singlefile` so each can be shared or opened as a self-contained HTML artifact.
+- **Multi-page Vite app:** Entry points are defined in `vite.config.ts` (`index.html` landing page linking to `concept.html`, `canvas.html`, `studio.html`, and `wizard.html`). `canvas-guide.html` and `prompt-library.html` are built separately with `vite-plugin-singlefile` so each can be shared or opened as a self-contained HTML artifact.
 - **Reactive components (`src/sdk/`):** UI components are built with `createComponent` (`src/sdk/create-component.ts`), which pairs `lit-html` templates with `rxjs` streams (`BehaviorSubject` / `Observable`) via a custom `observe()` directive (`src/sdk/observe-directive.ts`).
 - **Custom Elements for media:** `<generative-image>` (`src/components/generative-image/`) and `<generative-video>` (`src/components/generative-video/`) encapsulate Gemini image/video generation and caching behind standard Web Component tags.
 - **Centralized model configuration:** All Gemini model IDs and thinking levels are declared in `src/lib/gemini-models.ts` (covering text/reasoning, the Auto-Iterate agent, image generation/editing, video generation, Gemini Live audio, and the Decisions API).
@@ -144,7 +145,8 @@ Photo Studio is a structured product-design and photo/video staging environment 
 ├── studio.html                     # Photo Studio app entry point
 ├── canvas-guide.html               # Human-facing Canvas guide (single-file build)
 ├── prompt-library.html             # Interactive Prompt Library (single-file build)
-├── index.html / wizard.html        # Legacy/auxiliary multi-step prototypes
+├── index.html                      # Landing page linking to the apps
+├── concept.html / wizard.html      # Concept and Wizard prototypes
 ├── docs/
 │   └── prompts/                    # Auto-generated Markdown prompt inventory
 ├── src/
