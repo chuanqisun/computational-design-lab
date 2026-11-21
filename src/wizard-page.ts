@@ -11,6 +11,7 @@ import {
 } from "./components/connections/storage";
 import { GenerativeImageElement } from "./components/generative-image/generative-image";
 import { GenerativeVideoElement } from "./components/generative-video/generative-video";
+import { GEMINI_IMAGE_MODEL, GEMINI_VIDEO_MODEL } from "./lib/gemini-models";
 import { generateAnimationPrompt } from "./components/virtual-design-system/animator";
 import { getRenderPrompt, type ViewType } from "./components/virtual-design-system/render";
 import "./wizard-page.css";
@@ -318,7 +319,7 @@ function createPreviewItem(element: HTMLElement) {
       const genVideo = document.createElement("generative-video");
       genVideo.setAttribute("prompt", videoPrompt);
       genVideo.setAttribute("start-frame", img.src);
-      genVideo.setAttribute("model", "veo-3.1-fast-generate-preview");
+      genVideo.setAttribute("model", GEMINI_VIDEO_MODEL);
       genVideo.setAttribute("aspect-ratio", "9:16");
       genVideo.setAttribute("data-components", rawIds);
 
@@ -381,7 +382,7 @@ renderButtons.forEach((button) => {
     genImage.setAttribute("width", "720");
     genImage.setAttribute("height", "1280");
     genImage.setAttribute("aspect-ratio", "9:16");
-    genImage.setAttribute("model", "gemini-3.1-flash-lite-image");
+    genImage.setAttribute("model", GEMINI_IMAGE_MODEL);
 
     // Store component IDs on the element
     const ids = [

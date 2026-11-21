@@ -1,5 +1,6 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { LibraryItem } from "../../assets/library/index";
+import { GEMINI_TEXT_MODEL } from "../../lib/gemini-models";
 
 export interface GeminiConnection {
   apiKey: string;
@@ -53,7 +54,7 @@ Output ONLY the interaction prompt text. No preamble or meta-talk.
   `.trim();
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+    model: GEMINI_TEXT_MODEL,
     contents: prompt,
     config: {
       thinkingConfig: {
